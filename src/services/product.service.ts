@@ -159,7 +159,7 @@ async function attachVariantCosting(
   };
 }
 
-// ─── Mutations (manual entry — fallback until Shopify sync ships in Chunk 4) ──
+// Product mutations
 
 export async function createProduct(data: ProductCreateInput) {
   return db.$transaction(async (tx) => {

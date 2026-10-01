@@ -4,10 +4,6 @@ import { listProducts, createProduct } from "@/services/product.service";
 import { requireAuth, getStoreId } from "@/lib/auth-helpers";
 import { can } from "@/lib/rbac";
 
-// Manual product creation is a fallback for entering data before the
-// Shopify connection (Chunk 4) is live. Once Shopify sync ships, products
-// are expected to arrive with a shopifyId and this endpoint becomes a
-// rarely-used escape hatch for store-only test SKUs.
 const createSchema = z.object({
   title: z.string().trim().min(1).max(200),
   handle: z.string().trim().max(200).optional().nullable(),

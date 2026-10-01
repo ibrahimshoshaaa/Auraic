@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'api.dart';
 import 'ui.dart';
@@ -160,54 +159,6 @@ class _SettingsPageState extends State<SettingsPage> {
           catch (_) { /* Error shown by helper. */ }
         }, child: const Text('حفظ الإعدادات')),
       ])));
-    }),
-  ]);
-}
-
-class ShopifyPage extends StatefulWidget {
-  const ShopifyPage({required this.api, super.key});
-  final ErpApi api;
-  @override
-  State<ShopifyPage> createState() => _ShopifyPageState();
-}
-class _ShopifyPageState extends State<ShopifyPage> {
-  late Future<dynamic> status = widget.api.get('/api/shopify/status');
-  void reload() => setState(() => status = widget.api.get('/api/shopify/status'));
-  @override
-  Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(16), children: [
-    const PageIntro(title: 'Shopify', subtitle: 'حالة الاتصال ومزامنة بيانات المتجر', icon: Icons.storefront_outlined),
-    const SizedBox(height: 16),
-    FutureBuilder<dynamic>(future: status, builder: (context, snapshot) {
-      if (!snapshot.hasData) return snapshot.hasError
-        ? TextButton(onPressed: reload, child: const Text('تعذر تحميل حالة الاتصال · إعادة المحاولة'))
-        : const PageSkeleton(embedded: true);
-      final data = json(snapshot.data['data']);
-      final connection = data['connection'] is Map ? json(data['connection']) : data;
-      final connected = connection['status'] == 'CONNECTED';
-      final sync = data['syncState'] is Map ? json(data['syncState']) : const <String, dynamic>{};
-      return Column(children: [
-        Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [const Icon(Icons.storefront_outlined, color: appNavy),
-            const SizedBox(width: 10), Expanded(child: Text(
-              str(connection['shopDomain'] ?? 'لا يوجد متجر متصل'),
-              style: const TextStyle(fontWeight: FontWeight.w800))),
-            StatusPill(label: connected ? 'متصل' : 'غير متصل',
-              color: connected ? const Color(0xff24704a) : const Color(0xffa33146))]),
-          if (sync['lastSuccessfulSyncAt'] != null) Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: Text('آخر مزامنة ناجحة: ${str(sync['lastSuccessfulSyncAt'])}',
-              style: const TextStyle(fontSize: 12, color: appMuted))),
-        ]))),
-        const SizedBox(height: 14),
-        SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: connected ? () async {
-          try { await perform(context, () => widget.api.post('/api/shopify/sync', {}), success: 'اكتملت المزامنة'); reload(); }
-          catch (_) { /* Error shown by helper. */ }
-        } : null, icon: const Icon(Icons.sync), label: const Text('مزامنة الآن'))),
-        TextButton(onPressed: () => launchUrl(
-          Uri.parse('${widget.api.baseUrl}/dashboard/shopify'),
-          mode: LaunchMode.externalApplication), child: const Text('إدارة الربط من المتصفح')),
-      ]);
     }),
   ]);
 }
