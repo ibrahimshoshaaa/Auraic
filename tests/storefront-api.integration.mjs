@@ -48,6 +48,8 @@ test('public orders validate server prices, tenant, publication and recipe; retr
     assert.equal((await post({ ...order, requestId: randomUUID() })).status, 409);
   } finally {
     if (child) { child.kill('SIGTERM'); await new Promise(resolve => child.once('exit', resolve)); }
+    await db.order.deleteMany({ where: { storeId: { in: [shop.id, other.id] } } });
+    await db.recipeItem.deleteMany({ where: { recipeVersion: { storeId: shop.id } } });
     await db.store.deleteMany({ where: { id: { in: [shop.id, other.id] } } });
   }
 });
