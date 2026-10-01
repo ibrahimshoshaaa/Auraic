@@ -1,0 +1,83 @@
+import Link from "next/link";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth-helpers";
+import { can } from "@/lib/rbac";
+import { ManualOrderActions } from "@/components/orders/ManualOrderActions";
+import { ShopifyOrderActions } from "@/components/orders/ShopifyOrderActions";
+import { SHOPIFY_FULFILLMENT_SCOPES } from "@/lib/config";
+import { hasShopifyScope } from "@/lib/shopify/scopes";
+import type { ManualOrderStatus } from "@/services/manual-order.service";
+
+const PAGE_SIZE = 20;
+const financialLabels: Record<string, string> = {
+  PAID: "مدفوع", PENDING: "معلّق", PARTIALLY_PAID: "مدفوع جزئيًا",
+  REFUNDED: "مسترد", PARTIALLY_REFUNDED: "مسترد جزئيًا", VOIDED: "ملغي",
+};
+const fulfillmentLabels: Record<string, string> = {
+  FULFILLED: "تم الشحن", PARTIALLY_FULFILLED: "شحن جزئي", UNFULFILLED: "لم يُشحن",
+};
+const manualLabels: Record<string, string> = {
+  NEW: "قيد التجهيز", PREPARED: "تم التجهيز", SHIPPING: "جاري الشحن", DELIVERED: "تم التسليم", RETURNED: "تم الإرجاع",
+};
+
+export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ page?: string; q?: string; manual?: string; attention?: string }> }) {
+  const session = await requireAuth();
+  if (!can(session.role, "orders.read")) throw new Error("Forbidden");
+  const params = await searchParams;
+  const page = Math.max(1, Math.min(100000, Number.parseInt(params.page ?? "1", 10) || 1));
+  const q = (params.q ?? "").trim().slice(0, 80);
+  const where = { storeId: session.storeId, ...(q ? { OR: [
+    { orderNumber: { contains: q, mode: "insensitive" as const } },
+    { customerRef: { contains: q, mode: "insensitive" as const } },
+    { customerPhone: { contains: q } },
+  ] } : {}) };
+  const [orders, count, connection] = await Promise.all([
+    db.order.findMany({
+      where, orderBy: { occurredAt: "desc" }, skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE,
+      include: { items: { select: { id: true, title: true, quantity: true, consumptionStatus: true } } },
+    }),
+    db.order.count({ where }),
+    db.shopifyConnection.findUnique({ where: { storeId: session.storeId }, select: { shopDomain: true, scope: true } }),
+  ]);
+  const grantedScopes = new Set(connection?.scope?.split(",").map(scope => scope.trim()) ?? []);
+  const hasMore = page * PAGE_SIZE < count;
+  const pageUrl = (p: number) => `/dashboard/orders?page=${p}${q ? `&q=${encodeURIComponent(q)}` : ""}`;
+
+  return (
+    <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-8 sm:py-9">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div><p className="text-sm font-semibold text-[#96723c]">المبيعات</p><h1 className="mt-1 text-3xl font-bold tracking-tight">الطلبات</h1><p className="mt-2 text-sm text-slate-500">تابع طلبات متجر Auraic ومبيعات المحل من مكان واحد.</p></div>
+        <div className="flex items-center gap-3">{can(session.role, "orders.write") && <Link href="/dashboard/orders/new" className="rounded-xl bg-[#191735] px-5 py-3 text-sm font-semibold text-white hover:bg-[#302d58]">+ تسجيل بيع يدوي</Link>}<span className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600">{count} طلب</span></div>
+      </header>
+      {params.manual === "created" && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">تم تسجيل الطلب. تابع التجهيز والشحن والتسليم من هنا.</p>}
+      {params.manual === "created" && params.attention && <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">لم يُخصم كل المخزون لهذا البيع. راجع <Link className="font-semibold underline" href={`/dashboard/consumption?orderId=${encodeURIComponent(params.attention)}`}>حالة الاستهلاك وسبب التعطّل</Link>.</p>}
+      <form action="/dashboard/orders" className="flex max-w-md gap-2">
+        <input name="q" defaultValue={q} placeholder="رقم الطلب أو اسم العميل أو الهاتف" aria-label="ابحث عن طلب" className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#96723c]" />
+        <button type="submit" className="rounded-xl bg-[#191735] px-5 py-3 text-sm font-medium text-white hover:bg-[#302d58]">بحث</button>
+      </form>
+      {orders.length ? (
+        <div className="space-y-3">
+          {orders.map(order => (
+            <details key={order.id} className="group min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <summary className="flex cursor-pointer list-none items-center gap-3 p-4 marker:hidden [&::-webkit-details-marker]:hidden sm:p-5">
+                <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-x-3 gap-y-1"><h2 className="break-all font-bold">طلب #{(order.orderNumber ?? order.id.slice(-8)).replace(/^#+/, "")}</h2>{order.manualStatus ? <span className={`rounded-full px-2.5 py-1 text-xs ${order.manualStatus === "RETURNED" ? "bg-rose-50 text-rose-800" : "bg-emerald-50 text-emerald-800"}`}>{manualLabels[order.manualStatus] ?? order.manualStatus}</span> : <><span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs text-emerald-800">الدفع: {financialLabels[order.financialStatus ?? ""] ?? order.financialStatus ?? "غير محدد"}</span><span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs text-amber-900">الشحن: {fulfillmentLabels[order.fulfillmentStatus ?? ""] ?? order.fulfillmentStatus ?? "غير محدد"}</span>{order.shopifyStage && <span className="rounded-full bg-sky-50 px-2.5 py-1 text-xs text-sky-800">الطلب: {manualLabels[order.shopifyStage] ?? order.shopifyStage}</span>}</>}</div><p className="mt-1 text-xs text-slate-500">{order.customerRef ? `${order.customerRef} · ` : ""}{new Intl.DateTimeFormat("ar-EG", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Cairo" }).format(order.occurredAt)} · {order.items.length} بند · {Number(order.total ?? 0).toFixed(2)} {order.currency}</p></div>
+                <span aria-hidden="true" className="shrink-0 text-lg text-slate-500 transition-transform group-open:rotate-180">⌄</span>
+              </summary>
+              <div className="space-y-3 border-t border-slate-100 px-4 pb-5 pt-4 sm:px-5">
+                <p className="text-sm text-slate-600">{order.shopifyId ? "Shopify" : order.id.startsWith("web_") ? "متجر Auraic" : "طلب يدوي"} · {order.manualStatus ? manualLabels[order.manualStatus] ?? order.manualStatus : fulfillmentLabels[order.fulfillmentStatus ?? ""] ?? order.fulfillmentStatus ?? "حالة الشحن غير محددة"} · {financialLabels[order.financialStatus ?? ""] ?? order.financialStatus ?? "حالة الدفع غير محددة"}</p>
+                <div className="grid gap-2 rounded-xl bg-slate-50 p-4 text-sm sm:grid-cols-2"><p><span className="text-slate-500">العميل: </span>{order.customerRef || "غير متاح"}</p><p><span className="text-slate-500">الهاتف: </span>{order.customerPhone || "غير متاح"}</p><p className="break-words sm:col-span-2"><span className="text-slate-500">العنوان: </span>{order.customerAddress || "غير متاح"}</p>{order.manualStatus && <><p><span className="text-slate-500">الديبوزت: </span>{Number(order.depositAmount).toFixed(2)} {order.currency}</p><p><span className="text-slate-500">المتبقي عند التسليم: </span>{order.manualStatus === "DELIVERED" || order.manualStatus === "RETURNED" ? "0.00" : Math.max(0, Number(order.total ?? 0) - Number(order.depositAmount)).toFixed(2)} {order.currency}</p></>}</div>
+                <p className="text-sm text-slate-600">الإجمالي: <strong className="text-slate-900">{Number(order.total ?? 0).toFixed(2)} {order.currency}</strong> · صافي: {Number(order.netSales ?? 0).toFixed(2)} {order.currency}</p>
+                <p className="mb-2 text-xs font-semibold text-slate-500">بنود الطلب ({order.items.length})</p>
+                <div className="flex flex-wrap gap-2">{order.items.map(item => <span key={item.id} className="rounded-lg bg-slate-50 px-3 py-1.5 text-xs text-slate-700">{item.title} × {Number(item.quantity)} <span className="text-slate-400">· {item.consumptionStatus}</span></span>)}</div>
+                <Link href={`/dashboard/consumption?orderId=${order.id}`} className="mt-4 inline-block text-sm font-medium text-[#514b8c] hover:underline">عرض الاستهلاك ←</Link>
+                {order.shopifyId && can(session.role, "orders.write") && <ShopifyOrderActions orderId={order.id} stage={order.shopifyStage} fulfillmentStatus={order.fulfillmentStatus} missingScopes={(order.shopifyStage === "SHIPPING" ? ["write_fulfillments"] : SHOPIFY_FULFILLMENT_SCOPES.slice(0, 2)).filter(scope => !hasShopifyScope(grantedScopes, scope))} />}
+                {order.manualStatus && can(session.role, "orders.write") && <ManualOrderActions orderId={order.id} status={order.manualStatus as ManualOrderStatus} canReturn={["returns.write", "expenses.write", "inventory.write"].every(permission => can(session.role, permission))} />}
+              </div>
+            </details>
+          ))}
+        </div>
+      ) : <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center"><div className="text-4xl text-[#c4a265]">◫</div><h2 className="mt-3 text-xl font-semibold">{q ? "لا توجد نتائج لهذا الرقم" : "لا توجد طلبات بعد"}</h2><p className="mx-auto mt-2 max-w-lg text-sm leading-7 text-slate-500">{q ? "جرّب رقم طلب آخر أو امسح البحث." : "سجّل أول بيع يدوي من الزر بالأعلى، أو اربط Shopify لاستيراد الطلبات."}</p>{q && <Link className="mt-5 inline-block text-sm font-semibold text-[#514b8c] underline" href="/dashboard/orders">عرض كل الطلبات</Link>}</div>}
+      {(page > 1 || hasMore) && <nav aria-label="صفحات الطلبات" className="flex items-center justify-center gap-3 text-sm">{page > 1 && <Link href={pageUrl(page - 1)} className="rounded-lg border bg-white px-4 py-2">السابق</Link>}<span>صفحة {page}</span>{hasMore && <Link href={pageUrl(page + 1)} className="rounded-lg border bg-white px-4 py-2">التالي</Link>}</nav>}
+    </main>
+  );
+}
