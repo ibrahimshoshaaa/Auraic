@@ -9,6 +9,11 @@ const schema = z.object({
   requestId: z.string().uuid(),
   name: z.string().trim().min(1).max(200),
   price: z.number().finite().positive().max(1000000),
+  storefrontDescription: z.string().trim().max(4000).default(""),
+  storefrontCategory: z.string().trim().min(1).max(80).default("العطور"),
+  storefrontImages: z.array(z.string().url().refine(url => url.startsWith("https://"))).max(8).default([]),
+  storefrontPublished: z.boolean().default(false),
+  storefrontFeatured: z.boolean().default(false),
   materials: z.array(z.object({ materialId: z.string().min(1), quantity: z.number().finite().positive().max(10000000) })).min(1).max(30),
 });
 
@@ -31,7 +36,7 @@ export async function POST(req: NextRequest) {
     let result;
     try {
       result = await db.$transaction(async (tx) => {
-      const product = await tx.product.create({ data: { id: productId, storeId: session.storeId, title: input.name, status: "ACTIVE" } });
+      const product = await tx.product.create({ data: { id: productId, storeId: session.storeId, title: input.name, status: "ACTIVE", storefrontDescription: input.storefrontDescription, storefrontCategory: input.storefrontCategory, storefrontImages: input.storefrontImages, storefrontPublished: input.storefrontPublished, storefrontFeatured: input.storefrontFeatured } });
       const variant = await tx.productVariant.create({ data: { storeId: session.storeId, productId: product.id, title: input.name, price: new Prisma.Decimal(Math.round(input.price * 100)).div(100) } });
       const recipe = await tx.recipe.create({ data: { storeId: session.storeId, variantId: variant.id, name: input.name } });
       await tx.recipeVersion.create({ data: { storeId: session.storeId, recipeId: recipe.id, version: 1, isCurrent: true, items: { create: input.materials.map((item) => ({ materialId: item.materialId, quantity: item.quantity, unit: units.get(item.materialId)! })) } } });
