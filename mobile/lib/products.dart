@@ -6,14 +6,13 @@ import 'recipes.dart';
 import 'ui.dart';
 
 class ProductsPage extends StatelessWidget {
-  const ProductsPage({required this.api, required this.canWrite, required this.canShopify, super.key});
+  const ProductsPage({required this.api, required this.canWrite, super.key});
   final ErpApi api;
   final bool canWrite;
-  final bool canShopify;
 
   @override
   Widget build(BuildContext context) => DataView(api: api, path: '/api/products',
-    title: 'المنتجات', subtitle: 'الأحجام والوصفات وربط Shopify', icon: Icons.inventory_2_outlined,
+    title: 'المنتجات', subtitle: 'الأحجام والوصفات والنشر في المتجر', icon: Icons.inventory_2_outlined,
     action: canWrite ? (context, reload) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       SizedBox(height: 52, child: FilledButton.icon(onPressed: () async {
         final saved = await openPage<bool>(context, SimpleProductPage(api: api));
@@ -35,10 +34,10 @@ class ProductsPage extends StatelessWidget {
         fontSize: 17, fontWeight: FontWeight.w800)),
       subtitle: Padding(padding: const EdgeInsets.only(top: 6), child: Text(
         '${(product['variants'] as List?)?.length ?? 0} أحجام · '
-        '${product['shopifyId'] == null ? 'محلي' : 'مرتبط بـ Shopify'}')),
+        '${product['storefrontPublished'] == true ? 'منشور في المتجر' : 'غير منشور'}')),
       trailing: const Icon(Icons.chevron_left, color: appNavy),
       onTap: () async { await openPage(context, ProductDetail(api: api,
-        product: product, canWrite: canWrite, canShopify: canShopify)); reload(); },
+        product: product, canWrite: canWrite)); reload(); },
     )));
 }
 
@@ -189,11 +188,10 @@ class _ProductFormState extends State<ProductForm> {
 
 class ProductDetail extends StatefulWidget {
   const ProductDetail({required this.api, required this.product,
-    required this.canWrite, required this.canShopify, super.key});
+    required this.canWrite, super.key});
   final ErpApi api;
   final Json product;
   final bool canWrite;
-  final bool canShopify;
   @override
   State<ProductDetail> createState() => _ProductDetailState();
 }
@@ -204,10 +202,7 @@ class _ProductDetailState extends State<ProductDetail> {
   void reload() => setState(() => detail = fetch());
 
   Future<void> archive(Json product) async {
-    final linked = product['shopifyId'] != null;
-    if (!await confirm(context, linked
-      ? 'إخفاء المنتج من ERP ومن الطلبات الجديدة؟ سيظل منشورًا في Shopify حتى توقف نشره من المتجر.'
-      : 'إخفاء المنتج من القائمة والطلبات الجديدة؟ ستبقى بيانات الطلبات السابقة محفوظة.')) return;
+    if (!await confirm(context, 'إخفاء المنتج من القائمة والطلبات الجديدة؟ ستبقى بيانات الطلبات السابقة محفوظة.')) return;
     try {
       await perform(context, () => widget.api.delete('/api/products/${product['id']}'),
         success: 'تمت أرشفة المنتج');
@@ -232,20 +227,12 @@ class _ProductDetailState extends State<ProductDetail> {
         const Text('حالة المنتج', style: TextStyle(fontSize: 16,
           fontWeight: FontWeight.w800, color: appInk)),
         const SizedBox(height: 10),
-        StatusPill(label: product['shopifyId'] == null ? 'محلي · غير منشور' :
-          'مرتبط بـ Shopify', color: product['shopifyId'] == null ? appMuted : appNavy),
+        StatusPill(label: product['storefrontPublished'] == true ? 'منشور في المتجر' : 'غير منشور', color: product['storefrontPublished'] == true ? appNavy : appMuted),
         const SizedBox(height: 8),
         Text('${(product['variants'] as List).length} أحجام',
           style: const TextStyle(color: appMuted)),
       ]))),
       const SizedBox(height: 14),
-      if (widget.canShopify && product['shopifyId'] == null) SizedBox(
-        width: double.infinity, child: FilledButton.icon(
-        onPressed: () async {
-          if (!await confirm(context, 'نشر المنتج في Shopify؟ الخدمة تدعم منتجًا بحجم واحد.')) return;
-          try { await perform(context, () => widget.api.post('/api/products/${product['id']}/publish-shopify', {})); reload(); }
-          catch (_) { /* Error shown by helper. */ }
-        }, icon: const Icon(Icons.cloud_upload_outlined), label: const Text('نشر في Shopify'))),
       const SizedBox(height: 20),
       const Text('الأحجام والوصفات', style: TextStyle(fontSize: 19,
         fontWeight: FontWeight.w800, color: appInk)),

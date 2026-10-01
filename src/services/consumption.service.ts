@@ -2,58 +2,7 @@ import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { getSetting } from "@/lib/settings";
 
-/**
- * Chunk 5 — Consumption Engine (spec §24–§28).
- *
- * The business does not pre-manufacture finished products; a product is
- * "made" — and its recipe materials consumed — only when an order reaches
- * the store's configured trigger point. This module owns that decision and
- * the atomic ledger side-effects, per order line item:
- *
- *   resolve variant → resolve current recipe version → calculate required
- *   quantities → validate stock per the negative-stock policy → write
- *   Consumption + ConsumptionItem + InventoryTransaction + balance update,
- *   all in one DB transaction (spec §27).
- *
- * It is called automatically from order-sync.service.ts every time an order
- * snapshot is upserted (initial sync, manual resync, or any order/refund
- * webhook), and can be re-run manually via POST /api/orders/[id]/consume —
- * both paths funnel through `processOrderConsumption` below, so there is
- * exactly one code path that ever creates a Consumption record.
- *
- * ── Idempotency ──────────────────────────────────────────────────────────
- * `Consumption.orderItemId` is unique. Once an order line has a Consumption
- * row, `consumptionStatus` is "CONSUMED" and it is never revisited — a
- * re-sync, a duplicate webhook delivery, or a manual retry all no-op for
- * that line. This is a second, independent idempotency layer on top of
- * WebhookEvent's (storeId, eventId) guard (spec §28): even if consumption
- * were ever triggered from a path that bypassed the webhook table, it still
- * cannot double-consume a given order line.
- *
- * ── Assumptions documented per spec §5.14 / §79.22 ──────────────────────
- * 1. ORDER_PAID is interpreted as `Order.financialStatus === "PAID"` exactly
- *    (Shopify's OrderDisplayFinancialStatus enum). PARTIALLY_PAID orders do
- *    not trigger consumption under this setting — the spec does not define
- *    partial-payment behaviour, and treating a partial payment as "paid in
- *    full" for material-consumption purposes seemed the riskier default.
- * 2. RecipeItem.quantity/unit is assumed to already be expressed in the
- *    target Material's base unit — no unit conversion is performed. This
- *    mirrors the same assumption already implicit in
- *    recipe.service.ts's cost calculation (Chunk 3).
- * 3. Consumption is one-directional in this chunk: if an order's status
- *    later regresses (e.g. voided after being marked paid), already-created
- *    Consumption records are not reversed here. Returning materials to
- *    stock for a cancelled/returned order is Chunk 6's return-restocking
- *    flow (spec §32), which restocks based on the returned item's
- *    condition rather than simply undoing this chunk's ledger entries.
- * 4. Consumption is processed per order LINE ITEM, each in its own DB
- *    transaction — not one giant transaction for the whole order. Spec §27
- *    lists a per-order-shaped flow, but committing atomically per line
- *    means one line item with a missing recipe (a visible, correctable
- *    operational error — spec §23) never blocks material consumption for
- *    the order's other, correctly-mapped line items. Each line's own
- *    multi-material consumption remains fully atomic.
- */
+
 
 export type ConsumptionStatus =
   | "PENDING" // trigger not met yet, or not attempted
@@ -95,16 +44,7 @@ function round(n: number): number {
   return Math.round(n * 1e6) / 1e6;
 }
 
-/**
- * Attempts consumption for every eligible (non-terminal) line item on an
- * order. Safe to call any number of times for the same order — items
- * already CONSUMED or NO_VARIANT are skipped without touching the DB.
- *
- * Returns a summary rather than throwing on a per-line failure — a single
- * bad line item (missing recipe, insufficient stock) must not prevent the
- * rest of the order's lines from being processed or prevent the caller
- * (order sync / webhook handling) from completing successfully.
- */
+
 export async function processOrderConsumption(
   storeId: string,
   orderId: string,
@@ -156,11 +96,7 @@ export async function processOrderConsumption(
   return { triggered: true, consumed, skipped, failed };
 }
 
-/**
- * Resolves and consumes materials for a single order line item. Never
- * throws — always leaves the item in a terminal-for-now status and returns
- * it, so callers (including the batch loop above) can proceed unconditionally.
- */
+
 export async function processOrderItemConsumption(
   storeId: string,
   orderItemId: string,
@@ -376,7 +312,7 @@ export async function listConsumption(
   });
 }
 
-/** Order lines with a real, actionable consumption problem (spec §23). */
+
 export async function listOrderItemsNeedingAttention(storeId: string, limit = 50) {
   return db.orderItem.findMany({
     where: {

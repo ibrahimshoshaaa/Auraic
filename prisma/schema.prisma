@@ -28,8 +28,6 @@ enum Role {
 model Store {
   id                         String              @id @default(cuid())
   name                       String
-  shopifyShopDomain          String?             @unique
-  encryptedShopifyAccessToken String?
   status                     StoreStatus         @default(ACTIVE)
   currency                   String              @default("EGP")
   timezone                   String              @default("Africa/Cairo")
@@ -40,10 +38,6 @@ model Store {
   mobileSessions             MobileSession[]
   settings                   Setting[]
   auditLogs                  AuditLog[]
-  shopifyConnection          ShopifyConnection?
-  webhookEvents              WebhookEvent[]
-  syncJobs                   SyncJob[]
-  syncState                  SyncState?
   products                   Product[]
   productVariants             ProductVariant[]
   materials                  Material[]
@@ -128,75 +122,9 @@ model AuditLog {
   @@index([entity, entityId])
 }
 
-model ShopifyConnection {
-  id                String   @id @default(cuid())
-  storeId           String   @unique
-  shopDomain        String
-  shopifyShopId     String?
-  apiVersion        String?
-  scope             String?
-  connectedAt       DateTime?
-  lastSyncAt        DateTime?
-  webhooksRegisteredAt DateTime?
-  status            String   @default("DISCONNECTED")
-  lastError         String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  store             Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-}
-
-model WebhookEvent {
-  id             String   @id @default(cuid())
-  storeId        String
-  eventId        String
-  topic          String
-  payload       Json
-  status         String   @default("RECEIVED")
-  processedAt   DateTime?
-  errorMessage  String?
-  createdAt     DateTime @default(now())
-
-  store         Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-
-  @@unique([storeId, eventId])
-  @@index([storeId, createdAt])
-  @@index([storeId, status])
-}
-
-model SyncJob {
-  id          String    @id @default(cuid())
-  storeId     String
-  type        String
-  status      String    @default("PENDING")
-  cursor      String?
-  startedAt   DateTime?
-  finishedAt  DateTime?
-  error       String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  store       Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
-
-  @@index([storeId, createdAt])
-}
-
-model SyncState {
-  id              String    @id @default(cuid())
-  storeId         String    @unique
-  lastSuccessfulAt DateTime?
-  lastAttemptAt   DateTime?
-  status          String    @default("IDLE")
-  lastError       String?
-  updatedAt       DateTime  @updatedAt
-
-  store           Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
-}
-
 model Product {
   id          String           @id @default(cuid())
   storeId     String
-  shopifyId   String?
   title       String
   handle      String?
   storefrontPublished Boolean @default(false)
@@ -211,7 +139,6 @@ model Product {
   store       Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
   variants    ProductVariant[]
 
-  @@unique([storeId, shopifyId])
   @@index([storeId, title])
 }
 
@@ -219,7 +146,6 @@ model ProductVariant {
   id             String         @id @default(cuid())
   storeId        String
   productId      String
-  shopifyId      String?
   title          String
   sku            String?
   price          Decimal        @db.Decimal(18, 4)
@@ -233,7 +159,6 @@ model ProductVariant {
   orderItems     OrderItem[]
   consumption    Consumption[]
 
-  @@unique([storeId, shopifyId])
   @@index([storeId, productId])
   @@index([storeId, sku])
 }
@@ -450,7 +375,6 @@ model Return {
   id          String       @id @default(cuid())
   storeId     String
   orderId     String
-  shopifyId   String?
   status      String
   totalAmount Decimal?     @db.Decimal(18, 4)
   returnCost  Decimal      @db.Decimal(18, 4)
@@ -464,7 +388,6 @@ model Return {
   processedAt DateTime?
   reason      String?
 
-  @@unique([storeId, shopifyId])
   @@index([storeId, createdAt])
 }
 
@@ -522,7 +445,6 @@ model Expense {
 model Order {
   id              String      @id @default(cuid())
   storeId         String
-  shopifyId       String?
   orderNumber     String?
   financialStatus String?
   fulfillmentStatus String?
@@ -539,7 +461,6 @@ model Order {
   customerAddress String?
   depositAmount   Decimal     @default(0) @db.Decimal(18, 4)
   manualStatus    String?
-  shopifyStage    String?
   occurredAt      DateTime
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -549,14 +470,12 @@ model Order {
   consumptions    Consumption[]
   returns         Return[]
 
-  @@unique([storeId, shopifyId])
   @@index([storeId, occurredAt])
 }
 
 model OrderItem {
   id              String        @id @default(cuid())
   orderId         String
-  shopifyLineId   String?
   variantId       String?
   title           String
   sku             String?
@@ -575,7 +494,6 @@ model OrderItem {
   returnItems     ReturnItem[]
   consumption     Consumption?
 
-  @@unique([orderId, shopifyLineId])
   @@index([orderId])
   @@index([orderId, consumptionStatus])
   @@index([consumptionStatus])

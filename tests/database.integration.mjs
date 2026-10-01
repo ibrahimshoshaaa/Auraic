@@ -4,21 +4,21 @@ import { PrismaClient } from '@prisma/client';
 
 const db = new PrismaClient();
 
-test('store isolation, unique Shopify IDs and transaction rollback in PostgreSQL', async () => {
+test('store isolation, primary key uniqueness and transaction rollback in PostgreSQL', async () => {
   const first = await db.store.create({ data: { name: 'CI A' } });
   const second = await db.store.create({ data: { name: 'CI B' } });
   try {
     const order = await db.order.create({ data: {
-      storeId: first.id, shopifyId: 'gid://shopify/Order/ci-1', currency: 'EGP',
+      storeId: first.id, id: 'ci-order-' + first.id, currency: 'EGP',
       total: 100, refunded: 20, netSales: 80, occurredAt: new Date(),
     } });
     assert.equal((await db.order.findMany({ where: { storeId: second.id } })).length, 0);
     assert.equal(Number(order.netSales), 80);
     await assert.rejects(db.order.create({ data: {
-      storeId: first.id, shopifyId: 'gid://shopify/Order/ci-1', currency: 'EGP', occurredAt: new Date(),
+      storeId: first.id, id: 'ci-order-' + first.id, currency: 'EGP', occurredAt: new Date(),
     } }), /Unique constraint/);
     await db.order.create({ data: {
-      storeId: second.id, shopifyId: 'gid://shopify/Order/ci-1', currency: 'EGP', occurredAt: new Date(),
+      storeId: second.id, id: 'ci-order-' + second.id, currency: 'EGP', occurredAt: new Date(),
     } });
     await assert.rejects(db.$transaction(async tx => {
       await tx.expenseCategory.create({ data: { storeId: first.id, name: 'Should roll back' } });

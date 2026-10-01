@@ -45,7 +45,7 @@ export async function DELETE(
     const { id } = await params;
     const product = await db.product.findFirst({
       where: { id, storeId: getStoreId(session), ...activeProductStatus },
-      select: { id: true, shopifyId: true },
+      select: { id: true },
     });
     if (!product) return NextResponse.json({ error: "المنتج غير موجود" }, { status: 404 });
     await db.$transaction(async (tx) => {
@@ -53,10 +53,9 @@ export async function DELETE(
       await tx.auditLog.create({ data: {
         storeId: getStoreId(session), userId: session.userId,
         action: "ARCHIVE", entity: "Product", entityId: id,
-        metadata: { shopifyId: product.shopifyId },
       } });
     });
-    return NextResponse.json({ data: { archived: true, shopifyStillPublished: !!product.shopifyId } });
+    return NextResponse.json({ data: { archived: true } });
   } catch (err) {
     if (err instanceof Error && err.message === "UNAUTHORIZED")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

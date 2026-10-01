@@ -16,7 +16,6 @@ const nav = [
   { label: "الإعدادات", href: "/dashboard/settings", mark: "⚙" },
   { label: "إدارة المتجر", href: "/dashboard/storefront", mark: "♧" },
   { label: "زيارة المتجر", href: "/", mark: "↗" },
-  { label: "Shopify", href: "/dashboard/shopify", mark: "▥" },
 ];
 
 export function NavLinks({ compact = false, canCreateOrder = false }: { compact?: boolean; canCreateOrder?: boolean }) {

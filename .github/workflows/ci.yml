@@ -50,6 +50,8 @@ jobs:
         run: npm test
       - name: Verify PostgreSQL operations
         run: node --test tests/database.integration.mjs
+      - name: Verify upgrade preserves business records
+        run: node --test tests/commerce-removal.integration.mjs
       - name: Check TypeScript
         run: npm run typecheck
       - name: Lint

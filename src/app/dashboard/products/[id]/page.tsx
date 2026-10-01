@@ -4,8 +4,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getProduct } from "@/services/product.service";
 import { AddVariantForm } from "@/components/products/AddVariantForm";
-import { PublishShopifyButton } from "@/components/products/PublishShopifyButton";
-import { db } from "@/lib/db";
 import { ArchiveProductButton } from "@/components/products/ArchiveProductButton";
 
 async function getDevStoreId() {
@@ -25,8 +23,6 @@ export default async function ProductDetailPage({
 
   const product = await getProduct(storeId, id);
   if (!product) notFound();
-  const connection = await db.shopifyConnection.findUnique({ where: { storeId } });
-  const canPublish = connection?.status === "CONNECTED" && Boolean(connection.scope?.split(",").map(scope => scope.trim()).includes("write_products"));
   const session = await requireAuth();
 
   return (
@@ -40,21 +36,11 @@ export default async function ProductDetailPage({
         </Link>
         <div className="mt-2 flex items-center gap-2">
           <h1 className="text-3xl font-bold text-[#191735]">{product.title}</h1>
-          {!product.shopifyId && (
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
-              منتج يدوي
-            </span>
-          )}
         </div>
-        {can(session.role, "products.write") && <div className="mt-4"><ArchiveProductButton productId={product.id} published={Boolean(product.shopifyId)} /></div>}
+        {can(session.role, "products.write") && <div className="mt-4"><ArchiveProductButton productId={product.id} /></div>}
       </div>
 
       <div className="space-y-4">
-        {!product.shopifyId && connection?.status === "CONNECTED" && <div className="rounded-2xl border border-[#e5e4ec] bg-white p-5 shadow-sm">
-          <h2 className="font-semibold">الظهور في Shopify</h2>
-          <p className="mt-1 text-sm text-slate-600">المنتج محفوظ داخل التطبيق فقط. نشره في Shopify يتطلب صلاحية كتابة المنتجات، وبعد النشر تظل الوصفة والخامات مرتبطة بنفس المنتج.</p>
-          <div className="mt-3">{canPublish && can(session.role, "shopify.write") && product.variants.length === 1 ? <PublishShopifyButton productId={product.id} /> : <p className="text-sm text-amber-800">{!canPublish ? "فعّل write_products في إعدادات تطبيق Shopify وحدّث SHOPIFY_SCOPES على Vercel ثم أعد ربط المتجر." : "النشر من هنا متاح للمنتجات ذات الحجم الواحد ومن حساب المالك."}</p>}</div>
-        </div>}
         <div className="rounded-2xl border border-[#e5e4ec] bg-white p-5 shadow-sm sm:p-6">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="font-semibold">المتغيرات (الأحجام)</h2>

@@ -232,12 +232,12 @@ class _ErpHomeState extends State<ErpHome> {
   @override
   Widget build(BuildContext context) {
     const titles = ['الرئيسية', 'الطلبات', 'المخزون', 'المنتجات', 'المصروفات',
-      'المرتجعات', 'الوصفات', 'الاستهلاك', 'التقارير', 'الإعدادات', 'Shopify',
+      'المرتجعات', 'الوصفات', 'الاستهلاك', 'التقارير', 'الإعدادات',
       'المواد الخام', 'الموردون'];
     const icons = [Icons.dashboard_outlined, Icons.receipt_long_outlined,
       Icons.warehouse_outlined, Icons.inventory_2_outlined, Icons.payments_outlined,
       Icons.undo_outlined, Icons.science_outlined, Icons.trending_down_outlined,
-      Icons.bar_chart_outlined, Icons.settings_outlined, Icons.store_outlined,
+      Icons.bar_chart_outlined, Icons.settings_outlined,
       Icons.grain_outlined, Icons.local_shipping_outlined];
     return FutureBuilder<dynamic>(future: account, builder: (context, snapshot) {
       if (!snapshot.hasData) return Scaffold(body: snapshot.hasError
@@ -251,13 +251,13 @@ class _ErpHomeState extends State<ErpHome> {
       final manager = role == 'OWNER' || role == 'MANAGER';
       final owner = role == 'OWNER';
       final visible = [0, 1, 2, if (manager) 3, if (manager) 4, if (manager) 5,
-        if (manager) 6, 7, if (manager) 8, 9, if (owner) 10, 11, 12];
+        if (manager) 6, 7, if (manager) 8, 9, 10, 11];
       Widget body = switch (selected) {
         0 => _Dashboard(api: widget.api, user: user, onSelect: switchTo,
           manager: manager),
         1 => OrdersPage(api: widget.api, canWrite: manager),
         2 => InventoryPage(api: widget.api, canWrite: manager),
-        3 => ProductsPage(api: widget.api, canWrite: manager, canShopify: owner),
+        3 => ProductsPage(api: widget.api, canWrite: manager),
         4 => ExpensesPage(api: widget.api, canWrite: manager),
         5 => ReturnsPage(api: widget.api, canWrite: manager),
         6 => RecipesPage(api: widget.api, canWrite: manager),
@@ -266,8 +266,7 @@ class _ErpHomeState extends State<ErpHome> {
         9 => SettingsPage(api: widget.api, isOwner: owner,
           onAccount: () => openPage(context, AccountPage(api: widget.api,
             isOwner: owner, onPasswordChanged: widget.onLogout))),
-        10 => ShopifyPage(api: widget.api),
-        11 => MaterialsPage(api: widget.api, canWrite: manager),
+        10 => MaterialsPage(api: widget.api, canWrite: manager),
         _ => SuppliersPage(api: widget.api, canWrite: manager),
       };
       return Scaffold(
