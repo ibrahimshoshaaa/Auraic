@@ -1,0 +1,4 @@
+import Image from "next/image";
+export function RouteLoading() {
+  return <div className="shop-route-loading" role="status" aria-label="Loading Auraic" aria-live="polite"><span className="shop-loading-bar"/><div className="shop-loading-brand"><Image src="/auraic-logo.jpg" alt="Auraic" width={220} height={96} priority/><span className="shop-loading-pulse"/></div><div className="shop-loading-content" aria-hidden="true"><div className="shop-shimmer shop-loading-title"/><div className="shop-shimmer shop-loading-subtitle"/><div className="shop-loading-grid">{[0,1,2,3].map(i => <div key={i}><div className="shop-shimmer shop-loading-image"/><div className="shop-shimmer shop-loading-line"/></div>)}</div></div></div>;
+}

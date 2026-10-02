@@ -8,7 +8,7 @@ import { PrismaClient } from '@prisma/client';
 const db = new PrismaClient();
 async function freePort() { const server = createServer(); await new Promise(resolve => server.listen(0, '127.0.0.1', resolve)); const port = server.address().port; await new Promise(resolve => server.close(resolve)); return port; }
 
-test('public orders validate server prices, tenant, publication and recipe; retries create one unpaid order', { timeout: 90000 }, async () => {
+test('public orders validate server prices, tenant, publication and recipe; retries create one unpaid order', { timeout: 180000 }, async () => {
   const shop = await db.store.create({ data: { name: 'Auraic checkout test' } });
   const other = await db.store.create({ data: { name: 'Unrelated shop' } });
   const port = await freePort(); const url = `http://127.0.0.1:${port}`;
@@ -124,6 +124,43 @@ test('public orders validate server prices, tenant, publication and recipe; retr
     const homeCollections = await (await fetch(url)).text();
     assert.ok(homeCollections.indexOf('id="offers"') < homeCollections.indexOf('id="bestsellers"'));
     assert.ok(homeCollections.indexOf('id="bestsellers"') < homeCollections.indexOf('id="products"'));
+    if (process.env.STOREFRONT_BROWSER_TESTS === '1') {
+      const { chromium } = await import('playwright');
+      const { mkdir } = await import('node:fs/promises');
+      await mkdir('artifacts', { recursive: true });
+      const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
+      let release; const gate = new Promise(resolve => release = resolve);
+      try {
+        const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+        const errors = []; page.on('pageerror', error => errors.push(error.message));
+        await page.route(`**/products/${managedId}*`, async route => { if (route.request().headers().rsc === '1') await gate; await route.continue(); });
+        await page.goto(`${url}/products?audience=men`);
+        await page.waitForFunction(() => !document.querySelector('.shop-favorite')?.disabled);
+        assert.match(await page.locator('h1').innerText(), /FRAGRANCES\s+FOR MEN/);
+        assert.equal(await page.locator('.shop-product-card').count(), 1);
+        await page.screenshot({ path: 'artifacts/navigation-men.png', fullPage: true });
+        await page.getByRole('combobox', { name: 'Gender', exact: true }).selectOption('women');
+        assert.match(await page.locator('h1').innerText(), /FOR WOMEN/);
+        assert.equal(await page.locator('.shop-product-card').count(), 1, 'unisex belongs in women too');
+        await page.getByRole('switch').click();
+        assert.equal(await page.locator('.shop-product-notes').innerText(), 'Oud description');
+        await page.getByRole('combobox', { name: 'Size', exact: true }).selectOption('100 ml');
+        assert.equal(await page.locator('.shop-product-card').count(), 1);
+        await page.getByRole('button', { name: 'CLEAR ALL', exact: true }).click();
+        assert.match(await page.locator('h1').innerText(), /ALL\s+FRAGRANCES/);
+        await page.waitForURL(`${url}/products`);
+        await page.getByRole('button', { name: /FILTER/ }).click();
+        assert.equal(await page.locator('#collection-filters').isVisible(), false);
+        await page.locator('.shop-product-card').click({ noWaitAfter: true });
+        await page.locator('.shop-route-loading').first().waitFor({ state: 'visible' });
+        await page.screenshot({ path: 'artifacts/navigation-loader.png' });
+        release();
+        await page.waitForURL(`${url}/products/${managedId}`);
+        await page.locator('.shop-route-loading').waitFor({ state: 'hidden' });
+        assert.equal(await page.locator('.shop-detail-copy h1').innerText(), 'Oud');
+        assert.deepEqual(errors, []);
+      } finally { release(); await browser.close(); }
+    }
     const details = await (await fetch(`${url}/products/${managedId}`)).text();
     assert.ok(details.includes('30 ml') && details.includes('100 ml'));
     const checkout = await post({ ...order, requestId: randomUUID(), items: [{ variantId: managed.variants[0].id, quantity: 1 }], expectedTotalCents: 49500 });
