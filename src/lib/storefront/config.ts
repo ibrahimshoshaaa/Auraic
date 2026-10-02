@@ -17,7 +17,9 @@ export const shopSettingsSchema = z.object({
   menCollectionLabel: z.string().trim().min(1).max(40).default("SHOP FOR MEN"),
   womenCollectionLabel: z.string().trim().min(1).max(40).default("SHOP FOR WOMEN"),
   featuredEyebrow: z.string().trim().max(80).default("CHOSEN BY AURAIC"),
-  featuredTitle: z.string().trim().min(1).max(120).default("Hand-picked\nby Auraic"),
+  featuredTitle: z.string().trim().min(1).max(120).default("Best Sellers"),
+  offersTitle: z.string().trim().min(1).max(120).default("Offers"),
+  allProductsTitle: z.string().trim().min(1).max(120).default("All Products"),
   storyEyebrow: z.string().trim().max(80).default("DESIGNED TO BE FELT"),
   storyTitle: z.string().trim().min(1).max(160).default("More than a fragrance.\nA feeling that stays."),
   storyDescription: z.string().trim().max(600).default("Find the fragrance that feels like you. Make your presence unforgettable."),
@@ -34,7 +36,7 @@ export const defaultShopSettings: ShopSettings = {
   enabled: false, announcement: "DESIGNED TO BE FELT, NOT JUST SMELLED",
   heroTitle: "Discover Auraic.\nFind your\nfragrance.", heroSubtitle: "Find the fragrance that feels like you.",
   menCollectionLabel: "SHOP FOR MEN", womenCollectionLabel: "SHOP FOR WOMEN",
-  featuredEyebrow: "CHOSEN BY AURAIC", featuredTitle: "Hand-picked\nby Auraic",
+  featuredEyebrow: "CHOSEN BY AURAIC", featuredTitle: "Best Sellers", offersTitle: "Offers", allProductsTitle: "All Products",
   storyEyebrow: "DESIGNED TO BE FELT", storyTitle: "More than a fragrance.\nA feeling that stays.",
   storyDescription: "Find the fragrance that feels like you. Make your presence unforgettable.", storyButtonLabel: "Find your Auraic",
   heroImages: [], heroMode: "images", heroInterval: 6, heroVideo: "", menCollectionImage: "", womenCollectionImage: "", menCollectionCategory: "رجالي", womenCollectionCategory: "حريمي", whatsapp: "", contactEmail: "", shippingFee: 0, freeShippingFrom: 0,
@@ -60,5 +62,6 @@ export function resolveShopSettings(value: unknown): ShopSettings {
   if (["عطرك…أثرلاينسى", "عطرك...أثرلاينسى"].includes(settings.heroTitle.replace(/[\s\u064B-\u065F]/g, ""))) {
     settings.heroTitle = defaultShopSettings.heroTitle;
   }
+  if (settings.featuredTitle === "Hand-picked\nby Auraic") settings.featuredTitle = "Best Sellers";
   return settings;
 }

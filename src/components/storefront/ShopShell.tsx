@@ -6,9 +6,9 @@ import type { ShopSettings } from "@/lib/storefront/config";
 import { ShopIcon } from "./ShopIcon";
 import { useEffect, useState } from "react";
 
-export function ShopHeader({ announcement, menCategory, womenCategory }: { announcement: string; menCategory: string; womenCategory: string }) {
+export function ShopHeader({ announcement }: { announcement: string; menCategory?: string; womenCategory?: string }) {
   const { lines, favorites } = useCart(); const [open, setOpen] = useState(false); const [searchOpen, setSearchOpen] = useState(false); const [announcementPaused, setAnnouncementPaused] = useState(false);
-  const links = [["/", "Home"], [`/products?category=${encodeURIComponent(menCategory)}`, "Shop for men"], [`/products?category=${encodeURIComponent(womenCategory)}`, "Shop for women"], ["/products", "All fragrances"], ["/favorites", "Wishlist"], ["/contact", "Contact"]];
+  const links = [["/", "Home"], ["/products?audience=men", "Shop for men"], ["/products?audience=women", "Shop for women"], ["/products", "All fragrances"], ["/favorites", "Wishlist"], ["/contact", "Contact"]];
   useEffect(() => {
     if (!open && !searchOpen) return;
     const before = document.body.style.overflow; document.body.style.overflow = "hidden";
