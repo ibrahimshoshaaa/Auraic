@@ -1,4 +1,4 @@
-export type RangeKey = "today" | "yesterday" | "7d" | "30d" | "month" | "lastMonth" | "custom";
+export type RangeKey = "today" | "yesterday" | "7d" | "30d" | "60d" | "month" | "lastMonth" | "custom";
 const day = 86_400_000;
 
 // Convert a local midnight into UTC. Recomputing the offset handles Cairo's
@@ -28,6 +28,7 @@ export function getReportRange(timeZone: string, period: string = "7d", from?: s
   switch (period) {
     case "today": start = end = today; break;
     case "yesterday": start = end = addDays(today, -1); break;
+    case "60d": start = addDays(today, -59); end = today; break;
     case "30d": start = addDays(today, -29); end = today; break;
     case "month": start = `${today.slice(0, 7)}-01`; end = today; break;
     case "lastMonth": { const first = `${today.slice(0, 7)}-01`; end = addDays(first, -1); start = `${end.slice(0, 7)}-01`; break; }

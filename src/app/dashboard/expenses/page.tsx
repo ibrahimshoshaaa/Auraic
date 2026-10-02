@@ -3,7 +3,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-helpers";
 import { can } from "@/lib/rbac";
-import { listExpenses } from "@/services/finance.service";
+import { listExpenses, listExpenseCategories } from "@/services/finance.service";
 import { ExpenseForms } from "@/components/finance/ExpenseForms";
 
 export default async function ExpensesPage({ searchParams }: { searchParams: Promise<{ category?: string; add?: string }> }) {
@@ -12,7 +12,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   const store = await db.store.findUnique({ where: { id: session.storeId } });
   const [expenses, categories] = store ? await Promise.all([
     listExpenses(store.id),
-    db.expenseCategory.findMany({ where: { storeId: store.id, active: true }, orderBy: { name: "asc" } }),
+    listExpenseCategories(store.id),
   ]) : [[], []];
   const { category: requestedCategory, add } = await searchParams;
   // Historical expenses can belong to categories that are no longer active.

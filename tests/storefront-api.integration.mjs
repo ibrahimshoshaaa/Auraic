@@ -113,10 +113,51 @@ test('public orders validate server prices, tenant, publication and recipe; retr
     const savedOrder = await db.order.findFirst({ where: { storeId: shop.id, total: 495 }, include: { items: true } });
     assert.ok(receipt); assert.equal(Number(savedOrder.items[0].originalPrice), 450);
     assert.equal((await post({ ...order, requestId: randomUUID(), items: [{ variantId: managed.variants[1].id, quantity: 1 }], expectedTotalCents: 120000 })).status, 409);
+    // Real preparation snapshots recipe costs. Future purchases must not recost old sales.
+    await db.inventoryBalance.upsert({ where: { materialId: material.id }, create: { storeId: shop.id, materialId: material.id, quantity: 0 }, update: { quantity: 0 } });
+    const purchaseResponse = await fetch(`${url}/api/purchases`, { method: 'POST', headers: adminHeaders,
+      body: JSON.stringify({ materialId: material.id, quantity: 100, amount: 1000, date: '2026-08-01T12:00:00Z' }) });
+    assert.equal(purchaseResponse.status, 201, await purchaseResponse.clone().text());
+    assert.equal(Number((await db.material.findUniqueOrThrow({ where: { id: material.id } })).defaultCost), 10);
+    await db.recipe.updateMany({ where: { storeId: shop.id, variantId: variant.id }, data: { active: true } });
+    for (const date of ['2026-08-10T12:00:00Z', '2026-09-10T12:00:00Z']) {
+      const requestId = randomUUID();
+      const manualResponse = await fetch(`${url}/api/orders/manual`, { method: 'POST', headers: adminHeaders,
+        body: JSON.stringify({ requestId, customerName: 'Profit example', customerPhone: '01011111111', customerAddress: 'Cairo building 10', hasDeposit: false, depositAmount: 0,
+          items: [{ variantId: variant.id, quantity: 1, unitPrice: 450 }] }) });
+      assert.equal(manualResponse.status, 200, await manualResponse.clone().text());
+      const orderId = `manual_${requestId}`;
+      const prepare = await fetch(`${url}/api/orders/${encodeURIComponent(orderId)}/manual-status`, { method: 'POST', headers: adminHeaders, body: JSON.stringify({ status: 'PREPARED' }) });
+      assert.equal(prepare.status, 200, await prepare.clone().text());
+      const consumption = await db.consumption.findUniqueOrThrow({ where: { orderItemId: (await db.orderItem.findFirstOrThrow({ where: { orderId } })).id } });
+      const snapshot = await db.auditLog.findFirstOrThrow({ where: { storeId: shop.id, entity: 'Consumption', entityId: consumption.id, action: 'CREATE' } });
+      assert.equal(snapshot.after.materials[0].unitCost, 10);
+      await db.order.update({ where: { id: orderId }, data: { manualStatus: 'DELIVERED', financialStatus: 'PAID', occurredAt: new Date(date) } });
+    }
+    await db.material.update({ where: { id: material.id }, data: { defaultCost: 999 } });
+    const categories = await (await fetch(`${url}/api/expenses/categories`, { headers: adminHeaders })).json();
+    const social = categories.data.find(c => c.name === 'مصاريف سوشيال ميديا'); assert.ok(social);
+    for (const date of ['2026-08-01T12:00:00Z', '2026-09-01T12:00:00Z']) {
+      const expense = await fetch(`${url}/api/expenses`, { method: 'POST', headers: adminHeaders,
+        body: JSON.stringify({ categoryId: social.id, amount: 10000, date }) });
+      assert.equal(expense.status, 201, await expense.clone().text());
+    }
+    await db.expense.create({ data: { storeId: shop.id, categoryId: social.id, currency: 'USD', amount: 10000, date: new Date('2026-09-01T12:00:00Z') } });
+    const monthReport = await (await fetch(`${url}/api/mobile/home?period=custom&from=2026-08-01&to=2026-08-31`, { headers: adminHeaders })).json();
+    assert.equal(monthReport.data.sales.gross, 450);
+    assert.equal(monthReport.data.profit.recipeCost, 300); assert.equal(monthReport.data.profit.profit, 150);
+    assert.equal(monthReport.data.profit.margin, 33.33); assert.equal(monthReport.data.profit.estimated, false);
+    assert.equal(monthReport.data.roas.spend, 10000);
+    const twoMonths = await (await fetch(`${url}/api/mobile/home?period=custom&from=2026-08-01&to=2026-09-30`, { headers: adminHeaders })).json();
+    assert.equal(twoMonths.data.sales.gross, 900); assert.equal(twoMonths.data.profit.profit, 300);
+    assert.equal(twoMonths.data.roas.spend, 20000); assert.equal(twoMonths.data.roas.ratio, 0.045);
+    const emptyReport = await (await fetch(`${url}/api/mobile/home?period=custom&from=2026-07-01&to=2026-07-31`, { headers: adminHeaders })).json();
+    assert.equal(emptyReport.data.roas.ratio, null); assert.equal(emptyReport.data.profit.margin, null);
   } finally {
     if (child) { child.kill('SIGTERM'); await new Promise(resolve => child.once('exit', resolve)); }
     await db.order.deleteMany({ where: { storeId: { in: [shop.id, other.id] } } });
     await db.recipeItem.deleteMany({ where: { recipeVersion: { storeId: shop.id } } });
+    await db.materialPurchaseItem.deleteMany({ where: { purchase: { storeId: { in: [shop.id, other.id] } } } });
     await db.store.deleteMany({ where: { id: { in: [shop.id, other.id] } } });
   }
 });
