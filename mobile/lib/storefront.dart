@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'api.dart';
 import 'ui.dart';
 
@@ -18,6 +19,11 @@ class _StorefrontPageState extends State<StorefrontPage> {
     final data = json(snapshot.data['data']);
     return ListView(padding: const EdgeInsets.all(16), children: [
       const PageIntro(title: 'إدارة الموقع', subtitle: 'واجهة المتجر والشحن والمنتجات من مكان واحد', icon: Icons.storefront_outlined),
+      const SizedBox(height: 16),
+      Row(children: [Expanded(child: OutlinedButton.icon(onPressed: () async {
+        final opened = await launchUrl(Uri.parse(widget.api.baseUrl).replace(path: '/', query: null, fragment: null), mode: LaunchMode.externalApplication);
+        if (!opened && context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر فتح معاينة المتجر')));
+      }, icon: const Icon(Icons.open_in_new), label: const Text('معاينة المتجر')),), IconButton(onPressed: reload, tooltip: 'تحديث بيانات الموقع', icon: const Icon(Icons.refresh))]),
       const SizedBox(height: 16),
       if (data['linked'] != true) Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [const Text('اضبط STOREFRONT_STORE_ID في Vercel على:'), SelectableText(str(data['storeId']))]))),
       if (data['owner'] == true) StorefrontSettings(key: ValueKey(result), api: widget.api, initial: json(data['settings'])),
@@ -49,6 +55,7 @@ class _StorefrontSettingsState extends State<StorefrontSettings> {
   Widget field(String name, String label, {int lines = 1, bool number = false}) => Padding(padding: const EdgeInsets.only(bottom: 16), child: TextFormField(
     initialValue: name == 'heroImages' ? (settings[name] as List).join('\n') : str(settings[name]), maxLines: lines,
     keyboardType: number ? const TextInputType.numberWithOptions(decimal: true) : lines > 1 ? TextInputType.multiline : TextInputType.text,
+    enabled: !busy,
     decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
     validator: number ? (value) => double.tryParse(value ?? '') == null || double.parse(value!) < 0 ? 'أدخل مبلغًا صحيحًا' : null : null,
     onChanged: (value) => settings[name] = name == 'heroImages' ? value.split('\n').map((v) => v.trim()).where((v) => v.isNotEmpty).toList() : number ? double.tryParse(value) ?? -1 : value));
@@ -67,8 +74,10 @@ class _StorefrontSettingsState extends State<StorefrontSettings> {
   Widget build(BuildContext context) => Form(key: form, child: Column(children: [
     Card(color: appNavy, child: SwitchListTile(title: const Text('استقبال طلبات العملاء', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)), subtitle: const Text('الحالة تتحفظ فورًا', style: TextStyle(color: Colors.white70)), value: settings['enabled'] == true, onChanged: busy ? null : (_) => save(toggle: true))),
     if (message.isNotEmpty) Padding(padding: const EdgeInsets.all(12), child: Text(message, style: TextStyle(color: failed ? Colors.red : Colors.green))),
-    section('التصميم والبانرات', [field('announcement', 'الشريط العلوي'), field('heroTitle', 'عنوان البانر'), field('heroSubtitle', 'وصف البانر', lines: 3), DropdownButtonFormField<String>(initialValue: str(settings['heroMode']).isEmpty ? 'images' : str(settings['heroMode']), decoration: const InputDecoration(labelText: 'نوع الهيرو'), items: const [DropdownMenuItem(value: 'images', child: Text('صور سلايدر')), DropdownMenuItem(value: 'video', child: Text('فيديو'))], onChanged: busy ? null : (value) => settings['heroMode'] = value), const SizedBox(height: 16), field('heroInterval', 'مدة الصورة بالثواني (2–60)', number: true), field('heroVideo', 'رابط فيديو HTTPS مباشر'), field('heroImages', 'روابط صور البانر HTTPS، رابط في كل سطر', lines: 4)]),
-    section('الكولكشن', [field('menCollectionCategory', 'اسم قسم المنتجات الرجالي'), field('menCollectionImage', 'رابط صورة الكولكشن الرجالي HTTPS'), field('womenCollectionCategory', 'اسم قسم المنتجات الحريمي'), field('womenCollectionImage', 'رابط صورة الكولكشن الحريمي HTTPS')]),
+    section('التصميم والبانرات', [field('announcement', 'الشريط العلوي'), field('heroTitle', 'عنوان الهيرو الظاهر للعميل', lines: 3), DropdownButtonFormField<String>(initialValue: str(settings['heroMode']).isEmpty ? 'images' : str(settings['heroMode']), decoration: const InputDecoration(labelText: 'نوع الهيرو'), items: const [DropdownMenuItem(value: 'images', child: Text('صور سلايدر')), DropdownMenuItem(value: 'video', child: Text('فيديو'))], onChanged: busy ? null : (value) => settings['heroMode'] = value), const SizedBox(height: 16), field('heroInterval', 'مدة الصورة بالثواني (2–60)', number: true), field('heroVideo', 'رابط ملف فيديو HTTPS مباشر'), const Text('استخدم ملف MP4 أو WebM مباشر، وليس رابط مشاركة Facebook أو YouTube.'), const SizedBox(height: 16), field('heroImages', 'روابط صور البانر HTTPS، رابط في كل سطر', lines: 4)]),
+    section('زرارا الأقسام داخل الهيرو', [field('menCollectionLabel', 'نص زر الرجال'), field('menCollectionCategory', 'القسم المرتبط بزر الرجال'), field('womenCollectionLabel', 'نص زر السيدات'), field('womenCollectionCategory', 'القسم المرتبط بزر السيدات'), const Text('الصور تأتي من خلفية الهيرو. كل زر يعرض منتجات القسم المسجل هنا فقط.')]),
+    section('المنتجات المختارة', [field('featuredEyebrow', 'النص الصغير فوق المنتجات'), field('featuredTitle', 'عنوان المنتجات المختارة', lines: 2), const Text('زر SHOW NOTES يعرض الوصف المسجل لكل عطر في منتجات المتجر.')]),
+    section('التعريف بالعلامة', [field('storyEyebrow', 'النص الصغير في جزء التعريف'), field('storyTitle', 'عنوان التعريف', lines: 2), field('storyDescription', 'وصف التعريف', lines: 3), field('storyButtonLabel', 'نص زر التعريف')]),
     section('التواصل', [field('whatsapp', 'رقم واتساب'), field('contactEmail', 'بريد التواصل')]),
     section('الشحن والسياسات', [field('shippingFee', 'رسوم الشحن', number: true), field('freeShippingFrom', 'شحن مجاني من (0 لإيقافه)', number: true), field('shippingPolicy', 'سياسة الشحن', lines: 4), field('returnPolicy', 'سياسة الإرجاع', lines: 4)]),
     SizedBox(width: double.infinity, child: FilledButton(onPressed: busy ? null : () => save(), child: Text(busy ? 'جارٍ الحفظ…' : 'حفظ تعديلات الموقع'))),

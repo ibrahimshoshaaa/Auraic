@@ -85,7 +85,7 @@ test('public orders validate server prices, tenant, publication and recipe; retr
     assert.equal((await settingsRequest({ kind: 'availability', data: { enabled: false } })).status, 200);
     assert.equal(JSON.parse((await db.setting.findUnique({ where: { storeId_key: { storeId: shop.id, key: 'storefront' } } })).value).enabled, false);
     assert.equal((await settingsRequest({ kind: 'availability', data: { enabled: true } })).status, 200);
-    const presentation = { heroMode: 'video', heroVideo: 'https://example.com/auraic.mp4', heroInterval: 9, menCollectionCategory: 'رجالي', womenCollectionCategory: 'حريمي', menCollectionImage: 'https://example.com/men.jpg' };
+    const presentation = { heroMode: 'video', heroVideo: 'https://example.com/auraic.mp4', heroInterval: 9, heroTitle: 'Saved hero headline', menCollectionLabel: 'Explore men', womenCollectionLabel: 'Explore women', featuredTitle: 'Our selected fragrances', storyTitle: 'Our Auraic story', menCollectionCategory: 'رجالي', womenCollectionCategory: 'حريمي', menCollectionImage: 'https://example.com/men.jpg' };
     assert.equal((await settingsRequest({ kind: 'settings', data: presentation })).status, 200);
     assert.equal((await settingsRequest({ kind: 'settings', data: { heroInterval: 0 } })).status, 422);
     assert.equal((await settingsRequest({ kind: 'settings', data: { heroVideo: 'javascript:alert(1)' } })).status, 422);
@@ -95,9 +95,10 @@ test('public orders validate server prices, tenant, publication and recipe; retr
     assert.equal(presentationSaved.heroMode, 'video'); assert.equal(presentationSaved.heroInterval, 9);
     assert.equal(presentationSaved.menCollectionImage, presentation.menCollectionImage);
     const homepage = await (await fetch(url)).text();
-    assert.ok(homepage.includes('auraic.mp4')); assert.ok(homepage.includes('SHOP FOR MEN')); assert.ok(homepage.includes('SHOP FOR WOMEN'));
+    assert.ok(homepage.includes('auraic.mp4')); assert.ok(homepage.includes('Explore men')); assert.ok(homepage.includes('Explore women')); assert.ok(homepage.includes('Saved hero headline')); assert.ok(homepage.includes('Our selected fragrances')); assert.ok(homepage.includes('Our Auraic story'));
 
     const initialSettings = (await (await fetch(`${url}/api/admin/storefront`, { headers: adminHeaders })).json()).data.settings;
+    assert.equal(initialSettings.heroTitle, 'Saved hero headline'); assert.equal(initialSettings.menCollectionLabel, 'Explore men'); assert.equal(initialSettings.featuredTitle, 'Our selected fragrances');
     assert.equal((await settingsRequest({ kind: 'settings', data: { ...initialSettings, enabled: true, shippingPolicy: '', returnPolicy: '', whatsapp: '+20 1012345678' } })).status, 200);
     assert.equal(JSON.parse((await db.setting.findUnique({ where: { storeId_key: { storeId: shop.id, key: 'storefront' } } })).value).whatsapp, '201012345678');
     const body = { requestId: randomUUID(), title: 'Oud', category: 'Perfumes', description: 'Oud description', images: [], published: true, featured: false,
