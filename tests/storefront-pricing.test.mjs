@@ -11,3 +11,17 @@ test('free shipping threshold applies to product subtotal, including its exact b
   assert.equal(checkoutTotals([{ price: 250, quantity: 2 }], 50, 500).shippingCents, 0);
   assert.equal(checkoutTotals([{ price: 600, quantity: 1 }], 50, 0).shippingCents, 5000);
 });
+
+test('governorate shipping uses its configured fee and preserves zero and fallback rates', async () => {
+  const { shippingFeeFor, shopSettingsSchema, defaultShopSettings } = await import('../src/lib/storefront/config.ts');
+  const settings = shopSettingsSchema.parse({ ...defaultShopSettings, shippingFee: 60, shippingRates: { 'القاهرة': 60, 'أسوان': 90, 'الجيزة': 0 } });
+  assert.equal(shippingFeeFor(settings, 'أسوان'), 90);
+  assert.equal(shippingFeeFor(settings, 'القاهرة'), 60);
+  assert.equal(shippingFeeFor(settings, 'الجيزة'), 0);
+  assert.equal(shippingFeeFor(settings, 'المنوفية'), 60);
+  assert.equal(checkoutTotals([{ price: 500, quantity: 1 }], shippingFeeFor(settings, 'أسوان'), 0).totalCents, 59000);
+  assert.equal(checkoutTotals([{ price: 1200, quantity: 1 }], shippingFeeFor(settings, 'أسوان'), 1200).shippingCents, 0);
+  assert.equal(shopSettingsSchema.safeParse({ ...settings, shippingRates: { 'unknown': 90 } }).success, false);
+  assert.equal(shopSettingsSchema.safeParse({ ...settings, shippingRates: { 'القاهرة': -1 } }).success, false);
+  assert.deepEqual(shopSettingsSchema.parse(defaultShopSettings).shippingRates, {});
+});

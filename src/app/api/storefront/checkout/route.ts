@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHmac } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { checkoutSchema } from "@/lib/storefront/config";
+import { checkoutSchema, shippingFeeFor } from "@/lib/storefront/config";
 import { checkoutTotals } from "@/lib/storefront/pricing";
 import { getPublicShop } from "@/services/storefront/catalog";
 import { activeProductStatus } from "@/lib/active-product";
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     });
     if (variants.length !== ids.length) return NextResponse.json({ error: "أحد العطور لم يعد متاحًا. راجع السلة." }, { status: 409 });
     const byId = new Map(variants.map(variant => [variant.id, variant]));
-    const totals = checkoutTotals(input.items.map(item => ({ quantity: item.quantity, price: Number(byId.get(item.variantId)!.price) })), shop.settings.shippingFee, shop.settings.freeShippingFrom);
+    const totals = checkoutTotals(input.items.map(item => ({ quantity: item.quantity, price: Number(byId.get(item.variantId)!.price) })), shippingFeeFor(shop.settings, input.governorate), shop.settings.freeShippingFrom);
     if (totals.totalCents !== input.expectedTotalCents) return NextResponse.json({ error: "تغير السعر أو الشحن. حدّث الصفحة لمراجعة الإجمالي قبل التأكيد." }, { status: 409 });
     const decimal = (cents: number) => new Prisma.Decimal(cents).div(100);
     const orderNumber = `A-${input.requestId.slice(0, 12).toUpperCase()}`;

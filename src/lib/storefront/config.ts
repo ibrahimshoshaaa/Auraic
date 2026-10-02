@@ -26,6 +26,7 @@ export const shopSettingsSchema = z.object({
   storyButtonLabel: z.string().trim().min(1).max(60).default("Find your Auraic"),
   whatsapp: z.string().transform(value => { const cleaned = value.replace(/[^0-9]/g, ""); return cleaned.startsWith("01") ? `2${cleaned}` : cleaned.startsWith("0020") ? cleaned.slice(2) : cleaned; }).pipe(z.string().regex(/^$|^20\d{10}$/, "اكتب رقم واتساب مصري صحيح")),
   contactEmail: z.string().trim().pipe(z.union([z.literal(""), z.email("راجع بريد التواصل")])),
+  shippingRates: z.record(z.string(), z.number().finite().min(0).max(10000)).refine(rates => Object.keys(rates).every(name => (governorates as readonly string[]).includes(name)), "راجع اسم المحافظة").default({}),
   shippingFee: z.number().finite().min(0).max(10000),
   freeShippingFrom: z.number().finite().min(0).max(1000000),
   shippingPolicy: z.string().trim().max(5000),
@@ -39,7 +40,7 @@ export const defaultShopSettings: ShopSettings = {
   featuredEyebrow: "CHOSEN BY AURAIC", featuredTitle: "Best Sellers", offersTitle: "Offers", allProductsTitle: "All Products",
   storyEyebrow: "DESIGNED TO BE FELT", storyTitle: "More than a fragrance.\nA feeling that stays.",
   storyDescription: "Find the fragrance that feels like you. Make your presence unforgettable.", storyButtonLabel: "Find your Auraic",
-  heroImages: [], heroMode: "images", heroInterval: 6, heroVideo: "", menCollectionImage: "", womenCollectionImage: "", menCollectionCategory: "رجالي", womenCollectionCategory: "حريمي", whatsapp: "", contactEmail: "", shippingFee: 0, freeShippingFrom: 0,
+  heroImages: [], heroMode: "images", heroInterval: 6, heroVideo: "", menCollectionImage: "", womenCollectionImage: "", menCollectionCategory: "رجالي", womenCollectionCategory: "حريمي", whatsapp: "", contactEmail: "", shippingRates: {}, shippingFee: 0, freeShippingFrom: 0,
   shippingPolicy: "", returnPolicy: "",
 };
 export const productPresentationSchema = z.object({
@@ -67,4 +68,8 @@ export function resolveShopSettings(value: unknown): ShopSettings {
   }
   if (settings.featuredTitle === "Hand-picked\nby Auraic") settings.featuredTitle = "Best Sellers";
   return settings;
+}
+
+export function shippingFeeFor(settings: Pick<ShopSettings, "shippingFee" | "shippingRates">, governorate: string): number {
+  return settings.shippingRates[governorate] ?? settings.shippingFee;
 }
