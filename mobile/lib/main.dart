@@ -10,6 +10,7 @@ import 'orders.dart';
 import 'products.dart';
 import 'recipes.dart';
 import 'ui.dart';
+import 'storefront.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -233,12 +234,12 @@ class _ErpHomeState extends State<ErpHome> {
   Widget build(BuildContext context) {
     const titles = ['الرئيسية', 'الطلبات', 'المخزون', 'المنتجات', 'المصروفات',
       'المرتجعات', 'الوصفات', 'الاستهلاك', 'التقارير', 'الإعدادات',
-      'المواد الخام', 'الموردون'];
+      'المواد الخام', 'الموردون', 'إدارة الموقع'];
     const icons = [Icons.dashboard_outlined, Icons.receipt_long_outlined,
       Icons.warehouse_outlined, Icons.inventory_2_outlined, Icons.payments_outlined,
       Icons.undo_outlined, Icons.science_outlined, Icons.trending_down_outlined,
       Icons.bar_chart_outlined, Icons.settings_outlined,
-      Icons.grain_outlined, Icons.local_shipping_outlined];
+      Icons.grain_outlined, Icons.local_shipping_outlined, Icons.storefront_outlined];
     return FutureBuilder<dynamic>(future: account, builder: (context, snapshot) {
       if (!snapshot.hasData) return Scaffold(body: snapshot.hasError
         ? Column(mainAxisSize: MainAxisSize.min, children: [Text('${snapshot.error}'),
@@ -251,7 +252,7 @@ class _ErpHomeState extends State<ErpHome> {
       final manager = role == 'OWNER' || role == 'MANAGER';
       final owner = role == 'OWNER';
       final visible = [0, 1, 2, if (manager) 3, if (manager) 4, if (manager) 5,
-        if (manager) 6, 7, if (manager) 8, 9, 10, 11];
+        if (manager) 6, 7, if (manager) 8, 9, 10, 11, if (manager) 12];
       Widget body = switch (selected) {
         0 => _Dashboard(api: widget.api, user: user, onSelect: switchTo,
           manager: manager),
@@ -267,6 +268,7 @@ class _ErpHomeState extends State<ErpHome> {
           onAccount: () => openPage(context, AccountPage(api: widget.api,
             isOwner: owner, onPasswordChanged: widget.onLogout))),
         10 => MaterialsPage(api: widget.api, canWrite: manager),
+        12 => StorefrontPage(api: widget.api),
         _ => SuppliersPage(api: widget.api, canWrite: manager),
       };
       return Scaffold(
@@ -439,7 +441,7 @@ class _DashboardState extends State<_Dashboard> {
       final name = str(widget.user['name']).trim();
       final quick = <(String, IconData, VoidCallback)>[
         if (widget.manager) ('منتج جديد', Icons.add_box_outlined,
-          () => addAndRefresh(SimpleProductPage(api: widget.api))),
+          () => addAndRefresh(ProductManagePage(api: widget.api))),
         if (widget.manager) ('إضافة مخزون', Icons.add_home_work_outlined,
           () => addAndRefresh(StockForm(api: widget.api))),
         if (widget.manager) ('إضافة مصروف', Icons.add_card_outlined,

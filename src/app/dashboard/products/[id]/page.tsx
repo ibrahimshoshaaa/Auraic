@@ -3,7 +3,6 @@ import { can } from "@/lib/rbac";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getProduct } from "@/services/product.service";
-import { AddVariantForm } from "@/components/products/AddVariantForm";
 import { ArchiveProductButton } from "@/components/products/ArchiveProductButton";
 
 async function getDevStoreId() {
@@ -37,21 +36,21 @@ export default async function ProductDetailPage({
         <div className="mt-2 flex items-center gap-2">
           <h1 className="text-3xl font-bold text-[#191735]">{product.title}</h1>
         </div>
-        {can(session.role, "products.write") && <div className="mt-4"><ArchiveProductButton productId={product.id} /></div>}
+        {can(session.role, "products.write") && <div className="mt-4"><Link href={`/dashboard/products/${product.id}/edit`} className="ml-3 inline-block rounded-xl bg-[#191735] px-4 py-2.5 text-sm font-semibold text-white">تعديل المنتج والأحجام</Link><ArchiveProductButton productId={product.id} /></div>}
       </div>
 
       <div className="space-y-4">
         <div className="rounded-2xl border border-[#e5e4ec] bg-white p-5 shadow-sm sm:p-6">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="font-semibold">المتغيرات (الأحجام)</h2>
-            <AddVariantForm productId={product.id} />
+            {can(session.role, "products.write") && <Link href={`/dashboard/products/${product.id}/edit`} className="rounded-lg border px-3 py-2 text-sm">إدارة الأحجام والأسعار</Link>}
           </div>
 
           {product.variants.length === 0 ? (
             <p className="text-sm text-gray-400">لا توجد متغيرات بعد</p>
           ) : (
             <div className="space-y-3">
-              {product.variants.map((v) => (
+              {product.variants.filter(v => v.active).map((v) => (
                 <div
                   key={v.id}
                   className="rounded-2xl border border-[#e5e4ec] p-4"
@@ -61,7 +60,7 @@ export default async function ProductDetailPage({
                       <div className="font-medium">{v.title}</div>
                       <div className="text-xs text-gray-500">
                         {v.sku ? `SKU: ${v.sku} · ` : ""}
-                        {Number(v.price).toFixed(2)} EGP
+                        {v.compareAtPrice && <del className="ml-2">{Number(v.compareAtPrice).toFixed(2)}</del>}{Number(v.price).toFixed(2)} EGP
                       </div>
                     </div>
 

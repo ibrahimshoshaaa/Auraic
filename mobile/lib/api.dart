@@ -14,7 +14,7 @@ class ApiException implements Exception {
 class ErpApi {
   ErpApi({http.Client? client}) : _client = client ?? http.Client();
 
-  static const _baseUrl = String.fromEnvironment('API_BASE_URL');
+  static const _baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'https://auraic.vercel.app');
   String get baseUrl => _baseUrl;
   static const _storage = FlutterSecureStorage();
   static const _tokenKey = 'erp_mobile_session';
@@ -70,7 +70,7 @@ class ErpApi {
         : method == 'DELETE'
             ? _client.delete(uri, headers: headers)
             : _client.post(uri, headers: headers, body: jsonEncode(body)))
-        .timeout(Duration(seconds: path.endsWith('/sync') ? 120 : 30));
+        .timeout(const Duration(seconds: 30));
     dynamic decoded;
     try {
       decoded = jsonDecode(utf8.decode(response.bodyBytes));
