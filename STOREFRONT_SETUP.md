@@ -50,3 +50,9 @@ npm run auth:bootstrap-owner
 ## الأحجام والخصومات وإدارة الموبايل
 شغّل Apply production database migrations بعد تحديث الأسعار لإضافة compareAtPrice. إضافة المنتج وتعديله أصبحت تشمل جميع الأحجام وأسعارها ووصفاتها في عملية واحدة. السعر قبل الخصم اختياري ويجب أن يتجاوز سعر البيع.
 إدارة الموقع متاحة من الويب والموبايل. حالة استقبال الطلبات تتحفظ فورًا؛ احفظ تعديلات البانرات والشحن والتواصل بالزر المخصص. رقم واتساب يقبل الصيغة المحلية أو الدولية. في الموبايل تُضاف الصور بروابط HTTPS.
+
+### Fragrance cards and product details
+
+In **Dashboard → Storefront → Store products**, edit each fragrance's description, audience, photos, optional **Inspired by** and **Scent family**. Edit sizes, prices and recipes through the existing **Edit sizes and prices** link. Only active, positive-price sizes with a current recipe appear in the public store. Cards let customers select a size and add it directly to their bag; the detail page has a photo gallery and a mobile quick-add bar. Prices and discounts follow the selected size. Reviews are not displayed until a real review system is available.
+
+Apply migration `20261002183500_product_fragrance_details` with `npx prisma migrate deploy` before deploying this version. It adds two optional text fields with empty defaults and preserves existing products.

@@ -7,5 +7,5 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
   const shop = await getPublicShop(); if (!shop) return null;
   const { id } = await params; const all = await getPublicProducts(shop.id);
   const product = all.find(item => item.id === id); if (!product) notFound();
-  return <main className="shop-section"><p className="shop-breadcrumb"><Link href="/">Home</Link> / <Link href="/products">Fragrances</Link> / {product.name}</p><ProductDetail product={product} enabled={shop.settings.enabled} />{all.length > 1 && <section className="shop-related"><h2>You may also like</h2><div className="shop-product-grid">{all.filter(item => item.id !== id).slice(0, 4).map(item => <ProductCard key={item.id} product={item} />)}</div></section>}</main>;
+  return <main className="shop-section"><p className="shop-breadcrumb"><Link href="/">Home</Link> / <Link href="/products">Fragrances</Link> / {product.name}</p><ProductDetail product={product} enabled={shop.settings.enabled} />{all.length > 1 && <section className="shop-related"><h2>You may also like</h2><div className="shop-product-grid">{all.filter(item => item.id !== id).slice(0, 4).map(item => <ProductCard key={item.id} product={item} enabled={shop.settings.enabled} />)}</div></section>}</main>;
 }

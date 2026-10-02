@@ -45,6 +45,8 @@ export const defaultShopSettings: ShopSettings = {
 export const productPresentationSchema = z.object({
   id: z.string().min(1), published: z.boolean(), featured: z.boolean(),
   description: z.string().trim().max(10000), category: z.string().trim().min(1).max(80),
+  inspiredBy: z.string().trim().max(160).default(""),
+  scentFamily: z.string().trim().max(80).default(""),
   images: z.array(image).max(8),
 });
 export const governorates = ["القاهرة", "الجيزة", "الإسكندرية", "القليوبية", "المنوفية", "الغربية", "الدقهلية", "الشرقية", "البحيرة", "كفر الشيخ", "دمياط", "بورسعيد", "الإسماعيلية", "السويس", "الفيوم", "بني سويف", "المنيا", "أسيوط", "سوهاج", "قنا", "الأقصر", "أسوان", "مطروح", "البحر الأحمر", "الوادي الجديد", "شمال سيناء", "جنوب سيناء"] as const;

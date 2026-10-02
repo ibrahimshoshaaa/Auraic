@@ -33,6 +33,7 @@ export async function PUT(request: NextRequest) {
       const changed = await db.product.updateMany({ where: { id: data.id, storeId: session.storeId }, data: {
         storefrontPublished: data.published, storefrontDescription: data.description, storefrontCategory: data.category,
         storefrontImages: data.images, storefrontFeatured: data.featured,
+        storefrontInspiredBy: data.inspiredBy, storefrontScentFamily: data.scentFamily,
       } });
       if (!changed.count) return NextResponse.json({ error: "المنتج غير موجود" }, { status: 404 });
     } else return NextResponse.json({ error: "طلب غير صالح" }, { status: 422 });
