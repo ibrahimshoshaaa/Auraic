@@ -31,3 +31,11 @@ test('fragrance metadata is optional for older clients and validates new admin v
   assert.equal(productPresentationSchema.safeParse({ ...old, inspiredBy: 'x'.repeat(161) }).success, false);
   assert.equal(productPresentationSchema.safeParse({ ...old, scentFamily: 'x'.repeat(81) }).success, false);
 });
+
+test('checkout accepts optional order notes and limits their size', async () => {
+  const { checkoutSchema } = await import('../src/lib/storefront/config.ts');
+  const input = { requestId: '11111111-1111-4111-8111-111111111111', name: 'Customer', expectedTotalCents: 10000, phone: '01012345678', governorate: 'القاهرة', address: 'Building 12, Main Street', items: [{ variantId: 'variant', quantity: 1 }] };
+  assert.equal(checkoutSchema.parse(input).note, '');
+  assert.equal(checkoutSchema.parse({ ...input, note: '  Call before delivery  ' }).note, 'Call before delivery');
+  assert.equal(checkoutSchema.safeParse({ ...input, note: 'x'.repeat(501) }).success, false);
+});
