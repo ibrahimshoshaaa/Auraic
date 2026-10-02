@@ -156,6 +156,7 @@ test('public orders validate server prices, tenant, publication and recipe; retr
     if (child) { child.kill('SIGTERM'); await new Promise(resolve => child.once('exit', resolve)); }
     await db.order.deleteMany({ where: { storeId: { in: [shop.id, other.id] } } });
     await db.recipeItem.deleteMany({ where: { recipeVersion: { storeId: shop.id } } });
+    await db.materialPurchaseItem.deleteMany({ where: { purchase: { storeId: { in: [shop.id, other.id] } } } });
     await db.store.deleteMany({ where: { id: { in: [shop.id, other.id] } } });
   }
 });
