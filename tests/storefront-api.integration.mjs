@@ -113,6 +113,18 @@ test('public orders validate server prices, tenant, publication and recipe; retr
     const savedOrder = await db.order.findFirst({ where: { storeId: shop.id, total: 495 }, include: { items: true } });
     assert.ok(receipt); assert.equal(Number(savedOrder.items[0].originalPrice), 450);
     assert.equal((await post({ ...order, requestId: randomUUID(), items: [{ variantId: managed.variants[1].id, quantity: 1 }], expectedTotalCents: 120000 })).status, 409);
+    // Admin costing is available even when the legacy costing setting is disabled.
+    await db.material.update({ where: { id: material.id }, data: { defaultCost: 10 } });
+    const adminProduct = await (await fetch(`${url}/api/products/${managedId}`, { headers: adminHeaders })).json();
+    const adminSize = adminProduct.data.variants.find(v => v.id === managed.variants[0].id);
+    assert.equal(adminSize.costing.complete, true);
+    assert.equal(adminSize.costing.estimatedCost, 350);
+    assert.equal(adminSize.costing.estimatedMargin, 50);
+    for (const page of ['/favorites', '/cart', '/checkout']) {
+      const response = await fetch(`${url}${page}`);
+      assert.equal(response.status, 200);
+      assert.ok(!(await response.text()).includes('estimatedCost'), 'public pages must not expose recipe costs');
+    }
     // Real preparation snapshots recipe costs. Future purchases must not recost old sales.
     await db.inventoryBalance.upsert({ where: { materialId: material.id }, create: { storeId: shop.id, materialId: material.id, quantity: 0 }, update: { quantity: 0 } });
     const purchaseResponse = await fetch(`${url}/api/purchases`, { method: 'POST', headers: adminHeaders,

@@ -7,11 +7,12 @@ import type { ShopSettings } from "@/lib/storefront/config";
 import { useState } from "react";
 
 export function ShopHeader({ announcement }: { announcement: string }) {
-  const { lines } = useCart(); const [open, setOpen] = useState(false); const pathname = usePathname();
+  const { lines, favorites } = useCart(); const [open, setOpen] = useState(false); const pathname = usePathname();
   return <><div className="shop-announcement">{announcement}</div><header className="shop-header">
     <button className="shop-menu-button" aria-label="فتح القائمة" aria-expanded={open} onClick={() => setOpen(!open)}>☰</button>
     <Link href="/" className="shop-wordmark" aria-label="Auraic الرئيسية">Auraic<span>DESIGNED TO BE FELT</span></Link>
-    <nav className={open ? "shop-nav open" : "shop-nav"}>{[["/", "الرئيسية"], ["/products", "العطور"], ["/contact", "تواصل معنا"]].map(([url, label]) => <Link onClick={() => setOpen(false)} key={url} href={url} aria-current={pathname === url ? "page" : undefined}>{label}</Link>)}</nav>
+    <nav className={open ? "shop-nav open" : "shop-nav"}>{[["/", "الرئيسية"], ["/products", "العطور"], ["/favorites", "المفضلة"], ["/contact", "تواصل معنا"]].map(([url, label]) => <Link onClick={() => setOpen(false)} key={url} href={url} aria-current={pathname === url ? "page" : undefined}>{label}</Link>)}</nav>
+    <Link href="/favorites" className="shop-favorites-link" aria-label={`المفضلة، ${favorites.length} عطر`}>♡ <b>{favorites.length}</b></Link>
     <Link href="/cart" className="shop-cart-link" aria-label={`حقيبة التسوق، ${lines.reduce((sum, line) => sum + line.quantity, 0)} قطعة`}><span>الحقيبة</span> ♧ <b>{lines.reduce((sum, line) => sum + line.quantity, 0)}</b></Link>
   </header></>;
 }
