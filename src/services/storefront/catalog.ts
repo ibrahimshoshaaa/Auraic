@@ -1,11 +1,11 @@
 import { db } from "@/lib/db";
 import { activeProductStatus } from "@/lib/active-product";
-import { defaultShopSettings, shopSettingsSchema } from "@/lib/storefront/config";
+import { defaultShopSettings, resolveShopSettings } from "@/lib/storefront/config";
 
 export async function getShopSettings(storeId: string) {
   const setting = await db.setting.findUnique({ where: { storeId_key: { storeId, key: "storefront" } } });
   if (!setting) return defaultShopSettings;
-  try { return shopSettingsSchema.parse(JSON.parse(setting.value)); }
+  try { return resolveShopSettings(JSON.parse(setting.value)); }
   catch { return defaultShopSettings; }
 }
 export async function getPublicShop() {

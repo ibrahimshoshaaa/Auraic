@@ -14,6 +14,14 @@ export const shopSettingsSchema = z.object({
   womenCollectionImage: z.union([z.literal(""), image]).default(""),
   menCollectionCategory: z.string().trim().min(1).max(80).default("رجالي"),
   womenCollectionCategory: z.string().trim().min(1).max(80).default("حريمي"),
+  menCollectionLabel: z.string().trim().min(1).max(40).default("SHOP FOR MEN"),
+  womenCollectionLabel: z.string().trim().min(1).max(40).default("SHOP FOR WOMEN"),
+  featuredEyebrow: z.string().trim().max(80).default("CHOSEN BY AURAIC"),
+  featuredTitle: z.string().trim().min(1).max(120).default("Hand-picked\nby Auraic"),
+  storyEyebrow: z.string().trim().max(80).default("DESIGNED TO BE FELT"),
+  storyTitle: z.string().trim().min(1).max(160).default("More than a fragrance.\nA feeling that stays."),
+  storyDescription: z.string().trim().max(600).default("Find the fragrance that feels like you. Make your presence unforgettable."),
+  storyButtonLabel: z.string().trim().min(1).max(60).default("Find your Auraic"),
   whatsapp: z.string().transform(value => { const cleaned = value.replace(/[^0-9]/g, ""); return cleaned.startsWith("01") ? `2${cleaned}` : cleaned.startsWith("0020") ? cleaned.slice(2) : cleaned; }).pipe(z.string().regex(/^$|^20\d{10}$/, "اكتب رقم واتساب مصري صحيح")),
   contactEmail: z.string().trim().pipe(z.union([z.literal(""), z.email("راجع بريد التواصل")])),
   shippingFee: z.number().finite().min(0).max(10000),
@@ -25,6 +33,10 @@ export type ShopSettings = z.infer<typeof shopSettingsSchema>;
 export const defaultShopSettings: ShopSettings = {
   enabled: false, announcement: "DESIGNED TO BE FELT, NOT JUST SMELLED",
   heroTitle: "Discover Auraic.\nFind your\nfragrance.", heroSubtitle: "Find the fragrance that feels like you.",
+  menCollectionLabel: "SHOP FOR MEN", womenCollectionLabel: "SHOP FOR WOMEN",
+  featuredEyebrow: "CHOSEN BY AURAIC", featuredTitle: "Hand-picked\nby Auraic",
+  storyEyebrow: "DESIGNED TO BE FELT", storyTitle: "More than a fragrance.\nA feeling that stays.",
+  storyDescription: "Find the fragrance that feels like you. Make your presence unforgettable.", storyButtonLabel: "Find your Auraic",
   heroImages: [], heroMode: "images", heroInterval: 6, heroVideo: "", menCollectionImage: "", womenCollectionImage: "", menCollectionCategory: "رجالي", womenCollectionCategory: "حريمي", whatsapp: "", contactEmail: "", shippingFee: 0, freeShippingFrom: 0,
   shippingPolicy: "", returnPolicy: "",
 };
@@ -41,3 +53,12 @@ export const checkoutSchema = z.object({
   governorate: z.enum(governorates), address: z.string().trim().min(10).max(400),
   items: z.array(z.object({ variantId: z.string().min(1).max(100), quantity: z.number().int().min(1).max(20) })).min(1).max(20),
 });
+
+// Resolve retired default copy once at the settings boundary so editors and customers agree.
+export function resolveShopSettings(value: unknown): ShopSettings {
+  const settings = shopSettingsSchema.parse(value);
+  if (["عطرك…أثرلاينسى", "عطرك...أثرلاينسى"].includes(settings.heroTitle.replace(/[\s\u064B-\u065F]/g, ""))) {
+    settings.heroTitle = defaultShopSettings.heroTitle;
+  }
+  return settings;
+}
