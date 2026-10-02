@@ -123,7 +123,7 @@ export async function listUnmappedVariants(storeId: string) {
 }
 
 async function attachVariantCosting(
-  variant: Prisma.ProductVariantGetPayload<{ include: typeof variantInclude }> 
+  variant: Prisma.ProductVariantGetPayload<{ include: typeof variantInclude }>
 ) {
   const recipe = variant.recipes[0] ?? null;
   const currentVersion = recipe?.versions[0] ?? null;

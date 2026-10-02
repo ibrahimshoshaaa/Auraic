@@ -17,6 +17,10 @@ class ProductApi extends ErpApi {
 }
 void main() {
   testWidgets('advancing product steps never saves; review requires explicit confirmation', (tester) async {
+    tester.view.physicalSize = const Size(1000, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     final api = ProductApi();
     await tester.pumpWidget(MaterialApp(home: ProductManagePage(api: api, productId: 'product')));
     await tester.pumpAndSettle();
