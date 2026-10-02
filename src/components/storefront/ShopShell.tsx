@@ -34,6 +34,6 @@ export function ShopHeader({ announcement }: { announcement: string; menCategory
 export function ShopFooter({ settings }: { settings: ShopSettings }) {
   return <><section className="shop-benefits"><div>◇ <b>A fragrance for every feeling</b><span>Find your scent. Choose your size.</span></div><div>↗ <b>Delivered to your door</b><span>Delivery as described in our shipping policy</span></div><div>♧ <b>Cash on delivery</b><span>Pay when your order arrives</span></div></section>
     <footer className="shop-footer"><div><Image src="/auraic-logo.jpg" width={320} height={200} alt="Auraic" className="shop-footer-logo" /><p>Designed to be felt, not just smelled.</p></div><div><h3>Discover Auraic</h3><Link href="/products">All fragrances</Link><Link href="/contact">Contact us</Link></div><div><h3>Useful information</h3><Link href="/shipping">Shipping & delivery</Link><Link href="/returns">Returns & exchanges</Link><Link href="/login">Admin login</Link></div><small>© {new Date().getFullYear()} Auraic. All rights reserved.</small></footer>
-    {settings.whatsapp && <a className="shop-whatsapp" aria-label="Chat on WhatsApp" href={`https://wa.me/${settings.whatsapp}`} target="_blank" rel="noopener noreferrer">WhatsApp ↗</a>}
+    {settings.whatsapp && <a className="shop-whatsapp" aria-label="Chat on WhatsApp" href={`https://wa.me/${settings.whatsapp}`} target="_blank" rel="noopener noreferrer"><ShopIcon name="whatsapp"/></a>}
   </>;
 }
