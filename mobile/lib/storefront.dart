@@ -4,6 +4,13 @@ import 'package:url_launcher/url_launcher.dart';
 import 'api.dart';
 import 'ui.dart';
 
+String audienceCategory(String value) {
+  final category = value.trim().toLowerCase();
+  if (['men', 'male', 'رجالي', 'رجال', 'عطور رجالي'].contains(category)) return 'Men';
+  if (['women', 'female', 'حريمي', 'نسائي', 'نساء', 'عطور حريمي'].contains(category)) return 'Women';
+  return 'Unisex';
+}
+
 class StorefrontPage extends StatefulWidget {
   const StorefrontPage({required this.api, super.key});
   final ErpApi api;
@@ -75,8 +82,8 @@ class _StorefrontSettingsState extends State<StorefrontSettings> {
     Card(color: appNavy, child: SwitchListTile(title: const Text('استقبال طلبات العملاء', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)), subtitle: const Text('الحالة تتحفظ فورًا', style: TextStyle(color: Colors.white70)), value: settings['enabled'] == true, onChanged: busy ? null : (_) => save(toggle: true))),
     if (message.isNotEmpty) Padding(padding: const EdgeInsets.all(12), child: Text(message, style: TextStyle(color: failed ? Colors.red : Colors.green))),
     section('التصميم والبانرات', [field('announcement', 'الشريط العلوي'), field('heroTitle', 'عنوان الهيرو الظاهر للعميل', lines: 3), DropdownButtonFormField<String>(initialValue: str(settings['heroMode']).isEmpty ? 'images' : str(settings['heroMode']), decoration: const InputDecoration(labelText: 'نوع الهيرو'), items: const [DropdownMenuItem(value: 'images', child: Text('صور سلايدر')), DropdownMenuItem(value: 'video', child: Text('فيديو'))], onChanged: busy ? null : (value) => settings['heroMode'] = value), const SizedBox(height: 16), field('heroInterval', 'مدة الصورة بالثواني (2–60)', number: true), field('heroVideo', 'رابط ملف فيديو HTTPS مباشر'), const Text('استخدم ملف MP4 أو WebM مباشر، وليس رابط مشاركة Facebook أو YouTube.'), const SizedBox(height: 16), field('heroImages', 'روابط صور البانر HTTPS، رابط في كل سطر', lines: 4)]),
-    section('زرارا الأقسام داخل الهيرو', [field('menCollectionLabel', 'نص زر الرجال'), field('menCollectionCategory', 'القسم المرتبط بزر الرجال'), field('womenCollectionLabel', 'نص زر السيدات'), field('womenCollectionCategory', 'القسم المرتبط بزر السيدات'), const Text('الصور تأتي من خلفية الهيرو. كل زر يعرض منتجات القسم المسجل هنا فقط.')]),
-    section('المنتجات المختارة', [field('featuredEyebrow', 'النص الصغير فوق المنتجات'), field('featuredTitle', 'عنوان المنتجات المختارة', lines: 2), const Text('زر SHOW NOTES يعرض الوصف المسجل لكل عطر في منتجات المتجر.')]),
+    section('زرارا الأقسام داخل الهيرو', [field('menCollectionLabel', 'نص زر الرجال'), field('womenCollectionLabel', 'نص زر السيدات'), const Text('الصور تأتي من خلفية الهيرو. تصنيف المنتج يحدد ظهوره، والمنتج للجنسين يظهر في القسمين.')]),
+    section('المنتجات المختارة', [field('featuredEyebrow', 'النص الصغير فوق المنتجات'), field('featuredTitle', 'عنوان Best Sellers', lines: 2), field('offersTitle', 'عنوان Offers'), field('allProductsTitle', 'عنوان All Products'), const Text('زر SHOW NOTES يعرض الوصف المسجل لكل عطر في منتجات المتجر.')]),
     section('التعريف بالعلامة', [field('storyEyebrow', 'النص الصغير في جزء التعريف'), field('storyTitle', 'عنوان التعريف', lines: 2), field('storyDescription', 'وصف التعريف', lines: 3), field('storyButtonLabel', 'نص زر التعريف')]),
     section('التواصل', [field('whatsapp', 'رقم واتساب'), field('contactEmail', 'بريد التواصل')]),
     section('الشحن والسياسات', [field('shippingFee', 'رسوم الشحن', number: true), field('freeShippingFrom', 'شحن مجاني من (0 لإيقافه)', number: true), field('shippingPolicy', 'سياسة الشحن', lines: 4), field('returnPolicy', 'سياسة الإرجاع', lines: 4)]),
@@ -94,9 +101,11 @@ class ProductManagePage extends StatefulWidget {
 class _ProductManagePageState extends State<ProductManagePage> {
   final form = GlobalKey<FormState>();
   final requestId = const Uuid().v4();
-  Json product = {'title': '', 'description': '', 'category': 'العطور', 'images': <String>[], 'published': false, 'featured': false};
+  Json product = {'title': '', 'description': '', 'category': 'Unisex', 'images': <String>[], 'published': false, 'featured': false};
   List<Json> variants = [];
   late Future<List<Json>> materials = load();
+  bool offers = false;
+  void toggleOffers(bool value) => setState(() { offers = value; if (!value) { for (final v in variants) { v['compareAtPrice'] = ''; } } });
   int step = 0;
   final steps = const ['بيانات العطر', 'الصور', 'الأحجام والوصفات', 'الوصف والنشر', 'المعاينة والتأكيد'];
   bool busy = false;
@@ -106,7 +115,7 @@ class _ProductManagePageState extends State<ProductManagePage> {
     final available = rows(await widget.api.get('/api/materials'));
     if (widget.productId != null) {
       final p = json((await widget.api.get('/api/products/${widget.productId}'))['data']);
-      product = {'title': p['title'], 'description': p['storefrontDescription'], 'category': p['storefrontCategory'], 'images': p['storefrontImages'], 'published': p['storefrontPublished'], 'featured': p['storefrontFeatured']};
+      product = {'title': p['title'], 'description': p['storefrontDescription'], 'category': audienceCategory(str(p['storefrontCategory'])), 'images': p['storefrontImages'], 'published': p['storefrontPublished'], 'featured': p['storefrontFeatured']};
       variants = (p['variants'] as List).map(json).where((v) => v['active'] == true).map((v) {
         final recipes = rows({'data': v['recipes']});
         final versions = recipes.isEmpty ? <Json>[] : rows({'data': recipes.first['versions']});
@@ -115,6 +124,7 @@ class _ProductManagePageState extends State<ProductManagePage> {
       }).toList();
     }
     if (variants.isEmpty) variants = [blank()];
+    offers = variants.any((v) => (double.tryParse(str(v['compareAtPrice'])) ?? 0) > (double.tryParse(str(v['price'])) ?? 0));
     return available;
   }
   Widget field(Json target, String name, String label, {bool number = false, bool required = true, int lines = 1}) => Padding(padding: const EdgeInsets.only(bottom: 16), child: TextFormField(
@@ -145,6 +155,7 @@ class _ProductManagePageState extends State<ProductManagePage> {
   }
   Future<void> save() async {
     if (step != 4 || busy) return;
+    if (offers && !variants.any((v) => (double.tryParse(str(v['compareAtPrice'])) ?? 0) > (double.tryParse(str(v['price'])) ?? 0))) { setState(() { error = 'أدخل سعرًا قبل الخصم أعلى من سعر البيع لحجم واحد على الأقل'; step = 2; }); return; }
     setState(() { busy = true; error = ''; });
     try {
       final data = <String, dynamic>{...product, 'requestId': requestId, if (widget.productId != null) 'productId': widget.productId,
@@ -163,15 +174,16 @@ class _ProductManagePageState extends State<ProductManagePage> {
         if (error.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 16), child: Text(error, style: const TextStyle(color: Colors.red))),
         Text('الخطوة ${step + 1} من 5 · ${steps[step]}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
         const SizedBox(height: 12), LinearProgressIndicator(value: (step+1)/5), const SizedBox(height: 24),
-        if (step == 0) Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [field(product, 'title', 'اسم العطر، مثال: عود'), field(product, 'category', 'القسم'), const Text('اسم واحد يجمع كل أحجام العطر في المتجر.')] ))),
+        if (step == 0) Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [field(product, 'title', 'اسم العطر، مثال: عود'), DropdownButtonFormField<String>(initialValue: str(product['category']), decoration: const InputDecoration(labelText: 'موجّه إلى', border: OutlineInputBorder()), items: const [DropdownMenuItem(value: 'Men', child: Text('رجالي')), DropdownMenuItem(value: 'Women', child: Text('حريمي')), DropdownMenuItem(value: 'Unisex', child: Text('للجنسين (Unisex)'))], onChanged: busy ? null : (value) => product['category'] = value), const SizedBox(height: 16), const Text('للجنسين يظهر في For Men وFor Women.'), const Text('اسم واحد يجمع كل أحجام العطر في المتجر.')] ))),
         if (step == 1) Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [const Text('الصورة الأولى رئيسية. أضف حتى 8 صور.'), const SizedBox(height: 16), TextFormField(key: const ValueKey('product-images'), initialValue: (product['images'] as List).join('\n'), maxLines: 5, decoration: const InputDecoration(labelText: 'روابط الصور HTTPS، رابط في كل سطر', border: OutlineInputBorder()), validator: (value) { final urls = (value ?? '').split('\n').map((v) => v.trim()).where((v) => v.isNotEmpty).toList(); return urls.length > 8 || urls.any((url) => Uri.tryParse(url)?.scheme != 'https' || (Uri.tryParse(url)?.host ?? '').isEmpty) ? 'أدخل حتى 8 روابط HTTPS صحيحة' : null; }, onChanged: (value) => product['images'] = value.split('\n').map((v) => v.trim()).where((v) => v.isNotEmpty).toList())]))),
         if (step == 2) ...[
 
         const SizedBox(height: 16),
+        SwitchListTile(value: offers, onChanged: busy ? null : toggleOffers, title: const Text('عليه خصم ويظهر في Offers')),
         const Text('كل حجم له سعر ووصفة مستقلة', style: TextStyle(fontWeight: FontWeight.w800)),
         for (final v in variants) Card(key: ValueKey(v['clientId']), margin: const EdgeInsets.only(top: 14), child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
           Row(children: [const Expanded(child: Text('بيانات الحجم', style: TextStyle(fontWeight: FontWeight.w800))), if (variants.length > 1) IconButton(onPressed: busy ? null : () => setState(() => variants.remove(v)), icon: const Icon(Icons.delete_outline, color: Colors.red))]),
-          field(v, 'title', 'الحجم، مثال: ٣٠ مل'), field(v, 'price', 'سعر البيع', number: true), field(v, 'compareAtPrice', 'السعر قبل الخصم (اختياري)', number: true, required: false),
+          field(v, 'title', 'الحجم، مثال: ٣٠ مل'), field(v, 'price', 'سعر البيع', number: true), if (offers) field(v, 'compareAtPrice', 'السعر قبل الخصم (اختياري لباقي الأحجام)', number: true, required: false),
           for (final m in (v['materials'] as List).cast<Json>()) Padding(key: ObjectKey(m), padding: const EdgeInsets.only(bottom: 14), child: Column(children: [
             DropdownButtonFormField<String>(initialValue: available.any((a) => a['id'] == m['materialId']) ? str(m['materialId']) : null, isExpanded: true, decoration: const InputDecoration(labelText: 'الخامة', border: OutlineInputBorder()), items: available.where((a) => a['id'] == m['materialId'] || !(v['materials'] as List).any((other) => other['materialId'] == a['id'])).map((a) => DropdownMenuItem(value: str(a['id']), child: Text('${a['name']} (${a['unit']})', overflow: TextOverflow.ellipsis))).toList(), validator: (value) => value == null ? 'اختر خامة' : null, onChanged: (value) => setState(() => m['materialId'] = value)),
             const SizedBox(height: 12), field(m, 'quantity', 'الكمية لقطعة واحدة', number: true),
@@ -186,7 +198,7 @@ class _ProductManagePageState extends State<ProductManagePage> {
         if (step == 3) ...[
         Card(child: Padding(padding: const EdgeInsets.all(16), child: field(product, 'description', 'وصف العطر', required: false, lines: 5))),
         SwitchListTile(value: product['published'] == true, onChanged: busy ? null : (value) => setState(() => product['published'] = value), title: const Text('ظاهر للعملاء في المتجر')),
-        SwitchListTile(value: product['featured'] == true, onChanged: busy ? null : (value) => setState(() => product['featured'] = value), title: const Text('منتج مميز في الرئيسية')),
+        SwitchListTile(value: product['featured'] == true, onChanged: busy ? null : (value) => setState(() => product['featured'] = value), title: const Text('يظهر في Best Sellers')),
         const Text('الوصفات والطلبات السابقة تظل محفوظة عند تعديل المنتج أو إزالة حجم.', style: TextStyle(color: appMuted)),
         ],
         if (step == 4) ...[

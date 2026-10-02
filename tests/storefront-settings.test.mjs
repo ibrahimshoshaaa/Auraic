@@ -16,6 +16,6 @@ test('older settings gain current homepage copy without replacing saved custom c
   delete legacy.menCollectionLabel; delete legacy.featuredTitle;
   const settings = resolveShopSettings({ ...legacy, storyTitle: 'Our story' });
   assert.equal(settings.menCollectionLabel, 'SHOP FOR MEN');
-  assert.equal(settings.featuredTitle, 'Hand-picked\nby Auraic');
+  assert.equal(settings.featuredTitle, 'Best Sellers');
   assert.equal(settings.storyTitle, 'Our story');
 });

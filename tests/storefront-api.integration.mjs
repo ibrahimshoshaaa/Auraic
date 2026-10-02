@@ -101,7 +101,7 @@ test('public orders validate server prices, tenant, publication and recipe; retr
     assert.equal(initialSettings.heroTitle, 'Saved hero headline'); assert.equal(initialSettings.menCollectionLabel, 'Explore men'); assert.equal(initialSettings.featuredTitle, 'Our selected fragrances');
     assert.equal((await settingsRequest({ kind: 'settings', data: { ...initialSettings, enabled: true, shippingPolicy: '', returnPolicy: '', whatsapp: '+20 1012345678' } })).status, 200);
     assert.equal(JSON.parse((await db.setting.findUnique({ where: { storeId_key: { storeId: shop.id, key: 'storefront' } } })).value).whatsapp, '201012345678');
-    const body = { requestId: randomUUID(), title: 'Oud', category: 'Perfumes', description: 'Oud description', images: [], published: true, featured: false,
+    const body = { requestId: randomUUID(), title: 'Oud', category: 'Unisex', description: 'Oud description', images: [], published: true, featured: true,
       variants: [{ clientId: randomUUID(), title: '30 ml', price: 450, compareAtPrice: 550, materials: [{ materialId: material.id, quantity: 30 }] },
         { clientId: randomUUID(), title: '100 ml', price: 1200, compareAtPrice: null, materials: [{ materialId: material.id, quantity: 100 }] }] };
     assert.equal((await manage({ ...body, variants: [{ ...body.variants[0], compareAtPrice: 400 }] })).status, 422);
@@ -112,6 +112,18 @@ test('public orders validate server prices, tenant, publication and recipe; retr
     assert.equal(await db.product.count({ where: { id: managedId } }), 1);
     const managed = await db.product.findUnique({ where: { id: managedId }, include: { variants: { orderBy: { price: 'asc' }, include: { recipes: { include: { versions: true } } } } } });
     assert.equal(managed.variants.length, 2); assert.equal(Number(managed.variants[0].compareAtPrice), 550);
+    for (const filter of ['audience=men', 'audience=women', 'collection=offers', 'collection=bestsellers']) {
+      const page = await (await fetch(`${url}/products?${filter}`)).text();
+      assert.ok(page.includes('<h3>Oud</h3>'), `${filter} should include the eligible unisex perfume`);
+    }
+    const changeAudience = category => settingsRequest({ kind: 'product', data: { id: managedId, category, published: true, featured: true, description: 'Oud description', images: [] } });
+    assert.equal((await changeAudience('Men')).status, 200);
+    assert.ok(!(await (await fetch(`${url}/products?audience=women`)).text()).includes('<h3>Oud</h3>'));
+    assert.ok((await (await fetch(`${url}/products?audience=men`)).text()).includes('<h3>Oud</h3>'));
+    assert.equal((await changeAudience('Unisex')).status, 200);
+    const homeCollections = await (await fetch(url)).text();
+    assert.ok(homeCollections.indexOf('id="offers"') < homeCollections.indexOf('id="bestsellers"'));
+    assert.ok(homeCollections.indexOf('id="bestsellers"') < homeCollections.indexOf('id="products"'));
     const details = await (await fetch(`${url}/products/${managedId}`)).text();
     assert.ok(details.includes('30 ml') && details.includes('100 ml'));
     const checkout = await post({ ...order, requestId: randomUUID(), items: [{ variantId: managed.variants[0].id, quantity: 1 }], expectedTotalCents: 49500 });
