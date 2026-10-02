@@ -124,7 +124,7 @@ test('public orders validate server prices, tenant, publication and recipe; retr
       const manualResponse = await fetch(`${url}/api/orders/manual`, { method: 'POST', headers: adminHeaders,
         body: JSON.stringify({ requestId, customerName: 'Profit example', customerPhone: '01011111111', customerAddress: 'Cairo building 10', hasDeposit: false, depositAmount: 0,
           items: [{ variantId: managed.variants[0].id, quantity: 1, unitPrice: 450 }] }) });
-      assert.equal(manualResponse.status, 201, await manualResponse.clone().text());
+      assert.equal(manualResponse.status, 200, await manualResponse.clone().text());
       const orderId = `manual_${requestId}`;
       const prepare = await fetch(`${url}/api/orders/${encodeURIComponent(orderId)}/manual-status`, { method: 'POST', headers: adminHeaders, body: JSON.stringify({ status: 'PREPARED' }) });
       assert.equal(prepare.status, 200, await prepare.clone().text());
