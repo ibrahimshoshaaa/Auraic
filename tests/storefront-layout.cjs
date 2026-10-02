@@ -1,4 +1,5 @@
-const fs=require('fs'),path=require('path'),Module=require('module');const root=process.cwd();const ts=require(root+'/node_modules/typescript');
+/* eslint-disable @typescript-eslint/no-require-imports -- This isolated SSR fixture installs a CommonJS TypeScript loader. */
+const fs=require('fs'),Module=require('module');const root=process.cwd();const ts=require(root+'/node_modules/typescript');
 const load=Module._load;Module._load=function(name,parent,...rest){if(name.startsWith('@/'))name=root+'/src/'+name.slice(2);if(name===root+'/src/services/storefront/catalog')return{getPublicShop:async()=>({id:'demo',settings}),getPublicProducts:async()=>products};return load.call(this,name,parent,...rest)};
 for(const ext of ['.tsx','.ts'])require.extensions[ext]=(mod,file)=>mod._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true,target:ts.ScriptTarget.ES2020}}).outputText,file);
 const settings={...require(root+'/src/lib/storefront/config.ts').defaultShopSettings,enabled:true,announcement:'شحن مجاني للطلبات من ١٥٠٠ جنيه · الدفع عند الاستلام',heroTitle:'عطرك…\nأثر لا يُنسى',heroSubtitle:'عطور تحكي عنك. اكتشف الرائحة التي تصبح جزءًا من حكايتك.'};
