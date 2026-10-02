@@ -15,3 +15,8 @@ test('rolling seven-day period includes today', () => {
   const range = getReportRange('Africa/Cairo', '7d', undefined, undefined, new Date('2026-09-25T14:00:00Z'));
   assert.equal(range.from, '2026-09-19'); assert.equal(range.to, '2026-09-25');
 });
+
+test('60 day reporting range includes today and 59 prior local calendar days', () => {
+  const range = getReportRange('Africa/Cairo', '60d', undefined, undefined, new Date('2026-10-02T12:00:00Z'));
+  assert.equal(range.from, '2026-08-04'); assert.equal(range.to, '2026-10-02');
+});

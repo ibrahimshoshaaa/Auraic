@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { getSetting } from "@/lib/settings";
+import { SOCIAL_MEDIA_CATEGORY } from "./profit.math";
 import { Prisma } from "@prisma/client";
 
 export const RETURN_CONDITIONS = ["GOOD", "DAMAGED", "OPENED", "UNSELLABLE", "UNKNOWN"] as const;
@@ -14,6 +15,12 @@ export async function listExpenses(storeId: string) {
   return db.expense.findMany({ where: { storeId }, include: { category: true,
     return: { include: { order: { select: { orderNumber: true, customerRef: true, customerPhone: true, customerAddress: true } },
       items: { include: { orderItem: { select: { title: true } } } } } } }, orderBy: { date: "desc" } });
+}
+
+export async function listExpenseCategories(storeId: string) {
+  await db.expenseCategory.upsert({ where: { storeId_name: { storeId, name: SOCIAL_MEDIA_CATEGORY } },
+    create: { storeId, name: SOCIAL_MEDIA_CATEGORY }, update: {} });
+  return db.expenseCategory.findMany({ where: { storeId, active: true }, orderBy: { name: "asc" } });
 }
 
 export async function createExpenseCategory(storeId: string, name: string, userId?: string) {
@@ -94,6 +101,10 @@ export async function recordMaterialPurchase(input: { storeId: string; materialI
     const purchase = await tx.materialPurchase.create({ data: { storeId: input.storeId, supplierId: material.supplierId, reference: input.reference, totalAmount: input.amount, purchasedAt: input.date, items: { create: { materialId: material.id, quantity: input.quantity, unitCost: input.amount / input.quantity } } } });
     const transaction = await tx.inventoryTransaction.create({ data: { storeId: input.storeId, materialId: material.id, type: "PURCHASE", quantity: input.quantity, unit: material.unit, referenceType: "PURCHASE", referenceId: purchase.id, reason: "Material purchase", userId: input.userId } });
     await tx.inventoryBalance.update({ where: { materialId: material.id }, data: { quantity: { increment: input.quantity } } });
+    // The recipe uses cost per tracked unit, not the whole purchase amount.
+    const latest = await tx.materialPurchaseItem.findFirst({ where: { materialId: material.id, purchase: { storeId: input.storeId } },
+      orderBy: [{ purchase: { purchasedAt: "desc" } }, { purchase: { createdAt: "desc" } }] });
+    if (latest) await tx.material.update({ where: { id: material.id }, data: { defaultCost: latest.unitCost } });
     const expense = await tx.expense.create({ data: { storeId: input.storeId, categoryId: category.id, purchaseId: purchase.id, amount: input.amount, currency: store.currency, date: input.date, description: `Purchase: ${material.name}`, reference: input.reference, userId: input.userId } });
     await tx.auditLog.create({ data: { storeId: input.storeId, userId: input.userId, action: "MATERIAL_PURCHASE", entity: "Expense", entityId: expense.id, metadata: { transactionId: transaction.id } } });
     return { purchase, transaction, expense };

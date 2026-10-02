@@ -5,7 +5,7 @@ import { useState } from "react";
 
 const periods = [
   ["today", "اليوم"], ["yesterday", "أمس"], ["7d", "آخر ٧ أيام"],
-  ["30d", "آخر ٣٠ يوم"], ["month", "هذا الشهر"], ["lastMonth", "الشهر الماضي"],
+  ["30d", "آخر ٣٠ يوم"], ["60d", "آخر ٦٠ يوم"], ["month", "هذا الشهر"], ["lastMonth", "الشهر الماضي"],
 ];
 
 export function RangeFilter({ base, period, from, to }: { base: string; period: string; from?: string; to?: string }) {

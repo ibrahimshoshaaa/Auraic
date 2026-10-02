@@ -32,7 +32,7 @@ class _ReportsPageState extends State<ReportsPage> {
     const PageIntro(title: 'التقارير', subtitle: 'ملخص المبيعات والتحصيل والمخزون', icon: Icons.bar_chart_rounded),
     const SizedBox(height: 16),
     Wrap(spacing: 8, children: const {'today': 'اليوم', 'yesterday': 'أمس',
-      '7d': 'آخر ٧ أيام', '30d': 'آخر ٣٠ يوم',
+      '7d': 'آخر ٧ أيام', '30d': 'آخر ٣٠ يوم', '60d': 'آخر ٦٠ يوم',
       'month': 'هذا الشهر', 'lastMonth': 'الشهر الماضي'}.entries.map((entry) =>
       ChoiceChip(label: Text(entry.value), selected: period == entry.key,
         onSelected: (_) => choose(entry.key))).toList()),
@@ -71,6 +71,13 @@ class _ReportsPageState extends State<ReportsPage> {
           line('متوسط الطلب', sales['averageOrderValue']),
           line('الخصومات', sales['discounts']), line('المسترد', sales['refunded']),
           line('الديبوزت', cash['deposits']),
+        ]),
+        section('الربح وROAS', [
+          line('صافي الربح بعد تكلفة الوصفة', json(data['profit'])['profit'] ?? 'غير مكتمل'),
+          line('تكلفة الوصفات', json(data['profit'])['recipeCost']),
+          line('نسبة الربح', json(data['profit'])['margin'] == null ? '—' : '${json(data['profit'])['margin']}%'),
+          line('مصاريف السوشيال', json(data['roas'])['spend']),
+          line('ROAS', json(data['roas'])['ratio'] == null ? '—' : '${json(data['roas'])['ratio']}×'),
         ]),
         section('المنتجات', [for (final product in (data['products'] as List).map(json))
           ListTile(title: Text('${product['product']} · ${product['variant']}'),

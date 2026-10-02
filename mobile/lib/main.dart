@@ -378,14 +378,20 @@ class _DashboardState extends State<_Dashboard> {
   String period = '7d';
   Json? cached;
   late Future<dynamic> report = load();
-  Future<dynamic> load() => widget.api.get('/api/mobile/home?period=$period');
+  DateTimeRange? customRange;
+  String date(DateTime value) => '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
+  Future<dynamic> load() => widget.api.get('/api/mobile/home?period=$period${period == 'custom' && customRange != null ? '&from=${date(customRange!.start)}&to=${date(customRange!.end)}' : ''}');
+  Future<void> custom() async {
+    final picked = await showDateRangePicker(context: context, firstDate: DateTime(2020), lastDate: DateTime.now(), initialDateRange: customRange);
+    if (picked != null) setState(() { customRange = picked; period = 'custom'; report = load(); });
+  }
   void choose(String value) => setState(() { period = value; report = load(); });
   Future<void> addAndRefresh(Widget page) async {
     final saved = await openPage<bool>(context, page);
     if (saved == true && mounted) setState(() => report = load());
   }
   static const labels = {'today': 'اليوم', 'yesterday': 'أمس',
-    '7d': 'آخر ٧ أيام', '30d': 'آخر ٣٠ يوم', 'month': 'هذا الشهر',
+    '7d': 'آخر ٧ أيام', '30d': 'آخر ٣٠ يوم', '60d': 'آخر ٦٠ يوم', 'month': 'هذا الشهر',
     'lastMonth': 'الشهر الماضي'};
 
   Widget metric(String label, dynamic value, IconData icon, String currency,
@@ -440,6 +446,8 @@ class _DashboardState extends State<_Dashboard> {
       final returns = json(data['returns']);
       final expenses = json(data['expenses']);
       final currency = str(data['currency']);
+      final profit = json(data['profit']);
+      final roas = json(data['roas']);
       final name = str(widget.user['name']).trim();
       final quick = <(String, IconData, VoidCallback)>[
         if (widget.manager) ('منتج جديد', Icons.add_box_outlined,
@@ -454,12 +462,13 @@ class _DashboardState extends State<_Dashboard> {
           () => widget.onSelect(5)),
       ];
       final metrics = <(String, dynamic, IconData, bool)>[
-        ('صافي المبيعات', sales['net'], Icons.show_chart, true),
-        ('الدفعات المستلمة', cash['received'], Icons.payments_outlined, true),
+        ('صافي الربح', profit['profit'] ?? 'غير مكتمل', Icons.show_chart, profit['profit'] != null),
+        ('نسبة الربح', profit['margin'] == null ? '—' : '${profit['margin']}%', Icons.percent, false),
         ('الطلبات', sales['orders'], Icons.receipt_long_outlined, false),
         ('الوحدات المباعة', sales['units'], Icons.inventory_2_outlined, false),
         ('المرتجعات', returns['count'], Icons.assignment_return_outlined, false),
         ('المصروفات', expenses['total'], Icons.account_balance_wallet_outlined, true),
+        ('الدفعات المستلمة', cash['received'], Icons.payments_outlined, true),
       ];
       return RefreshIndicator(onRefresh: () async {
         final next = load(); setState(() => report = next); await next;
@@ -487,6 +496,7 @@ class _DashboardState extends State<_Dashboard> {
               backgroundColor: Colors.white,
               side: const BorderSide(color: Color(0xffdedfe8)),
               selected: period == key, onSelected: (_) => choose(key)))])),
+        TextButton.icon(onPressed: custom, icon: const Icon(Icons.date_range), label: Text(period == 'custom' && customRange != null ? '${date(customRange!.start)} – ${date(customRange!.end)}' : 'فترة مخصصة')),
         const SizedBox(height: 16),
         Container(padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(color: const Color(0xff191735),
@@ -497,7 +507,7 @@ class _DashboardState extends State<_Dashboard> {
               const Text('إجمالي المبيعات', style: TextStyle(
                 color: Color(0xffe3e1f0), fontSize: 15)),
               const Spacer(),
-              Text(labels[period]!, style: const TextStyle(
+              Text(labels[period] ?? 'فترة مخصصة', style: const TextStyle(
                 color: Color(0xffffe8a1), fontSize: 12))]),
             const SizedBox(height: 18),
             Row(textDirection: TextDirection.ltr,
@@ -519,6 +529,19 @@ class _DashboardState extends State<_Dashboard> {
               child: metric(m.$1, m.$2, m.$3, currency, money: m.$4)),
           ]);
         }),
+        const SizedBox(height: 12),
+        const Text('صافي الربح = سعر البيع بعد الخصم والاسترداد − تكلفة الوصفة، قبل المصروفات التشغيلية.', style: TextStyle(fontSize: 12, color: Color(0xff718079))),
+        if (profit['incomplete'] == true || profit['estimated'] == true) Padding(padding: const EdgeInsets.symmetric(vertical: 12), child: Text(profit['incomplete'] == true ? '${profit['missingLines']} بند بدون تكلفة وصفة مكتملة. راجع تكلفة الخامات والاستهلاك.' : 'بعض المبيعات القديمة تكلفتها تقديرية. الطلبات الجديدة تحفظ تكلفة الخامات وقت التجهيز.', style: const TextStyle(color: Color(0xff956528), fontSize: 12))),
+        Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const Text('ROAS · عائد مصاريف السوشيال ميديا', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          Text(roas['ratio'] == null ? '—' : '${roas['ratio']}×', textDirection: TextDirection.ltr, style: const TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Color(0xff191735))),
+          Text('مصاريف السوشيال: ${roas['spend']} $currency'),
+          const SizedBox(height: 8),
+          const Text('إجمالي مبيعات الفترة ÷ مجموع مصاريف السوشيال لنفس الفترة. يعتمد على كل مبيعات المتجر.', style: TextStyle(fontSize: 12, color: Color(0xff718079))),
+          if (roas['ratio'] == null) const Text('سجّل مصاريف سوشيال في الفترة لعرض النسبة.', style: TextStyle(fontSize: 12)),
+          if (widget.manager) TextButton(onPressed: () => addAndRefresh(ExpenseForm(api: widget.api)), child: const Text('تسجيل مصروف سوشيال')),
+        ]))),
         const SizedBox(height: 22),
         const Text('عمليات سريعة', style: TextStyle(fontSize: 17,
           fontWeight: FontWeight.w800, color: Color(0xff152b3c))),

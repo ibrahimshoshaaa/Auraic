@@ -15,12 +15,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const report = await getBusinessReport(session.storeId, { period: query.period, from: query.from, to: query.to });
   const currency = report.currency;
   const cards = [
-    { label: "صافي المبيعات", value: money(report.sales.net, currency), mark: "◈" },
-    { label: "الدفعات المستلمة من الطلبات اليدوية", value: money(report.cash.received, currency), mark: "●", hint: `ديبوزت ${money(report.cash.deposits, currency)} · باقي الطلبات المسلّمة ${money(report.cash.deliveryBalances, currency)}؛ قبل أي ردّ مبالغ` },
+    { label: "صافي الربح", value: report.profit.profit === null ? "تكلفة غير مكتملة" : money(report.profit.profit, currency), mark: "◈", hint: "سعر البيع بعد الخصم والاسترداد − تكلفة الوصفة؛ قبل المصروفات التشغيلية" },
+    { label: "نسبة الربح", value: report.profit.margin === null ? "—" : `${report.profit.margin}%`, mark: "%", hint: "صافي الربح ÷ قيمة المنتجات المباعة × ١٠٠" },
     { label: "الطلبات", value: String(report.sales.orders), mark: "◫" },
     { label: "الوحدات المباعة", value: String(report.sales.units), mark: "▤" },
     { label: "المرتجعات", value: String(report.returns.count), mark: "↶" },
     { label: "المصروفات", value: money(report.expenses.total, currency), mark: "◇", hint: "تشمل تكلفة المرتجعات" },
+    { label: "الدفعات المستلمة من الطلبات اليدوية", value: money(report.cash.received, currency), mark: "●", hint: `ديبوزت ${money(report.cash.deposits, currency)} · باقي الطلبات المسلّمة ${money(report.cash.deliveryBalances, currency)}؛ قبل أي ردّ مبالغ` },
   ];
 
   return (
@@ -34,7 +35,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <div className="flex items-center justify-between gap-3"><h2 className="text-sm text-[#e4e1f2] sm:text-base">↗ &nbsp; إجمالي المبيعات</h2><span className="rounded-full bg-white/10 px-3 py-1 text-xs text-[#ffe8a1]">{report.range.from} – {report.range.to}</span></div>
         <strong className="mt-5 block text-3xl font-extrabold tabular-nums tracking-tight sm:text-4xl" dir="ltr">{money(report.sales.gross, currency)}</strong>
       </section>
-      <section className="grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-3" aria-label="مؤشرات الأداء">
+      <section className="grid grid-cols-2 gap-2.5 sm:gap-3 " aria-label="مؤشرات الأداء">
         {cards.map(card => (
           <div key={card.label} className="min-w-0 rounded-2xl border border-[#e5e4ec] bg-white p-3.5 shadow-sm sm:p-5">
             <div className="flex items-start justify-between gap-1"><p className="text-xs text-slate-500 sm:text-sm">{card.label}</p><span aria-hidden="true" className="text-lg text-[#625f89]">{card.mark}</span></div>
@@ -42,6 +43,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             {"hint" in card && <p className="mt-2 text-xs text-slate-400">{card.hint}</p>}
           </div>
         ))}
+      </section>
+      {(report.profit.incomplete || report.profit.estimated) && <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">{report.profit.incomplete ? `${report.profit.missingLines} بند بيع بدون تكلفة وصفة مكتملة. راجع تكلفة الخامات والاستهلاك؛ الربح والنسبة لا يظهران حتى تكتمل البيانات.` : "ربح بعض المبيعات القديمة تقديري لعدم تسجيل تكلفة الخامات وقت تجهيزها. المبيعات الجديدة تحفظ تكلفتها وقت التجهيز."}</p>}
+      <section aria-label="عائد الإنفاق على السوشيال ميديا" className="rounded-2xl border border-[#e5e4ec] bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-bold">ROAS · عائد مصاريف السوشيال ميديا</h2><p className="mt-1 text-xs text-slate-500">إجمالي مبيعات الفترة ÷ مجموع مصاريف السوشيال لنفس الفترة</p></div><strong dir="ltr" className="text-3xl font-bold text-[#191735]">{report.roas.ratio === null ? "—" : `${report.roas.ratio}×`}</strong></div>
+        <p className="mt-3 text-sm text-slate-600">مصاريف السوشيال: <b>{money(report.roas.spend, currency)}</b> · المبيعات: <b>{money(report.roas.sales, currency)}</b></p>
+        <p className="mt-2 text-xs text-slate-500">{report.roas.ratio === null ? "سجّل مصاريف سوشيال ميديا خلال الفترة لعرض النسبة." : `كل ١ ${currency} مصروف يقابله ${report.roas.ratio} ${currency} مبيعات.`} المؤشر يعتمد على كل مبيعات المتجر، بدون تتبع مصدر الإعلان.</p>
+        {can(session.role, "expenses.write") && <Link href="/dashboard/expenses?add=1" className="mt-3 inline-block text-sm font-semibold text-[#514b8c] underline">تسجيل مصروف سوشيال ←</Link>}
       </section>
       <section aria-label="عمليات سريعة">
         <h2 className="mb-3 text-lg font-bold text-[#191735]">عمليات سريعة</h2>

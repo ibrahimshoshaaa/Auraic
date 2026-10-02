@@ -190,6 +190,8 @@ export async function processOrderItemConsumption(
         );
       }
 
+      const costs = await tx.material.findMany({ where: { storeId, id: { in: required.map(r => r.materialId) } }, select: { id: true, defaultCost: true } });
+      const unitCosts = new Map(costs.map(material => [material.id, material.defaultCost]));
       const consumption = await tx.consumption.create({
         data: {
           storeId,
@@ -238,7 +240,7 @@ export async function processOrderItemConsumption(
           action: "CREATE",
           entity: "Consumption",
           entityId: consumption.id,
-          after: { orderId: item.orderId, orderItemId: item.id, materials: required } as unknown as Prisma.JsonObject,
+          after: { orderId: item.orderId, orderItemId: item.id, materials: required.map(r => ({ ...r, unitCost: unitCosts.get(r.materialId) === null || unitCosts.get(r.materialId) === undefined ? null : Number(unitCosts.get(r.materialId)) })) } as unknown as Prisma.JsonObject,
           metadata: warnings.length ? { negativeStockWarnings: warnings } : undefined,
         },
       });
