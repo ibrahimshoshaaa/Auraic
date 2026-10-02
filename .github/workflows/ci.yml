@@ -60,5 +60,18 @@ jobs:
         run: npm run build
       - name: Verify mobile authentication over HTTP
         run: node --test tests/mobile-api.integration.mjs
+      - name: Install browser for storefront interaction checks
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.1
+          npx playwright install --with-deps chromium
       - name: Verify public storefront checkout over HTTP
+        env:
+          STOREFRONT_BROWSER_TESTS: '1'
         run: node --test tests/storefront-api.integration.mjs
+      - name: Upload storefront interaction previews
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auraic-collection-navigation-previews
+          path: artifacts/navigation-*.png
+          if-no-files-found: ignore
