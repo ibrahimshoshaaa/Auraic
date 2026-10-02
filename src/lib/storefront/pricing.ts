@@ -3,4 +3,4 @@ export function checkoutTotals(lines: { price: number; quantity: number }[], fee
   const shippingCents = freeFrom > 0 && subtotalCents >= Math.round(freeFrom * 100) ? 0 : Math.round(fee * 100);
   return { subtotalCents, shippingCents, totalCents: subtotalCents + shippingCents };
 }
-export const formatMoney = (value: number) => `${new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 2 }).format(value)} ج.م`;
+export const formatMoney = (value: number) => `${new Intl.NumberFormat("en-EG", { maximumFractionDigits: 2 }).format(value)} LE`;

@@ -23,8 +23,8 @@ export const shopSettingsSchema = z.object({
 });
 export type ShopSettings = z.infer<typeof shopSettingsSchema>;
 export const defaultShopSettings: ShopSettings = {
-  enabled: false, announcement: "Auraic · عطر يُشعَر به، قبل أن يُشم",
-  heroTitle: "عطرك… أثر لا يُنسى", heroSubtitle: "اكتشف عطور Auraic، واختر الرائحة التي تحكي عنك.",
+  enabled: false, announcement: "DESIGNED TO BE FELT, NOT JUST SMELLED",
+  heroTitle: "Discover Auraic.\nFind your\nfragrance.", heroSubtitle: "Find the fragrance that feels like you.",
   heroImages: [], heroMode: "images", heroInterval: 6, heroVideo: "", menCollectionImage: "", womenCollectionImage: "", menCollectionCategory: "رجالي", womenCollectionCategory: "حريمي", whatsapp: "", contactEmail: "", shippingFee: 0, freeShippingFrom: 0,
   shippingPolicy: "", returnPolicy: "",
 };

@@ -95,7 +95,7 @@ test('public orders validate server prices, tenant, publication and recipe; retr
     assert.equal(presentationSaved.heroMode, 'video'); assert.equal(presentationSaved.heroInterval, 9);
     assert.equal(presentationSaved.menCollectionImage, presentation.menCollectionImage);
     const homepage = await (await fetch(url)).text();
-    assert.ok(homepage.includes('auraic.mp4')); assert.ok(homepage.includes('عطور رجالي')); assert.ok(homepage.includes('عطور حريمي'));
+    assert.ok(homepage.includes('auraic.mp4')); assert.ok(homepage.includes('SHOP FOR MEN')); assert.ok(homepage.includes('SHOP FOR WOMEN'));
 
     const initialSettings = (await (await fetch(`${url}/api/admin/storefront`, { headers: adminHeaders })).json()).data.settings;
     assert.equal((await settingsRequest({ kind: 'settings', data: { ...initialSettings, enabled: true, shippingPolicy: '', returnPolicy: '', whatsapp: '+20 1012345678' } })).status, 200);
