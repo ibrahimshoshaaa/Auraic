@@ -148,6 +148,7 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         assert.equal(await page.locator('.shop-product-card').count(), 1);
         await page.getByRole('button', { name: 'CLEAR ALL', exact: true }).click();
         assert.match(await page.locator('h1').innerText(), /ALL\s+FRAGRANCES/);
+        await page.waitForURL(`${url}/products`);
         await page.getByRole('button', { name: /FILTER/ }).click();
         assert.equal(await page.locator('#collection-filters').isVisible(), false);
         await page.locator('.shop-product-card').click({ noWaitAfter: true });

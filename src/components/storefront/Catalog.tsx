@@ -3,7 +3,7 @@ import { productAudience, matchesAudience, hasOffer } from "@/lib/storefront/col
 import Link from "next/link";
 import Image from "next/image";
 import { useCart } from "./CartProvider";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ShopProduct } from "@/services/storefront/catalog";
 import { formatMoney } from "@/lib/storefront/pricing";
 
@@ -11,9 +11,16 @@ export function ProductCard({ product, showNotes = false }: { product: ShopProdu
   const cart = useCart();
   return <article className="shop-product-wrap"><button type="button" className="shop-favorite" disabled={!cart.ready} onClick={() => cart.toggleFavorite(product.id)} aria-pressed={cart.favorites.includes(product.id)} aria-label={cart.favorites.includes(product.id) ? "Remove from wishlist" : "Add to wishlist"}>{cart.favorites.includes(product.id) ? "♥" : "♡"}</button><Link href={`/products/${product.id}`} className="shop-product-card"><div className="shop-product-image"><Image src={product.images[0] || "/auraic-bottle.svg"} alt={product.name} fill unoptimized={!!product.images.length} sizes="(max-width: 640px) 50vw, 25vw" />{(product.featured || hasOffer(product)) && <span className="shop-product-badge">{product.featured ? "Best Seller" : "Offer"}</span>}<span className="shop-product-arrow">↗</span></div><p>{productAudience(product.category) === "men" ? "For Men" : productAudience(product.category) === "women" ? "For Women" : "Unisex"}</p><h3>{product.name}</h3><div><strong>{product.variants.length > 1 && "From "}{formatMoney(product.variants[0].price)}</strong>{product.variants[0].compareAtPrice && <del>{formatMoney(product.variants[0].compareAtPrice)}</del>}<span>{product.variants.length > 1 ? `${product.variants.length} sizes` : product.variants[0].title}</span></div>{showNotes && <p className="shop-product-notes">{product.description || "Discover the full fragrance on the product page."}</p>}</Link></article>;
 }
-export function Catalog({ products, initialSearch = "", initialAudience = "", initialCollection = "" }: { products: ShopProduct[]; initialSearch?: string; initialAudience?: string; initialCollection?: string }) {
+export function Catalog({ products, initialSearch = "", initialAudience = "", initialCollection = "", initialSize = "" }: { products: ShopProduct[]; initialSearch?: string; initialAudience?: string; initialCollection?: string; initialSize?: string }) {
   const [audience, setAudience] = useState(initialAudience); const [search, setSearch] = useState(initialSearch); const [sort, setSort] = useState("featured");
-  const [size, setSize] = useState(""); const [collection, setCollection] = useState(initialCollection); const [filtersOpen, setFiltersOpen] = useState(true); const [showNotes, setShowNotes] = useState(false);
+  const [size, setSize] = useState(initialSize); const [collection, setCollection] = useState(initialCollection); const [filtersOpen, setFiltersOpen] = useState(true); const [showNotes, setShowNotes] = useState(false);
+  useEffect(() => {
+    const next = new URL(window.location.href);
+    for (const [name, value] of [["audience", audience], ["collection", collection], ["size", size], ["q", search]]) {
+      if (value) next.searchParams.set(name, value); else next.searchParams.delete(name);
+    }
+    if (next.href !== window.location.href) window.history.replaceState(null, "", next.pathname + next.search + next.hash);
+  }, [audience, collection, size, search]);
   const sizes = [...new Set(products.flatMap(p => p.variants.map(v => v.title)))];
   const filtered = products.filter(p => (!audience || matchesAudience(p.category, audience)) && (!size || p.variants.some(v => v.title === size)) && (collection !== "offers" || hasOffer(p)) && (collection !== "bestsellers" || p.featured) && p.name.toLowerCase().includes(search.toLowerCase())).sort((a,b) => sort === "low" ? a.variants[0].price-b.variants[0].price : sort === "high" ? b.variants[0].price-a.variants[0].price : Number(b.featured)-Number(a.featured));
   const heading = audience === "men" ? "FRAGRANCES\nFOR MEN" : audience === "women" ? "FRAGRANCES\nFOR WOMEN" : audience === "unisex" ? "UNISEX\nFRAGRANCES" : collection === "offers" ? "FRAGRANCE\nOFFERS" : collection === "bestsellers" ? "BEST\nSELLERS" : "ALL\nFRAGRANCES";
