@@ -85,6 +85,18 @@ test('public orders validate server prices, tenant, publication and recipe; retr
     assert.equal((await settingsRequest({ kind: 'availability', data: { enabled: false } })).status, 200);
     assert.equal(JSON.parse((await db.setting.findUnique({ where: { storeId_key: { storeId: shop.id, key: 'storefront' } } })).value).enabled, false);
     assert.equal((await settingsRequest({ kind: 'availability', data: { enabled: true } })).status, 200);
+    const presentation = { heroMode: 'video', heroVideo: 'https://example.com/auraic.mp4', heroInterval: 9, menCollectionCategory: 'رجالي', womenCollectionCategory: 'حريمي', menCollectionImage: 'https://example.com/men.jpg' };
+    assert.equal((await settingsRequest({ kind: 'settings', data: presentation })).status, 200);
+    assert.equal((await settingsRequest({ kind: 'settings', data: { heroInterval: 0 } })).status, 422);
+    assert.equal((await settingsRequest({ kind: 'settings', data: { heroVideo: 'javascript:alert(1)' } })).status, 422);
+    // Older mobile clients must preserve the new presentation settings on save.
+    assert.equal((await settingsRequest({ kind: 'settings', data: { announcement: 'Auraic offer' } })).status, 200);
+    const presentationSaved = JSON.parse((await db.setting.findUnique({ where: { storeId_key: { storeId: shop.id, key: 'storefront' } } })).value);
+    assert.equal(presentationSaved.heroMode, 'video'); assert.equal(presentationSaved.heroInterval, 9);
+    assert.equal(presentationSaved.menCollectionImage, presentation.menCollectionImage);
+    const homepage = await (await fetch(url)).text();
+    assert.ok(homepage.includes('auraic.mp4')); assert.ok(homepage.includes('عطور رجالي')); assert.ok(homepage.includes('عطور حريمي'));
+
     const initialSettings = (await (await fetch(`${url}/api/admin/storefront`, { headers: adminHeaders })).json()).data.settings;
     assert.equal((await settingsRequest({ kind: 'settings', data: { ...initialSettings, enabled: true, shippingPolicy: '', returnPolicy: '', whatsapp: '+20 1012345678' } })).status, 200);
     assert.equal(JSON.parse((await db.setting.findUnique({ where: { storeId_key: { storeId: shop.id, key: 'storefront' } } })).value).whatsapp, '201012345678');

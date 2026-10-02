@@ -22,7 +22,8 @@ export async function PUT(request: NextRequest) {
       await db.setting.upsert({ where: { storeId_key: { storeId: session.storeId, key: "storefront" } }, create: { storeId: session.storeId, key: "storefront", value: JSON.stringify(settings) }, update: { value: JSON.stringify(settings) } });
     } else if (body.kind === "settings") {
       if (session.role !== "OWNER") return NextResponse.json({ error: "إعدادات المتجر متاحة لمالك المتجر فقط" }, { status: 403 });
-      const parsed = shopSettingsSchema.safeParse(body.data);
+      const current = await getShopSettings(session.storeId);
+      const parsed = shopSettingsSchema.safeParse({ ...current, ...body.data });
       if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message }, { status: 422 });
       await db.setting.upsert({ where: { storeId_key: { storeId: session.storeId, key: "storefront" } }, create: { storeId: session.storeId, key: "storefront", value: JSON.stringify(parsed.data) }, update: { value: JSON.stringify(parsed.data) } });
     } else if (body.kind === "product") {

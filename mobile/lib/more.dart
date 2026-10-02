@@ -50,12 +50,12 @@ class _ReportsPageState extends State<ReportsPage> {
       final expenses = json(data['expenses']);
       Widget section(String title, List<Widget> children) => Card(child: ExpansionTile(
         title: Text(title), initiallyExpanded: title == 'المبيعات', children: children));
-      Widget line(String title, dynamic value) => ListTile(title: Text(title), trailing: Text(str(value)));
+      Widget line(String title, dynamic value) => ListTile(title: Text(title), trailing: Text(statistic(value)));
       Widget kpi(String label, dynamic value, IconData icon) => Card(child: Padding(
         padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start,
           children: [Icon(icon, color: appNavy, size: 21), const SizedBox(height: 12),
             Text(label, style: const TextStyle(fontSize: 12, color: appMuted)),
-            const SizedBox(height: 5), Text(str(value), textDirection: TextDirection.ltr,
+            const SizedBox(height: 5), Text(statistic(value), textDirection: TextDirection.ltr,
               style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: appInk))])));
       return Column(children: [
         const SizedBox(height: 12),
@@ -81,7 +81,7 @@ class _ReportsPageState extends State<ReportsPage> {
         ]),
         section('المنتجات', [for (final product in (data['products'] as List).map(json))
           ListTile(title: Text('${product['product']} · ${product['variant']}'),
-            subtitle: Text('الوحدات: ${product['units']}'), trailing: Text(str(product['net'])))]),
+            subtitle: Text('الوحدات: ${product['units']}'), trailing: Text(statistic(product['net'])))]),
         section('المرتجعات', [line('عدد المرتجعات', returns['count']),
           line('قيمتها', returns['value']), line('تكلفتها', returns['costs'])]),
         section('المصروفات', [line('إجمالي المصروفات', expenses['total']),
