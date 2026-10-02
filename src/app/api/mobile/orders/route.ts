@@ -19,7 +19,9 @@ export async function GET(request: NextRequest) {
       } }),
       db.order.count({ where }),
     ]);
-    return NextResponse.json({ data: orders, page, count, hasMore: page * 25 < count }, { headers: { "Cache-Control": "no-store" } });
+    const noteLogs = await db.auditLog.findMany({ where: { storeId: session.storeId, entity: "Order", action: "CREATE", entityId: { in: orders.map(order => order.id) } }, select: { entityId: true, metadata: true } });
+    const notes = new Map(noteLogs.flatMap(log => { const meta = log.metadata; return meta && typeof meta === "object" && !Array.isArray(meta) && typeof meta.note === "string" ? [[log.entityId, meta.note] as const] : []; }));
+    return NextResponse.json({ data: orders.map(order => ({ ...order, customerNote: notes.get(order.id) || "" })), page, count, hasMore: page * 25 < count }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof Error && error.message === "UNAUTHORIZED") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     throw error;

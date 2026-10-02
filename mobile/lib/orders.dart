@@ -129,6 +129,7 @@ class _OrdersPageState extends State<OrdersPage> {
           if (str(o['customerAddress']).trim().isNotEmpty)
             _detailRow(Icons.location_on_outlined, 'العنوان', str(o['customerAddress'])),
           const SizedBox(height: 14),
+          if (str(o['customerNote']).trim().isNotEmpty) _detailRow(Icons.sticky_note_2_outlined, 'ملاحظة العميل', str(o['customerNote'])),
           _sectionTitle('الأصناف (${items.length})'),
           ...items.map((item) => Padding(padding: const EdgeInsets.symmetric(vertical: 7),
             child: Row(children: [

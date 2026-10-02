@@ -4,6 +4,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'api.dart';
 import 'ui.dart';
 
+const shippingGovernorates = ['القاهرة', 'الجيزة', 'الإسكندرية', 'القليوبية', 'المنوفية', 'الغربية', 'الدقهلية', 'الشرقية', 'البحيرة', 'كفر الشيخ', 'دمياط', 'بورسعيد', 'الإسماعيلية', 'السويس', 'الفيوم', 'بني سويف', 'المنيا', 'أسيوط', 'سوهاج', 'قنا', 'الأقصر', 'أسوان', 'مطروح', 'البحر الأحمر', 'الوادي الجديد', 'شمال سيناء', 'جنوب سيناء'];
+
 String audienceCategory(String value) {
   final category = value.trim().toLowerCase();
   if (['men', 'male', 'رجالي', 'رجال', 'عطور رجالي'].contains(category)) return 'Men';
@@ -56,6 +58,7 @@ class StorefrontSettings extends StatefulWidget {
 class _StorefrontSettingsState extends State<StorefrontSettings> {
   final form = GlobalKey<FormState>();
   late final Json settings = Map<String, dynamic>.from(widget.initial);
+  late final Json shippingRates = Map<String, dynamic>.from(json(settings['shippingRates']));
   bool busy = false;
   String message = '';
   bool failed = false;
@@ -68,6 +71,7 @@ class _StorefrontSettingsState extends State<StorefrontSettings> {
     onChanged: (value) => settings[name] = name == 'heroImages' ? value.split('\n').map((v) => v.trim()).where((v) => v.isNotEmpty).toList() : number ? double.tryParse(value) ?? -1 : value));
   Future<void> save({bool toggle = false}) async {
     if (!toggle && !form.currentState!.validate()) return;
+    if (!toggle) settings['shippingRates'] = shippingRates;
     setState(() { busy = true; message = ''; failed = false; });
     try {
       final enabled = settings['enabled'] == true;
@@ -76,6 +80,12 @@ class _StorefrontSettingsState extends State<StorefrontSettings> {
     } catch (error) { if (mounted) setState(() { failed = true; message = '$error'; }); }
     finally { if (mounted) setState(() => busy = false); }
   }
+  Widget shippingRate(String name) => Padding(padding: const EdgeInsets.only(bottom: 16), child: TextFormField(
+    key: ValueKey('shipping-$name'), initialValue: str(shippingRates[name]), enabled: !busy,
+    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+    decoration: InputDecoration(labelText: name, hintText: 'فارغ = السعر الافتراضي', border: const OutlineInputBorder()),
+    validator: (value) { if ((value ?? '').trim().isEmpty) return null; final fee = double.tryParse(value!); return fee == null || !fee.isFinite || fee < 0 || fee > 10000 ? 'أدخل سعرًا من 0 إلى 10000' : null; },
+    onChanged: (value) { if (value.trim().isEmpty) { shippingRates.remove(name); } else { shippingRates[name] = double.tryParse(value) ?? -1; } }));
   Widget section(String title, List<Widget> children) => Card(margin: const EdgeInsets.only(bottom: 14), child: ExpansionTile(title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)), childrenPadding: const EdgeInsets.all(16), children: children));
   @override
   Widget build(BuildContext context) => Form(key: form, child: Column(children: [
@@ -85,8 +95,8 @@ class _StorefrontSettingsState extends State<StorefrontSettings> {
     section('زرارا الأقسام داخل الهيرو', [field('menCollectionLabel', 'نص زر الرجال'), field('womenCollectionLabel', 'نص زر السيدات'), const Text('الصور تأتي من خلفية الهيرو. تصنيف المنتج يحدد ظهوره، والمنتج للجنسين يظهر في القسمين.')]),
     section('المنتجات المختارة', [field('featuredEyebrow', 'النص الصغير فوق المنتجات'), field('featuredTitle', 'عنوان Best Sellers', lines: 2), field('offersTitle', 'عنوان Offers'), field('allProductsTitle', 'عنوان All Products'), const Text('زر SHOW NOTES يعرض الوصف المسجل لكل عطر في منتجات المتجر.')]),
     section('التعريف بالعلامة', [field('storyEyebrow', 'النص الصغير في جزء التعريف'), field('storyTitle', 'عنوان التعريف', lines: 2), field('storyDescription', 'وصف التعريف', lines: 3), field('storyButtonLabel', 'نص زر التعريف')]),
-    section('التواصل', [field('whatsapp', 'رقم واتساب'), field('contactEmail', 'بريد التواصل')]),
-    section('الشحن والسياسات', [field('shippingFee', 'رسوم الشحن', number: true), field('freeShippingFrom', 'شحن مجاني من (0 لإيقافه)', number: true), field('shippingPolicy', 'سياسة الشحن', lines: 4), field('returnPolicy', 'سياسة الإرجاع', lines: 4)]),
+    section('التواصل', [const Text('الرقم يظهر في صفحة التواصل وزر واتساب الثابت. استخدم 010xxxxxxxx أو +2010xxxxxxxx.'), const SizedBox(height: 16), field('whatsapp', 'رقم واتساب'), field('contactEmail', 'بريد التواصل')]),
+    section('الشحن والسياسات', [field('shippingFee', 'رسوم الشحن الافتراضية', number: true), const Text('حدد سعر كل محافظة: ٦٠ أو ٩٠ أو أي سعر. الفارغ يستخدم السعر الافتراضي، والصفر يعني شحن مجاني.'), const SizedBox(height: 16), for (final name in shippingGovernorates) shippingRate(name), field('freeShippingFrom', 'شحن مجاني من (0 لإيقافه)', number: true), field('shippingPolicy', 'سياسة الشحن', lines: 4), field('returnPolicy', 'سياسة الإرجاع', lines: 4)]),
     SizedBox(width: double.infinity, child: FilledButton(onPressed: busy ? null : () => save(), child: Text(busy ? 'جارٍ الحفظ…' : 'حفظ تعديلات الموقع'))),
   ]));
 }
@@ -101,7 +111,7 @@ class ProductManagePage extends StatefulWidget {
 class _ProductManagePageState extends State<ProductManagePage> {
   final form = GlobalKey<FormState>();
   final requestId = const Uuid().v4();
-  Json product = {'title': '', 'description': '', 'category': 'Unisex', 'images': <String>[], 'published': false, 'featured': false};
+  Json product = {'title': '', 'description': '', 'category': 'Unisex', 'inspiredBy': '', 'scentFamily': '', 'images': <String>[], 'published': false, 'featured': false};
   List<Json> variants = [];
   late Future<List<Json>> materials = load();
   bool offers = false;
@@ -115,7 +125,7 @@ class _ProductManagePageState extends State<ProductManagePage> {
     final available = rows(await widget.api.get('/api/materials'));
     if (widget.productId != null) {
       final p = json((await widget.api.get('/api/products/${widget.productId}'))['data']);
-      product = {'title': p['title'], 'description': p['storefrontDescription'], 'category': audienceCategory(str(p['storefrontCategory'])), 'images': p['storefrontImages'], 'published': p['storefrontPublished'], 'featured': p['storefrontFeatured']};
+      product = {'title': p['title'], 'description': p['storefrontDescription'], 'category': audienceCategory(str(p['storefrontCategory'])), 'inspiredBy': str(p['storefrontInspiredBy']), 'scentFamily': str(p['storefrontScentFamily']), 'images': p['storefrontImages'], 'published': p['storefrontPublished'], 'featured': p['storefrontFeatured']};
       variants = (p['variants'] as List).map(json).where((v) => v['active'] == true).map((v) {
         final recipes = rows({'data': v['recipes']});
         final versions = recipes.isEmpty ? <Json>[] : rows({'data': recipes.first['versions']});
@@ -196,13 +206,13 @@ class _ProductManagePageState extends State<ProductManagePage> {
         const SizedBox(height: 16), OutlinedButton.icon(onPressed: busy || variants.length >= 20 ? null : () => setState(() => variants.add(blank())), icon: const Icon(Icons.add), label: const Text('إضافة حجم آخر')),
         ],
         if (step == 3) ...[
-        Card(child: Padding(padding: const EdgeInsets.all(16), child: field(product, 'description', 'وصف العطر', required: false, lines: 5))),
+        Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [field(product, 'description', 'وصف العطر', required: false, lines: 5), field(product, 'inspiredBy', 'مستوحى من (اختياري)', required: false), field(product, 'scentFamily', 'طابع العطر (اختياري)', required: false)]))),
         SwitchListTile(value: product['published'] == true, onChanged: busy ? null : (value) => setState(() => product['published'] = value), title: const Text('ظاهر للعملاء في المتجر')),
         SwitchListTile(value: product['featured'] == true, onChanged: busy ? null : (value) => setState(() => product['featured'] = value), title: const Text('يظهر في Best Sellers')),
         const Text('الوصفات والطلبات السابقة تظل محفوظة عند تعديل المنتج أو إزالة حجم.', style: TextStyle(color: appMuted)),
         ],
         if (step == 4) ...[
-          Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(str(product['title']), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)), Text(str(product['category'])), if ((product['images'] as List).isNotEmpty) Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Wrap(spacing: 12, runSpacing: 12, children: (product['images'] as List).map((url) => ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.network(str(url), width: 90, height: 110, fit: BoxFit.cover, errorBuilder: (context, failure, stack) => const SizedBox(width: 90, height: 110, child: Icon(Icons.broken_image_outlined))))).toList())), const SizedBox(height: 12), Text(str(product['description'])), Text(product['published'] == true ? 'سيظهر للعملاء' : 'مسودة غير منشورة')]))),
+          Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(str(product['title']), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)), Text(str(product['category'])), if ((product['images'] as List).isNotEmpty) Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Wrap(spacing: 12, runSpacing: 12, children: (product['images'] as List).map((url) => ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.network(str(url), width: 90, height: 110, fit: BoxFit.cover, errorBuilder: (context, failure, stack) => const SizedBox(width: 90, height: 110, child: Icon(Icons.broken_image_outlined))))).toList())), const SizedBox(height: 12), Text(str(product['description'])), if (str(product['inspiredBy']).isNotEmpty) Text('مستوحى من: ${product['inspiredBy']}'), if (str(product['scentFamily']).isNotEmpty) Text('طابع العطر: ${product['scentFamily']}'), Text(product['published'] == true ? 'سيظهر للعملاء' : 'مسودة غير منشورة')]))),
           for (final v in variants) Card(margin: const EdgeInsets.only(top: 16), child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('${v['title']} · ${v['price']} جنيه', style: const TextStyle(fontWeight: FontWeight.w800)), for (final m in (v['materials'] as List).map(json)) Text('${available.where((a) => a['id'] == m['materialId']).map((a) => a['name']).join()} · ${m['quantity']}'), costPreview(v, available)]))),
           const SizedBox(height: 16), const Text('لم يُحفظ المنتج بعد. راجع التفاصيل ثم أكد الحفظ.'),
         ],
