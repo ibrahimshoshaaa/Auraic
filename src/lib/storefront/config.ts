@@ -51,6 +51,7 @@ export const productPresentationSchema = z.object({
 });
 export const governorates = ["القاهرة", "الجيزة", "الإسكندرية", "القليوبية", "المنوفية", "الغربية", "الدقهلية", "الشرقية", "البحيرة", "كفر الشيخ", "دمياط", "بورسعيد", "الإسماعيلية", "السويس", "الفيوم", "بني سويف", "المنيا", "أسيوط", "سوهاج", "قنا", "الأقصر", "أسوان", "مطروح", "البحر الأحمر", "الوادي الجديد", "شمال سيناء", "جنوب سيناء"] as const;
 export const checkoutSchema = z.object({
+  note: z.string().trim().max(500).default(""),
   requestId: z.uuid(), name: z.string().trim().min(2).max(100),
   expectedTotalCents: z.number().int().positive().max(1000000000),
   phone: z.string().regex(/^01[0125]\d{8}$/, "راجع رقم الموبايل المصري"),

@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
               quantity: item.quantity, originalPrice: decimal(priceCents), finalLinePrice: decimal(priceCents * item.quantity), discount: 0, refunded: 0 };
           }) },
         } });
-        await tx.auditLog.create({ data: { storeId: shop.id, action: "CREATE", entity: "Order", entityId: orderId, metadata: { source: "STOREFRONT", payment: "COD" } } });
+        await tx.auditLog.create({ data: { storeId: shop.id, action: "CREATE", entity: "Order", entityId: orderId, metadata: { source: "STOREFRONT", payment: "COD", note: input.note } } });
       });
     } catch (error) {
       if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002")) throw error;

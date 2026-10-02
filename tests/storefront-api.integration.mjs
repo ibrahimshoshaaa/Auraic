@@ -172,9 +172,11 @@ test('public orders validate server prices, tenant, publication and recipe; retr
     }
     const details = await (await fetch(`${url}/products/${managedId}`)).text();
     assert.ok(details.includes('30 ml') && details.includes('100 ml'));
-    const checkout = await post({ ...order, requestId: randomUUID(), items: [{ variantId: managed.variants[0].id, quantity: 1 }], expectedTotalCents: 49500 });
+    const checkout = await post({ ...order, note: 'Call before delivery', requestId: randomUUID(), items: [{ variantId: managed.variants[0].id, quantity: 1 }], expectedTotalCents: 49500 });
     assert.equal(checkout.status, 201, await checkout.clone().text());
     const receipt = (await checkout.json()).data;
+    const savedNote = await db.auditLog.findFirst({ where: { storeId: shop.id, entity: 'Order', metadata: { path: ['note'], equals: 'Call before delivery' } } });
+    assert.ok(savedNote, 'customer note is persisted with the order audit');
     const versionId = managed.variants[0].recipes[0].versions[0].id;
     const edited = await manage({ ...body, productId: managedId, variants: [{ ...body.variants[0], id: managed.variants[0].id, price: 400, materials: [{ materialId: material.id, quantity: 35 }] }] });
     assert.equal(edited.status, 200, await edited.clone().text());

@@ -9,7 +9,7 @@ import { governorates } from "@/lib/storefront/config";
 import { checkoutTotals, formatMoney } from "@/lib/storefront/pricing";
 
 export function Checkout({ products, settings, checkout = false }: { products: ShopProduct[]; settings: ShopSettings; checkout?: boolean }) {
-  const { lines, ready, update, clear } = useCart();
+  const { lines, ready, update, clear, note } = useCart();
   const [busy, setBusy] = useState(false); const [error, setError] = useState("");
   const [result, setResult] = useState<{ orderNumber: string; total: number } | null>(null);
   const requestId = useRef<string | null>(null);
@@ -21,7 +21,7 @@ export function Checkout({ products, settings, checkout = false }: { products: S
     const data = new FormData(event.currentTarget); requestId.current ??= crypto.randomUUID();
     try {
       const response = await fetch("/api/storefront/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-        requestId: requestId.current, expectedTotalCents: totals.totalCents, name: data.get("name"), phone: data.get("phone"), governorate: data.get("governorate"), address: data.get("address"),
+        note, requestId: requestId.current, expectedTotalCents: totals.totalCents, name: data.get("name"), phone: data.get("phone"), governorate: data.get("governorate"), address: data.get("address"),
         items: lines.map(line => ({ variantId: line.variantId, quantity: line.quantity })),
       }) });
       const body = await response.json(); if (!response.ok) throw new Error(response.status === 409 ? "Your bag or its prices have changed. Review your bag before continuing." : response.status === 422 ? "Please check your delivery details and try again." : "Unable to place your order. Please try again.");
