@@ -13,9 +13,16 @@ export function ShopHeader({ announcement, menCategory, womenCategory }: { annou
   useEffect(() => {
     if (!open) return;
     const before = document.body.style.overflow; document.body.style.overflow = "hidden";
-    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
+    const close = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Tab") {
+        const elements = document.querySelectorAll<HTMLElement>("#shop-drawer a, #shop-drawer button"); const first = elements[0], last = elements[elements.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+      }
+    };
     document.addEventListener("keydown", close);
-    return () => { document.body.style.overflow = before; document.removeEventListener("keydown", close); };
+    return () => { document.body.style.overflow = before; document.removeEventListener("keydown", close); document.querySelector<HTMLButtonElement>(".shop-menu-button")?.focus(); };
   }, [open]);
   const count = lines.reduce((sum, line) => sum + line.quantity, 0);
   return <><div className="shop-header-stack">{announcement && <div className="shop-announcement"><span>✦</span><p>{announcement}</p><span>✦</span></div>}<header className="shop-header">
