@@ -13,9 +13,10 @@ const fulfillmentStages = {'UNFULFILLED': 'لم يُشحن', 'FULFILLED': 'تم 
   'PARTIALLY_FULFILLED': 'شُحن جزء منه', 'IN_PROGRESS': 'جاري التجهيز'};
 
 class OrdersPage extends StatefulWidget {
-  const OrdersPage({required this.api, required this.canWrite, super.key});
+  const OrdersPage({required this.api, required this.canWrite, this.orderId, super.key});
   final ErpApi api;
   final bool canWrite;
+  final String? orderId;
   @override
   State<OrdersPage> createState() => _OrdersPageState();
 }
@@ -24,7 +25,7 @@ class _OrdersPageState extends State<OrdersPage> {
   final search = TextEditingController();
   int page = 1;
   late Future<dynamic> result = load();
-  Future<dynamic> load() => widget.api.get('/api/mobile/orders?page=$page&search=${Uri.encodeQueryComponent(search.text)}');
+  Future<dynamic> load() => widget.api.get('/api/mobile/orders?page=$page&search=${Uri.encodeQueryComponent(search.text)}${widget.orderId == null ? '' : '&orderId=${Uri.encodeComponent(widget.orderId!)}'}');
   void reload() => setState(() => result = load());
   @override
   void dispose() { search.dispose(); super.dispose(); }
@@ -197,7 +198,8 @@ class _OrdersPageState extends State<OrdersPage> {
 }
 
 class NewOrderPage extends StatefulWidget {
-  const NewOrderPage({required this.api, super.key});
+  const NewOrderPage({required this.api, this.customer, super.key});
+  final Json? customer;
   final ErpApi api;
   @override
   State<NewOrderPage> createState() => _NewOrderPageState();
@@ -227,6 +229,18 @@ class _NewOrderPageState extends State<NewOrderPage> {
     name.dispose(); phone.dispose(); address.dispose(); deposit.dispose();
     for (final line in lines) { line.dispose(); }
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final customer = widget.customer;
+    if (customer != null) {
+      name.text = str(customer['name']);
+      final value = str(customer['phone']);
+      phone.text = value.startsWith('20') ? '0${value.substring(2)}' : value;
+      address.text = str(customer['address']);
+    }
   }
 
   Future<void> submit() async {

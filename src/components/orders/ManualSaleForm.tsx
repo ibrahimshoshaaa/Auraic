@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useRef, useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 type Variant = { id: string; label: string; price: number };
 type Line = { key: number; variantId: string; quantity: string; unitPrice: string };
 
 export function ManualSaleForm({ variants }: { variants: Variant[] }) {
   const router = useRouter();
+  const customerKey = useSearchParams().get("customer");
   const nextKey = useRef(1);
   const requestId = useRef<string | null>(null);
   const [lines, setLines] = useState<Line[]>([{ key: 0, variantId: "", quantity: "1", unitPrice: "" }]);
@@ -20,6 +21,16 @@ export function ManualSaleForm({ variants }: { variants: Variant[] }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const fieldClass = "mt-2 block w-full min-w-0 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#96723c]";
+
+  useEffect(() => {
+    if (!customerKey) return;
+    const abort = new AbortController();
+    fetch(`/api/customers?key=${encodeURIComponent(customerKey)}`, { signal: abort.signal })
+      .then(async response => { const payload = await response.json(); if (!response.ok) throw new Error(payload.error); return payload.data; })
+      .then(customer => { setCustomerName(customer.name); setCustomerPhone(customer.phone.startsWith("20") ? `0${customer.phone.slice(2)}` : customer.phone); setCustomerAddress(customer.address); })
+      .catch(error => { if (!abort.signal.aborted) setError(error.message || "تعذر تحميل بيانات العميل"); });
+    return () => abort.abort();
+  }, [customerKey]);
 
   function update(key: number, changes: Partial<Line>) {
     setLines((current) => current.map((line) => line.key === key ? { ...line, ...changes } : line));

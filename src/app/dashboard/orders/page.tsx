@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { normalizeCustomerPhone } from "@/lib/customers";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-helpers";
 import { can } from "@/lib/rbac";
@@ -17,13 +18,13 @@ const manualLabels: Record<string, string> = {
   NEW: "قيد التجهيز", PREPARED: "تم التجهيز", SHIPPING: "جاري الشحن", DELIVERED: "تم التسليم", RETURNED: "تم الإرجاع",
 };
 
-export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ page?: string; q?: string; manual?: string; attention?: string }> }) {
+export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ page?: string; q?: string; manual?: string; attention?: string; orderId?: string }> }) {
   const session = await requireAuth();
   if (!can(session.role, "orders.read")) throw new Error("Forbidden");
   const params = await searchParams;
   const page = Math.max(1, Math.min(100000, Number.parseInt(params.page ?? "1", 10) || 1));
   const q = (params.q ?? "").trim().slice(0, 80);
-  const where = { storeId: session.storeId, ...(q ? { OR: [
+  const where = { storeId: session.storeId, ...(params.orderId ? { id: params.orderId } : {}), ...(q ? { OR: [
     { orderNumber: { contains: q, mode: "insensitive" as const } },
     { customerRef: { contains: q, mode: "insensitive" as const } },
     { customerPhone: { contains: q } },
@@ -53,7 +54,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
       {orders.length ? (
         <div className="space-y-3">
           {orders.map(order => (
-            <details key={order.id} className="group min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <details key={order.id} open={Boolean(params.orderId)} className="group min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm">
               <summary className="flex cursor-pointer list-none items-center gap-3 p-4 marker:hidden [&::-webkit-details-marker]:hidden sm:p-5">
                 <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-x-3 gap-y-1"><h2 className="break-all font-bold">طلب #{(order.orderNumber ?? order.id.slice(-8)).replace(/^#+/, "")}</h2>{order.manualStatus ? <span className={`rounded-full px-2.5 py-1 text-xs ${order.manualStatus === "RETURNED" ? "bg-rose-50 text-rose-800" : "bg-emerald-50 text-emerald-800"}`}>{manualLabels[order.manualStatus] ?? order.manualStatus}</span> : <><span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs text-emerald-800">الدفع: {financialLabels[order.financialStatus ?? ""] ?? order.financialStatus ?? "غير محدد"}</span><span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs text-amber-900">الشحن: {fulfillmentLabels[order.fulfillmentStatus ?? ""] ?? order.fulfillmentStatus ?? "غير محدد"}</span></>}</div><p className="mt-1 text-xs text-slate-500">{order.customerRef ? `${order.customerRef} · ` : ""}{new Intl.DateTimeFormat("ar-EG", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Cairo" }).format(order.occurredAt)} · {order.items.length} بند · {Number(order.total ?? 0).toFixed(2)} {order.currency}</p></div>
                 <span aria-hidden="true" className="shrink-0 text-lg text-slate-500 transition-transform group-open:rotate-180">⌄</span>
@@ -64,6 +65,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                 <p className="text-sm text-slate-600">الإجمالي: <strong className="text-slate-900">{Number(order.total ?? 0).toFixed(2)} {order.currency}</strong> · صافي: {Number(order.netSales ?? 0).toFixed(2)} {order.currency}</p>
                 <p className="mb-2 text-xs font-semibold text-slate-500">بنود الطلب ({order.items.length})</p>
                 <div className="flex flex-wrap gap-2">{order.items.map(item => <span key={item.id} className="rounded-lg bg-slate-50 px-3 py-1.5 text-xs text-slate-700">{item.title} × {Number(item.quantity)} <span className="text-slate-400">· {item.consumptionStatus}</span></span>)}</div>
+                {can(session.role, "customers.read") && <Link href={`/dashboard/customers?q=${encodeURIComponent(normalizeCustomerPhone(order.customerPhone) || order.customerRef || "")}`} className="mr-3 inline-block text-sm font-medium text-[#514b8c] underline">ملف العميل</Link>}
                 <Link href={`/dashboard/consumption?orderId=${order.id}`} className="mt-4 inline-block text-sm font-medium text-[#514b8c] hover:underline">عرض الاستهلاك ←</Link>
                 {order.manualStatus && can(session.role, "orders.write") && <ManualOrderActions orderId={order.id} status={order.manualStatus as ManualOrderStatus} canReturn={["returns.write", "expenses.write", "inventory.write"].every(permission => can(session.role, permission))} />}
               </div>

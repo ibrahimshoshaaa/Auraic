@@ -9,7 +9,8 @@ export async function GET(request: NextRequest) {
     if (!can(session.role, "orders.read")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     const page = Math.max(1, Math.min(100000, Number(request.nextUrl.searchParams.get("page")) || 1));
     const search = (request.nextUrl.searchParams.get("search") ?? "").trim().slice(0, 100);
-    const where = { storeId: session.storeId, ...(search ? { OR: [{ orderNumber: { contains: search, mode: "insensitive" as const } }, { customerRef: { contains: search, mode: "insensitive" as const } }] } : {}) };
+    const orderId = request.nextUrl.searchParams.get("orderId");
+    const where = { storeId: session.storeId, ...(orderId ? { id: orderId } : {}), ...(search ? { OR: [{ orderNumber: { contains: search, mode: "insensitive" as const } }, { customerRef: { contains: search, mode: "insensitive" as const } }] } : {}) };
     const [orders, count] = await Promise.all([
       db.order.findMany({ where, orderBy: [{ occurredAt: "desc" }, { id: "desc" }], skip: (page - 1) * 25, take: 25, select: {
         id: true, orderNumber: true, occurredAt: true, financialStatus: true, fulfillmentStatus: true, manualStatus: true,

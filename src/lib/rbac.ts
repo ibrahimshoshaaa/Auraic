@@ -6,6 +6,7 @@ export const rolePermissions = {
     "dashboard.read",
     "orders.read",
     "orders.write",
+    "customers.read",
     "products.read",
     "products.write",
     "materials.read",
