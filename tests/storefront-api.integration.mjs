@@ -116,21 +116,22 @@ test('public orders validate server prices, tenant, publication and recipe; retr
     // Real preparation snapshots recipe costs. Future purchases must not recost old sales.
     await db.inventoryBalance.upsert({ where: { materialId: material.id }, create: { storeId: shop.id, materialId: material.id, quantity: 0 }, update: { quantity: 0 } });
     const purchaseResponse = await fetch(`${url}/api/purchases`, { method: 'POST', headers: adminHeaders,
-      body: JSON.stringify({ materialId: material.id, quantity: 100, amount: 1200, date: '2026-08-01T12:00:00Z' }) });
+      body: JSON.stringify({ materialId: material.id, quantity: 100, amount: 1000, date: '2026-08-01T12:00:00Z' }) });
     assert.equal(purchaseResponse.status, 201, await purchaseResponse.clone().text());
-    assert.equal(Number((await db.material.findUniqueOrThrow({ where: { id: material.id } })).defaultCost), 12);
+    assert.equal(Number((await db.material.findUniqueOrThrow({ where: { id: material.id } })).defaultCost), 10);
+    await db.recipe.updateMany({ where: { storeId: shop.id, variantId: variant.id }, data: { active: true } });
     for (const date of ['2026-08-10T12:00:00Z', '2026-09-10T12:00:00Z']) {
       const requestId = randomUUID();
       const manualResponse = await fetch(`${url}/api/orders/manual`, { method: 'POST', headers: adminHeaders,
         body: JSON.stringify({ requestId, customerName: 'Profit example', customerPhone: '01011111111', customerAddress: 'Cairo building 10', hasDeposit: false, depositAmount: 0,
-          items: [{ variantId: managed.variants[0].id, quantity: 1, unitPrice: 450 }] }) });
+          items: [{ variantId: variant.id, quantity: 1, unitPrice: 450 }] }) });
       assert.equal(manualResponse.status, 200, await manualResponse.clone().text());
       const orderId = `manual_${requestId}`;
       const prepare = await fetch(`${url}/api/orders/${encodeURIComponent(orderId)}/manual-status`, { method: 'POST', headers: adminHeaders, body: JSON.stringify({ status: 'PREPARED' }) });
       assert.equal(prepare.status, 200, await prepare.clone().text());
       const consumption = await db.consumption.findUniqueOrThrow({ where: { orderItemId: (await db.orderItem.findFirstOrThrow({ where: { orderId } })).id } });
       const snapshot = await db.auditLog.findFirstOrThrow({ where: { storeId: shop.id, entity: 'Consumption', entityId: consumption.id, action: 'CREATE' } });
-      assert.equal(snapshot.after.materials[0].unitCost, 12);
+      assert.equal(snapshot.after.materials[0].unitCost, 10);
       await db.order.update({ where: { id: orderId }, data: { manualStatus: 'DELIVERED', financialStatus: 'PAID', occurredAt: new Date(date) } });
     }
     await db.material.update({ where: { id: material.id }, data: { defaultCost: 999 } });
