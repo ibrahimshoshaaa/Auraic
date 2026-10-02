@@ -84,18 +84,18 @@ export default async function ProductDetailPage({
                   {v.costing && (
                     <div className="mt-3 flex gap-6 border-t border-[var(--border)] pt-3 text-sm">
                       <div>
-                        <span className="text-gray-500">التكلفة التقديرية: </span>
+                        <span className="text-gray-500">تكلفة الوصفة: </span>
                         <span className="font-mono font-semibold">
-                          {v.costing.estimatedCost.toFixed(2)} EGP
+                          {v.costing.complete ? `${v.costing.estimatedCost.toFixed(2)} EGP` : "غير مكتملة"}
                         </span>
                         {!v.costing.complete && (
                           <span className="mr-1 text-xs text-amber-600">(غير مكتملة)</span>
                         )}
                       </div>
                       <div>
-                        <span className="text-gray-500">الهامش التقديري: </span>
+                        <span className="text-gray-500">الربح المتوقع قبل التشغيل: </span>
                         <span className="font-mono font-semibold">
-                          {v.costing.estimatedMargin.toFixed(2)} EGP
+                          {v.costing.complete ? `${v.costing.estimatedMargin.toFixed(2)} EGP` : "أكمل تكاليف الخامات"}
                         </span>
                       </div>
                     </div>

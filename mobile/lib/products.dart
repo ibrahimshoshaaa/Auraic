@@ -99,8 +99,10 @@ class _ProductDetailState extends State<ProductDetail> {
         children: [
           const Divider(),
           if (v['costing'] is Map && (v['costing'] as Map)['estimatedCost'] != null)
-            ListTile(title: const Text('تكلفة التصنيع المقدرة'),
-              trailing: Text('${(v['costing'] as Map)['estimatedCost']} EGP')),
+            ListTile(title: const Text('تكلفة الوصفة للقطعة'),
+              trailing: Text((v['costing'] as Map)['complete'] == true ? '${(v['costing'] as Map)['estimatedCost']} EGP' : 'غير مكتملة')),
+          if (v['costing'] is Map && (v['costing'] as Map)['complete'] == true)
+            ListTile(title: const Text('الربح المتوقع قبل التشغيل'), trailing: Text('${(v['costing'] as Map)['estimatedMargin']} EGP')),
           if (v['recipes'] is List && (v['recipes'] as List).isNotEmpty) ...[
             const Align(alignment: AlignmentDirectional.centerStart,
               child: Text('الوصفة الحالية', style: TextStyle(

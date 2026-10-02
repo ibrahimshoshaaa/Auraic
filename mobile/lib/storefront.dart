@@ -87,6 +87,8 @@ class _ProductManagePageState extends State<ProductManagePage> {
   Json product = {'title': '', 'description': '', 'category': 'العطور', 'images': <String>[], 'published': false, 'featured': false};
   List<Json> variants = [];
   late Future<List<Json>> materials = load();
+  int step = 0;
+  final steps = const ['بيانات العطر', 'الصور', 'الأحجام والوصفات', 'الوصف والنشر', 'المعاينة والتأكيد'];
   bool busy = false;
   String error = '';
   Json blank() => {'clientId': const Uuid().v4(), 'title': '', 'price': '', 'compareAtPrice': '', 'materials': <Json>[{'materialId': '', 'quantity': ''}]};
@@ -106,13 +108,33 @@ class _ProductManagePageState extends State<ProductManagePage> {
     return available;
   }
   Widget field(Json target, String name, String label, {bool number = false, bool required = true, int lines = 1}) => Padding(padding: const EdgeInsets.only(bottom: 16), child: TextFormField(
-    initialValue: str(target[name]), maxLines: lines,
+    key: ValueKey("${identityHashCode(target)}-$name"), initialValue: str(target[name]), maxLines: lines,
     keyboardType: number ? const TextInputType.numberWithOptions(decimal: true) : lines > 1 ? TextInputType.multiline : TextInputType.text,
     decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
     validator: (value) { if (!required && (value ?? '').trim().isEmpty) return null; if ((value ?? '').trim().isEmpty) return 'الحقل مطلوب'; if (number && (double.tryParse(value!) == null || double.parse(value) <= 0)) return 'أدخل قيمة أكبر من صفر'; return null; },
-    onChanged: (value) => target[name] = value));
+    onChanged: (value) => setState(() => target[name] = value)));
+  void next() {
+    if (!(form.currentState?.validate() ?? false)) return;
+    setState(() { step++; error = ''; });
+  }
+  Widget costPreview(Json variant, List<Json> available) {
+    double total = 0;
+    bool complete = (variant['materials'] as List).isNotEmpty;
+    for (final line in (variant['materials'] as List).map(json)) {
+      final matches = available.where((m) => m['id'] == line['materialId']);
+      final quantity = double.tryParse(str(line['quantity']));
+      final unitCost = matches.isEmpty ? null : double.tryParse(str(matches.first['defaultCost']));
+      if (unitCost == null || quantity == null || quantity <= 0) { complete = false; } else { total += quantity * unitCost; }
+    }
+    final price = double.tryParse(str(variant['price'])) ?? 0;
+    return Container(width: double.infinity, padding: const EdgeInsets.all(16), margin: const EdgeInsets.only(top: 12), decoration: BoxDecoration(color: const Color(0xfff5f3eb), borderRadius: BorderRadius.circular(14)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(complete ? 'تكلفة الوصفة للقطعة: ${total.toStringAsFixed(2)} جنيه' : 'أكمل كميات وتكاليف الخامات في المخزون'),
+      if (complete && price > 0) Text('الربح المتوقع: ${(price-total).toStringAsFixed(2)} جنيه · ${((price-total)/price*100).toStringAsFixed(2)}٪'),
+      const SizedBox(height: 8), const Text('قبل المصروفات التشغيلية، حسب تكلفة الخامات الحالية. للإدارة فقط.', style: TextStyle(fontSize: 12, color: appMuted)),
+    ]));
+  }
   Future<void> save() async {
-    if (!form.currentState!.validate()) return;
+    if (step != 4 || busy) return;
     setState(() { busy = true; error = ''; });
     try {
       final data = <String, dynamic>{...product, 'requestId': requestId, if (widget.productId != null) 'productId': widget.productId,
@@ -129,7 +151,12 @@ class _ProductManagePageState extends State<ProductManagePage> {
       final available = snapshot.data!;
       return Form(key: form, child: ListView(padding: const EdgeInsets.all(16), children: [
         if (error.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 16), child: Text(error, style: const TextStyle(color: Colors.red))),
-        Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [field(product, 'title', 'اسم العطر، مثال: عود'), field(product, 'category', 'القسم'), field(product, 'description', 'الوصف', required: false, lines: 4), TextFormField(initialValue: (product['images'] as List).join('\n'), maxLines: 4, decoration: const InputDecoration(labelText: 'روابط الصور HTTPS، رابط في كل سطر', border: OutlineInputBorder()), onChanged: (value) => product['images'] = value.split('\n').map((v) => v.trim()).where((v) => v.isNotEmpty).toList())]))),
+        Text('الخطوة ${step + 1} من 5 · ${steps[step]}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 12), LinearProgressIndicator(value: (step+1)/5), const SizedBox(height: 24),
+        if (step == 0) Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [field(product, 'title', 'اسم العطر، مثال: عود'), field(product, 'category', 'القسم'), const Text('اسم واحد يجمع كل أحجام العطر في المتجر.')] ))),
+        if (step == 1) Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [const Text('الصورة الأولى رئيسية. أضف حتى 8 صور.'), const SizedBox(height: 16), TextFormField(key: const ValueKey('product-images'), initialValue: (product['images'] as List).join('\n'), maxLines: 5, decoration: const InputDecoration(labelText: 'روابط الصور HTTPS، رابط في كل سطر', border: OutlineInputBorder()), validator: (value) { final urls = (value ?? '').split('\n').map((v) => v.trim()).where((v) => v.isNotEmpty).toList(); return urls.length > 8 || urls.any((url) => Uri.tryParse(url)?.scheme != 'https' || (Uri.tryParse(url)?.host ?? '').isEmpty) ? 'أدخل حتى 8 روابط HTTPS صحيحة' : null; }, onChanged: (value) => product['images'] = value.split('\n').map((v) => v.trim()).where((v) => v.isNotEmpty).toList())]))),
+        if (step == 2) ...[
+
         const SizedBox(height: 16),
         const Text('كل حجم له سعر ووصفة مستقلة', style: TextStyle(fontWeight: FontWeight.w800)),
         for (final v in variants) Card(key: ValueKey(v['clientId']), margin: const EdgeInsets.only(top: 14), child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
@@ -140,13 +167,24 @@ class _ProductManagePageState extends State<ProductManagePage> {
             const SizedBox(height: 12), field(m, 'quantity', 'الكمية لقطعة واحدة', number: true),
             if ((v['materials'] as List).length > 1) TextButton(onPressed: busy ? null : () => setState(() => (v['materials'] as List).remove(m)), child: const Text('حذف الخامة')),
           ])),
+          if (variants.indexOf(v) > 0) TextButton(onPressed: busy ? null : () => setState(() => v['materials'] = (variants.first['materials'] as List).map((m) => <String, dynamic>{...json(m)}).toList()), child: const Text('نسخ خامات الحجم الأول ثم تعديل الكميات')),
+          costPreview(v, available),
           TextButton.icon(onPressed: busy || (v['materials'] as List).length >= 30 ? null : () => setState(() => (v['materials'] as List).add(<String, dynamic>{'materialId': '', 'quantity': ''})), icon: const Icon(Icons.add), label: const Text('إضافة خامة')),
         ]))),
         const SizedBox(height: 16), OutlinedButton.icon(onPressed: busy || variants.length >= 20 ? null : () => setState(() => variants.add(blank())), icon: const Icon(Icons.add), label: const Text('إضافة حجم آخر')),
+        ],
+        if (step == 3) ...[
+        Card(child: Padding(padding: const EdgeInsets.all(16), child: field(product, 'description', 'وصف العطر', required: false, lines: 5))),
         SwitchListTile(value: product['published'] == true, onChanged: busy ? null : (value) => setState(() => product['published'] = value), title: const Text('ظاهر للعملاء في المتجر')),
         SwitchListTile(value: product['featured'] == true, onChanged: busy ? null : (value) => setState(() => product['featured'] = value), title: const Text('منتج مميز في الرئيسية')),
         const Text('الوصفات والطلبات السابقة تظل محفوظة عند تعديل المنتج أو إزالة حجم.', style: TextStyle(color: appMuted)),
-        const SizedBox(height: 16), FilledButton(onPressed: busy || available.isEmpty ? null : save, child: Text(busy ? 'جارٍ الحفظ…' : 'حفظ المنتج')),
+        ],
+        if (step == 4) ...[
+          Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(str(product['title']), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)), Text(str(product['category'])), const SizedBox(height: 12), Text(str(product['description'])), Text(product['published'] == true ? 'سيظهر للعملاء' : 'مسودة غير منشورة')]))),
+          for (final v in variants) Card(margin: const EdgeInsets.only(top: 16), child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('${v['title']} · ${v['price']} جنيه', style: const TextStyle(fontWeight: FontWeight.w800)), for (final m in (v['materials'] as List).map(json)) Text('${available.where((a) => a['id'] == m['materialId']).map((a) => a['name']).join()} · ${m['quantity']}'), costPreview(v, available)]))),
+          const SizedBox(height: 16), const Text('لم يُحفظ المنتج بعد. راجع التفاصيل ثم أكد الحفظ.'),
+        ],
+        const SizedBox(height: 24), Row(children: [if (step > 0) ...[OutlinedButton(onPressed: busy ? null : () => setState(() => step--), child: const Text('السابق')), const SizedBox(width: 12)], Expanded(child: FilledButton(key: ValueKey('step-action-$step'), onPressed: busy || (step >= 2 && available.isEmpty) ? null : step == 4 ? save : next, child: Text(busy ? 'جارٍ الحفظ…' : step == 4 ? 'تأكيد حفظ المنتج' : step == 3 ? 'معاينة المنتج' : 'التالي')))]),
         if (available.isEmpty) const Text('أضف خامات المخزون أولًا'),
       ]));
     }));

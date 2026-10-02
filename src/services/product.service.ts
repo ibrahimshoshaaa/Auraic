@@ -1,7 +1,6 @@
 import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { getRecipeVersionCost } from "@/services/recipe.service";
-import { isCostingEnabled } from "@/lib/settings";
 import { activeProductStatus } from "@/lib/active-product";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -60,13 +59,12 @@ export async function listProducts(
     orderBy: { title: "asc" },
   });
 
-  const costingEnabled = await isCostingEnabled(storeId);
 
   return Promise.all(
     products.map(async (p) => ({
       ...p,
       variants: await Promise.all(
-        p.variants.map((v) => attachVariantCosting(v, costingEnabled))
+        p.variants.map((v) => attachVariantCosting(v))
       ),
     }))
   );
@@ -79,9 +77,8 @@ export async function getProduct(storeId: string, productId: string) {
   });
   if (!product) return null;
 
-  const costingEnabled = await isCostingEnabled(storeId);
   const variants = await Promise.all(
-    product.variants.map((v) => attachVariantCosting(v, costingEnabled))
+    product.variants.map((v) => attachVariantCosting(v))
   );
 
   return { ...product, variants };
@@ -97,8 +94,7 @@ export async function getVariant(storeId: string, variantId: string) {
   });
   if (!variant) return null;
 
-  const costingEnabled = await isCostingEnabled(storeId);
-  const withCosting = await attachVariantCosting(variant, costingEnabled);
+  const withCosting = await attachVariantCosting(variant);
 
   const [unitsSold, returnCount] = await Promise.all([
     db.orderItem.aggregate({
@@ -127,17 +123,16 @@ export async function listUnmappedVariants(storeId: string) {
 }
 
 async function attachVariantCosting(
-  variant: Prisma.ProductVariantGetPayload<{ include: typeof variantInclude }>,
-  costingEnabled: boolean
+  variant: Prisma.ProductVariantGetPayload<{ include: typeof variantInclude }> 
 ) {
   const recipe = variant.recipes[0] ?? null;
   const currentVersion = recipe?.versions[0] ?? null;
 
-  if (!costingEnabled || !currentVersion) {
+  if (!currentVersion) {
     return {
       ...variant,
       currentRecipe: recipe
-        ? { id: recipe.id, name: recipe.name, versionId: currentVersion?.id ?? null }
+        ? { id: recipe.id, name: recipe.name, versionId: null }
         : null,
       costing: null as null | {
         estimatedCost: number;
