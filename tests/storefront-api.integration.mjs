@@ -158,6 +158,15 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         await page.waitForURL(`${url}/products/${managedId}`);
         await page.locator('.shop-route-loading').waitFor({ state: 'hidden' });
         assert.equal(await page.locator('.shop-detail-copy h1').innerText(), 'Oud');
+        await page.locator('.shop-variant-buttons button').filter({ hasText: '100 ml' }).click();
+        const selectedSize = await page.locator('.shop-sticky-bag select').inputValue();
+        await page.locator('.shop-sticky-bag .shop-button').click();
+        await page.waitForFunction(id => JSON.parse(localStorage.getItem('auraic-cart') || '[]').some(line => line.variantId === id), selectedSize);
+        await page.screenshot({ path: 'artifacts/navigation-product.png', fullPage: true });
+        for (const width of [360, 390, 1440]) {
+          await page.setViewportSize({ width, height: 900 });
+          assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `No product overflow at ${width}px`);
+        }
         assert.deepEqual(errors, []);
       } finally { release(); await browser.close(); }
     }

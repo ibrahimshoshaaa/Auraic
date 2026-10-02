@@ -19,3 +19,15 @@ test('older settings gain current homepage copy without replacing saved custom c
   assert.equal(settings.featuredTitle, 'Best Sellers');
   assert.equal(settings.storyTitle, 'Our story');
 });
+
+test('fragrance metadata is optional for older clients and validates new admin values', async () => {
+  const { productPresentationSchema } = await import('../src/lib/storefront/config.ts');
+  const old = { id: 'product', published: true, featured: false, description: 'Vanilla', category: 'Unisex', images: [] };
+  assert.equal(productPresentationSchema.parse(old).inspiredBy, '');
+  assert.equal(productPresentationSchema.parse(old).scentFamily, '');
+  const current = productPresentationSchema.parse({ ...old, inspiredBy: '  Kayali · Vanilla 28  ', scentFamily: '  Warm Sweet  ' });
+  assert.equal(current.inspiredBy, 'Kayali · Vanilla 28');
+  assert.equal(current.scentFamily, 'Warm Sweet');
+  assert.equal(productPresentationSchema.safeParse({ ...old, inspiredBy: 'x'.repeat(161) }).success, false);
+  assert.equal(productPresentationSchema.safeParse({ ...old, scentFamily: 'x'.repeat(81) }).success, false);
+});

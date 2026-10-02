@@ -6,5 +6,5 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   const { category, q, audience, collection, size } = await searchParams;
   const all = await getPublicProducts(shop.id);
   const validAudience = ["men", "women", "unisex"].includes(audience || "") ? audience : undefined;
-  return <main className="shop-section shop-collection-page"><Catalog key={`${audience || ""}-${collection || ""}-${q || ""}-${category || ""}-${size || ""}`} initialSize={size || ""} initialSearch={q || ""} initialAudience={validAudience || ""} initialCollection={["offers", "bestsellers"].includes(collection || "") ? collection : ""} products={category ? all.filter(p => p.category === category) : all} /></main>;
+  return <main className="shop-section shop-collection-page"><Catalog enabled={shop.settings.enabled} key={`${audience || ""}-${collection || ""}-${q || ""}-${category || ""}-${size || ""}`} initialSize={size || ""} initialSearch={q || ""} initialAudience={validAudience || ""} initialCollection={["offers", "bestsellers"].includes(collection || "") ? collection : ""} products={category ? all.filter(p => p.category === category) : all} /></main>;
 }
