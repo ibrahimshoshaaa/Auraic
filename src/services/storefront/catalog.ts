@@ -22,13 +22,13 @@ export async function getPublicProducts(storeId: string) {
     select: { id: true, title: true, storefrontDescription: true, storefrontCategory: true,
       storefrontImages: true, storefrontFeatured: true,
       variants: { where: { active: true, price: { gt: 0 }, recipes: { some: { active: true, versions: { some: { isCurrent: true, items: { some: {} } } } } } },
-        select: { id: true, title: true, price: true }, orderBy: { price: "asc" } } },
+        select: { id: true, title: true, price: true, compareAtPrice: true }, orderBy: { price: "asc" } } },
     orderBy: [{ storefrontFeatured: "desc" }, { createdAt: "desc" }],
   });
   return products.filter(product => product.variants.length).map(product => ({
     id: product.id, name: product.title, description: product.storefrontDescription,
     category: product.storefrontCategory, images: product.storefrontImages, featured: product.storefrontFeatured,
-    variants: product.variants.map(variant => ({ ...variant, price: Number(variant.price) })),
+    variants: product.variants.map(variant => ({ ...variant, price: Number(variant.price), compareAtPrice: variant.compareAtPrice ? Number(variant.compareAtPrice) : null })),
   }));
 }
 export type ShopProduct = Awaited<ReturnType<typeof getPublicProducts>>[number];

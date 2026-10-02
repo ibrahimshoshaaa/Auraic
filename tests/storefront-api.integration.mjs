@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
 import { setTimeout as delay } from 'node:timers/promises';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, randomBytes, createHash } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
 const db = new PrismaClient();
 async function freePort() { const server = createServer(); await new Promise(resolve => server.listen(0, '127.0.0.1', resolve)); const port = server.address().port; await new Promise(resolve => server.close(resolve)); return port; }
@@ -46,6 +46,44 @@ test('public orders validate server prices, tenant, publication and recipe; retr
     await db.product.update({ where: { id: product.id }, data: { storefrontPublished: true } });
     await db.recipe.updateMany({ where: { variantId: variant.id }, data: { active: false } });
     assert.equal((await post({ ...order, requestId: randomUUID() })).status, 409);
+    // The same authenticated management API serves web sessions and mobile tokens.
+    const owner = await db.user.create({ data: { storeId: shop.id, email: `owner-${shop.id}@example.com`, role: 'OWNER', status: 'ACTIVE' } });
+    const token = `perf_${randomBytes(32).toString('base64url')}`;
+    await db.mobileSession.create({ data: { storeId: shop.id, userId: owner.id, tokenHash: createHash('sha256').update(token).digest('hex'), expiresAt: new Date(Date.now() + 60000) } });
+    const adminHeaders = { ...headers, authorization: `Bearer ${token}` };
+    const manage = data => fetch(`${url}/api/products/manage`, { method: 'POST', headers: adminHeaders, body: JSON.stringify(data) });
+    const settingsRequest = data => fetch(`${url}/api/admin/storefront`, { method: 'PUT', headers: adminHeaders, body: JSON.stringify(data) });
+    assert.equal((await settingsRequest({ kind: 'availability', data: { enabled: false } })).status, 200);
+    assert.equal(JSON.parse((await db.setting.findUnique({ where: { storeId_key: { storeId: shop.id, key: 'storefront' } } })).value).enabled, false);
+    assert.equal((await settingsRequest({ kind: 'availability', data: { enabled: true } })).status, 200);
+    const initialSettings = (await (await fetch(`${url}/api/admin/storefront`, { headers: adminHeaders })).json()).data.settings;
+    assert.equal((await settingsRequest({ kind: 'settings', data: { ...initialSettings, enabled: true, shippingPolicy: '', returnPolicy: '', whatsapp: '+20 1012345678' } })).status, 200);
+    assert.equal(JSON.parse((await db.setting.findUnique({ where: { storeId_key: { storeId: shop.id, key: 'storefront' } } })).value).whatsapp, '201012345678');
+    const body = { requestId: randomUUID(), title: 'Oud', category: 'Perfumes', description: 'Oud description', images: [], published: true, featured: false,
+      variants: [{ clientId: randomUUID(), title: '30 ml', price: 450, compareAtPrice: 550, materials: [{ materialId: material.id, quantity: 30 }] },
+        { clientId: randomUUID(), title: '100 ml', price: 1200, compareAtPrice: null, materials: [{ materialId: material.id, quantity: 100 }] }] };
+    assert.equal((await manage({ ...body, variants: [{ ...body.variants[0], compareAtPrice: 400 }] })).status, 422);
+    assert.equal((await manage({ ...body, variants: [{ ...body.variants[0], id: foreign.variants[0].id }] })).status, 422);
+    const create = await manage(body); assert.equal(create.status, 200, await create.clone().text());
+    const managedId = (await create.json()).data.productId;
+    assert.equal((await manage(body)).status, 200);
+    assert.equal(await db.product.count({ where: { id: managedId } }), 1);
+    const managed = await db.product.findUnique({ where: { id: managedId }, include: { variants: { orderBy: { price: 'asc' }, include: { recipes: { include: { versions: true } } } } } });
+    assert.equal(managed.variants.length, 2); assert.equal(Number(managed.variants[0].compareAtPrice), 550);
+    const details = await (await fetch(`${url}/products/${managedId}`)).text();
+    assert.ok(details.includes('30 ml') && details.includes('100 ml'));
+    const checkout = await post({ ...order, requestId: randomUUID(), items: [{ variantId: managed.variants[0].id, quantity: 1 }], expectedTotalCents: 49500 });
+    assert.equal(checkout.status, 201, await checkout.clone().text());
+    const receipt = (await checkout.json()).data;
+    const versionId = managed.variants[0].recipes[0].versions[0].id;
+    const edited = await manage({ ...body, productId: managedId, variants: [{ ...body.variants[0], id: managed.variants[0].id, price: 400, materials: [{ materialId: material.id, quantity: 35 }] }] });
+    assert.equal(edited.status, 200, await edited.clone().text());
+    assert.equal((await db.productVariant.findUnique({ where: { id: managed.variants[1].id } })).active, false);
+    assert.equal(Number((await db.recipeItem.findFirst({ where: { recipeVersionId: versionId } })).quantity), 30);
+    assert.equal(await db.recipeVersion.count({ where: { recipeId: managed.variants[0].recipes[0].id } }), 2);
+    const savedOrder = await db.order.findFirst({ where: { storeId: shop.id, total: 495 }, include: { items: true } });
+    assert.ok(receipt); assert.equal(Number(savedOrder.items[0].originalPrice), 450);
+    assert.equal((await post({ ...order, requestId: randomUUID(), items: [{ variantId: managed.variants[1].id, quantity: 1 }], expectedTotalCents: 120000 })).status, 409);
   } finally {
     if (child) { child.kill('SIGTERM'); await new Promise(resolve => child.once('exit', resolve)); }
     await db.order.deleteMany({ where: { storeId: { in: [shop.id, other.id] } } });

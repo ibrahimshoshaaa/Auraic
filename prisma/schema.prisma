@@ -149,6 +149,7 @@ model ProductVariant {
   title          String
   sku            String?
   price          Decimal        @db.Decimal(18, 4)
+  compareAtPrice Decimal?       @db.Decimal(18, 4)
   active         Boolean        @default(true)
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
