@@ -28,7 +28,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
           <p className="flex items-center gap-3 text-lg font-bold tracking-tight"><Image src={auraicIcon} alt="" className="size-10 rounded-xl object-cover" />Auraic</p>
           <p className="mt-2 truncate text-xs text-slate-400">{storeName}</p>
         </div>
-        <div className="flex-1"><NavLinks /></div>
+        <div className="flex-1"><NavLinks canReadCustomers={can(session.role, "customers.read")} /></div>
         <form action={logout} className="border-t border-white/10 p-3">
           <button type="submit" className="w-full rounded-xl px-4 py-3 text-right text-sm text-slate-300 transition hover:bg-white/10 hover:text-white">تسجيل الخروج ←</button>
         </form>
@@ -42,7 +42,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
           </summary>
           <MenuBackdrop />
           <div className="absolute right-0 top-full z-10 max-h-[calc(100dvh-9rem)] w-[min(22rem,88vw)] overflow-y-auto rounded-bl-2xl border-t border-white/10 bg-[#191735] shadow-2xl">
-            <NavLinks />
+            <NavLinks canReadCustomers={can(session.role, "customers.read")} />
             <form action={logout} className="border-t border-white/10 p-3">
               <button type="submit" className="w-full rounded-xl px-4 py-3 text-right text-sm text-slate-300">تسجيل الخروج ←</button>
             </form>

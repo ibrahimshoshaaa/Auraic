@@ -51,6 +51,35 @@ test('public orders validate server prices, tenant, publication and recipe; retr
     const token = `perf_${randomBytes(32).toString('base64url')}`;
     await db.mobileSession.create({ data: { storeId: shop.id, userId: owner.id, tokenHash: createHash('sha256').update(token).digest('hex'), expiresAt: new Date(Date.now() + 60000) } });
     const adminHeaders = { ...headers, authorization: `Bearer ${token}` };
+    // Customer management must reconcile channels while keeping customer PII tenant-scoped.
+    assert.equal((await fetch(`${url}/api/customers`)).status, 401);
+    const customerPhone = '01012345678';
+    await db.order.create({ data: { storeId: shop.id, id: `customer-delivered-${shop.id}`, orderNumber: 'CRM-1',
+      currency: 'EGP', total: 450, refunded: 50, occurredAt: new Date(), manualStatus: 'DELIVERED', financialStatus: 'PARTIALLY_REFUNDED',
+      customerRef: 'Returning buyer', customerPhone: '+20 1012345678', customerAddress: 'New address' } });
+    await db.order.create({ data: { storeId: other.id, currency: 'EGP', total: 99999, occurredAt: new Date(),
+      customerRef: 'SECRET FOREIGN CUSTOMER', customerPhone, customerAddress: 'SECRET ADDRESS' } });
+    const customerResponse = await fetch(`${url}/api/customers`, { headers: adminHeaders });
+    assert.equal(customerResponse.status, 200);
+    const customerList = await customerResponse.json();
+    assert.equal(customerList.stats.total, 1); assert.equal(customerList.stats.repeat, 1);
+    const customerKey = customerList.data[0].key;
+    assert.equal(customerList.data[0].ordersCount, 2);
+    assert.equal(customerList.data[0].totals.EGP.deliveredValue, 40000);
+    assert.ok(!JSON.stringify(customerList).includes('SECRET'));
+    const customerDetail = await (await fetch(`${url}/api/customers?key=${encodeURIComponent(customerKey)}`, { headers: adminHeaders })).json();
+    assert.equal(customerDetail.data.orders.length, 2);
+    assert.ok(customerDetail.data.orders.every(o => o.id === saved.id || o.id === `customer-delivered-${shop.id}`));
+    assert.equal((await fetch(`${url}/api/customers?key=order:not-found`, { headers: adminHeaders })).status, 404);
+    const phoneSearch = await (await fetch(`${url}/api/customers?q=${encodeURIComponent('٠١٠١٢٣٤٥٦٧٨')}`, { headers: adminHeaders })).json();
+    assert.equal(phoneSearch.count, 1);
+    const exactOrder = await (await fetch(`${url}/api/mobile/orders?orderId=${encodeURIComponent(saved.id)}`, { headers: adminHeaders })).json();
+    assert.equal(exactOrder.count, 1); assert.equal(exactOrder.data[0].id, saved.id);
+    await db.user.update({ where: { id: owner.id }, data: { role: 'EMPLOYEE' } });
+    assert.equal((await fetch(`${url}/api/customers`, { headers: adminHeaders })).status, 403);
+    await db.user.update({ where: { id: owner.id }, data: { role: 'MANAGER' } });
+    assert.equal((await fetch(`${url}/api/customers`, { headers: adminHeaders })).status, 200);
+    await db.user.update({ where: { id: owner.id }, data: { role: 'OWNER' } });
     const manage = data => fetch(`${url}/api/products/manage`, { method: 'POST', headers: adminHeaders, body: JSON.stringify(data) });
     const settingsRequest = data => fetch(`${url}/api/admin/storefront`, { method: 'PUT', headers: adminHeaders, body: JSON.stringify(data) });
     assert.equal((await settingsRequest({ kind: 'availability', data: { enabled: false } })).status, 200);
