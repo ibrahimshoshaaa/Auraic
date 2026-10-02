@@ -1,15 +1,22 @@
 "use client";
-import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ShopSettings } from "@/lib/storefront/config";
 export function ShopHero({ settings }: { settings: ShopSettings }) {
-  const [slide, setSlide] = useState(0);
-  useEffect(() => { if (settings.heroImages.length < 2) return; const interval = setInterval(() => setSlide(current => (current + 1) % settings.heroImages.length), 6000); return () => clearInterval(interval); }, [settings.heroImages.length]);
-  return <section className={`shop-hero ${settings.heroImages.length ? "has-photo" : ""}`}>
-    {settings.heroImages.length > 0 && <div className="shop-hero-photos">{settings.heroImages.map((image, index) => <Image key={image + index} src={image} alt="" fill unoptimized priority={index === 0} className={index === slide ? "active" : ""} />)}</div>}
-    <div className="shop-hero-copy"><span className="shop-eyebrow">THE AURAIC EXPERIENCE</span><h1>{settings.heroTitle}</h1><p>{settings.heroSubtitle}</p><Link className="shop-button gold" href="/products">اكتشف عطرك <span>←</span></Link><small>DESIGNED TO BE FELT, NOT JUST SMELLED</small></div>
-    {!settings.heroImages.length && <div className="shop-hero-art"><div className="shop-orbit"/><Image src="/auraic-bottle.svg" width={600} height={700} alt="" priority /><span>A scent. A feeling. An Aura.</span></div>}
-    {settings.heroImages.length > 1 && <div className="shop-slider-dots">{settings.heroImages.map((_, index) => <button key={index} aria-label={`البانر ${index + 1}`} aria-pressed={index === slide} onClick={() => setSlide(index)} />)}</div>}
+  const [slide, setSlide] = useState(0); const [paused, setPaused] = useState(false); const [videoFailed, setVideoFailed] = useState(false); const video = useRef<HTMLVideoElement>(null);
+  const isVideo = settings.heroMode === "video" && !!settings.heroVideo && !videoFailed;
+  const images = settings.heroImages;
+  useEffect(() => {
+    if (isVideo || images.length < 2 || paused || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const timer = window.setInterval(() => { if (!document.hidden) setSlide(current => (current + 1) % images.length); }, settings.heroInterval * 1000);
+    return () => window.clearInterval(timer);
+  }, [isVideo, images.length, paused, settings.heroInterval]);
+  useEffect(() => { if (!isVideo || !video.current) return; if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { setPaused(true); return; } video.current.play().catch(() => setPaused(true)); }, [isVideo]);
+  function toggle() { if (isVideo && video.current) { if (video.current.paused) video.current.play().then(() => setPaused(false)).catch(() => setPaused(true)); else { video.current.pause(); setPaused(true); } } else setPaused(!paused); }
+  return <section className={`shop-hero shop-editorial-hero ${images.length || isVideo ? "has-photo" : ""}`} aria-label="مجموعة Auraic">
+    {isVideo ? <video ref={video} className="shop-hero-video" src={settings.heroVideo} poster={images[0]} muted loop playsInline preload="metadata" onError={() => setVideoFailed(true)} onPlay={() => setPaused(false)} onPause={() => setPaused(true)} /> : images.length > 0 ? <div className="shop-hero-photos">{images.map((image, index) => <Image key={image + index} src={image} alt={index === slide % images.length ? "مجموعة عطور Auraic" : ""} fill unoptimized priority={index === 0} sizes="100vw" className={index === slide % images.length ? "active" : ""}/>)}</div> : <div className="shop-hero-fallback"><Image src="/auraic-bottle.svg" alt="" fill priority sizes="100vw"/></div>}
+    <div className="shop-hero-copy"><p className="shop-eyebrow">THE AURAIC COLLECTION</p><h1>{settings.heroTitle}</h1><p>{settings.heroSubtitle}</p></div>
+    <div className="shop-hero-bottom"><a className="shop-hero-cta" href="#products">اكتشف المجموعة <span>←</span></a>{!isVideo && images.length > 1 && <div className="shop-slider-dots">{images.map((_, index) => <button key={index} type="button" aria-label={`عرض الصورة ${index + 1}`} aria-pressed={index === slide % images.length} onClick={() => setSlide(index)}/>)}</div>}</div>
+    {(isVideo || images.length > 1) && <button type="button" className="shop-hero-pause" onClick={toggle} aria-label={paused ? "تشغيل الهيرو" : "إيقاف حركة الهيرو"}>{paused ? "▶" : "Ⅱ"}</button>}
   </section>;
 }

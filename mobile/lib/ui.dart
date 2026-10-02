@@ -8,6 +8,11 @@ Json json(dynamic data) => Map<String, dynamic>.from(data as Map);
 List<Json> rows(dynamic response) =>
     ((response as Map)['data'] as List).map(json).toList();
 String str(dynamic value) => value?.toString() ?? '';
+String statistic(dynamic value) {
+  final number = num.tryParse(str(value));
+  if (number == null) return str(value);
+  return number.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
+}
 double amount(dynamic value) => double.tryParse(str(value)) ?? 0;
 
 const appNavy = Color(0xff123e57);

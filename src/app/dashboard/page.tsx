@@ -6,7 +6,7 @@ import { RangeFilter } from "@/components/reports/RangeFilter";
 import { SalesBars } from "@/components/reports/SalesBars";
 
 type Params = { period?: string; from?: string; to?: string };
-const money = (value: number, currency: string) => `${Number(value).toLocaleString("ar-EG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
+const money = (value: number, currency: string) => `${Number(value).toLocaleString("ar-EG", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ${currency}`;
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<Params> }) {
   const session = await requireAuth();

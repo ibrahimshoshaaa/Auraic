@@ -7,6 +7,13 @@ export const shopSettingsSchema = z.object({
   heroTitle: z.string().trim().min(1, "اكتب عنوان البانر الرئيسي").max(120),
   heroSubtitle: z.string().trim().max(400),
   heroImages: z.array(image).max(8),
+  heroMode: z.enum(["images", "video"]).default("images"),
+  heroInterval: z.number().int().min(2).max(60).default(6),
+  heroVideo: z.union([z.literal(""), image]).default(""),
+  menCollectionImage: z.union([z.literal(""), image]).default(""),
+  womenCollectionImage: z.union([z.literal(""), image]).default(""),
+  menCollectionCategory: z.string().trim().min(1).max(80).default("رجالي"),
+  womenCollectionCategory: z.string().trim().min(1).max(80).default("حريمي"),
   whatsapp: z.string().transform(value => { const cleaned = value.replace(/[^0-9]/g, ""); return cleaned.startsWith("01") ? `2${cleaned}` : cleaned.startsWith("0020") ? cleaned.slice(2) : cleaned; }).pipe(z.string().regex(/^$|^20\d{10}$/, "اكتب رقم واتساب مصري صحيح")),
   contactEmail: z.string().trim().pipe(z.union([z.literal(""), z.email("راجع بريد التواصل")])),
   shippingFee: z.number().finite().min(0).max(10000),
@@ -18,7 +25,7 @@ export type ShopSettings = z.infer<typeof shopSettingsSchema>;
 export const defaultShopSettings: ShopSettings = {
   enabled: false, announcement: "Auraic · عطر يُشعَر به، قبل أن يُشم",
   heroTitle: "عطرك… أثر لا يُنسى", heroSubtitle: "اكتشف عطور Auraic، واختر الرائحة التي تحكي عنك.",
-  heroImages: [], whatsapp: "", contactEmail: "", shippingFee: 0, freeShippingFrom: 0,
+  heroImages: [], heroMode: "images", heroInterval: 6, heroVideo: "", menCollectionImage: "", womenCollectionImage: "", menCollectionCategory: "رجالي", womenCollectionCategory: "حريمي", whatsapp: "", contactEmail: "", shippingFee: 0, freeShippingFrom: 0,
   shippingPolicy: "", returnPolicy: "",
 };
 export const productPresentationSchema = z.object({
