@@ -7,19 +7,21 @@ import { useEffect, useState } from "react";
 import type { ShopProduct } from "@/services/storefront/catalog";
 import { formatMoney } from "@/lib/storefront/pricing";
 
+const displaySize = (title: string) => /^\d+(?:\.\d+)?$/.test(title.trim()) ? `${title.trim()} ml` : title;
+
 export function ProductCard({ product, showNotes = false, enabled = false }: { product: ShopProduct; showNotes?: boolean; enabled?: boolean }) {
-  const cart = useCart(); const [variantId, setVariantId] = useState(product.variants[0].id); const [added, setAdded] = useState(false);
+  const cart = useCart(); const [variantId, setVariantId] = useState((product.variants.find(item => /^50\s*(ml|مل)?$/i.test(item.title.trim())) || product.variants[0]).id); const [added, setAdded] = useState(false);
   const variant = product.variants.find(item => item.id === variantId)!;
   const disabled = !enabled || !cart.ready || (cart.lines.length >= 20 && !cart.lines.some(item => item.variantId === variant.id));
   return <article className="shop-product-wrap shop-fragrance-card">
     <button type="button" className="shop-favorite" disabled={!cart.ready} onClick={() => cart.toggleFavorite(product.id)} aria-pressed={cart.favorites.includes(product.id)} aria-label={cart.favorites.includes(product.id) ? "Remove from wishlist" : "Add to wishlist"}>{cart.favorites.includes(product.id) ? "♥" : "♡"}</button>
-    <Link href={`/products/${product.id}`} className="shop-product-card"><div className="shop-product-image"><Image src={product.images[0] || "/auraic-bottle.svg"} alt={product.name} fill unoptimized={!!product.images.length} sizes="(max-width: 760px) 80vw, 25vw"/>{(product.featured || hasOffer(product)) && <span className="shop-product-badge">{product.featured ? "Best Seller" : "Offer"}</span>}<span className="shop-card-size">{variant.title}</span></div><h3>{product.name}</h3></Link>
-    <div className="shop-fragrance-tags"><span>{productAudience(product.category) === "men" ? "FOR MEN" : productAudience(product.category) === "women" ? "FOR WOMEN" : "UNISEX"}</span>{product.scentFamily && <span>{product.scentFamily}</span>}</div>
+    <Link href={`/products/${product.id}`} className="shop-product-card shop-card-photo-link"><div className="shop-product-image"><Image src={product.images[0] || "/auraic-bottle.svg"} alt={product.name} fill unoptimized={!!product.images.length} sizes="(max-width: 760px) 76vw, 42vw"/><span className="shop-card-size">{displaySize(variant.title)}</span></div></Link>
+    <div className="shop-card-heading"><Link href={`/products/${product.id}`}><h3>{product.name}</h3></Link><div className="shop-fragrance-tags">{product.scentFamily && <span className="shop-scent-tag">{product.scentFamily}</span>}<span>{productAudience(product.category) === "men" ? "MASCULINE" : productAudience(product.category) === "women" ? "FEMININE" : "UNISEX"}</span></div></div>
     <p className={`shop-card-description ${showNotes ? "expanded shop-product-notes" : ""}`}>{product.description}</p>
     {product.inspiredBy && <p className="shop-inspired"><span>Inspired by</span><strong>{product.inspiredBy}</strong></p>}
-    <div className="shop-card-sizes" aria-label={`Choose size for ${product.name}`}>{product.variants.map(item => <button type="button" key={item.id} aria-pressed={item.id === variantId} onClick={() => { setVariantId(item.id); setAdded(false); }}>{item.title}</button>)}</div>
+    <div className="shop-card-sizes" aria-label={`Choose size for ${product.name}`}>{product.variants.map(item => <button type="button" key={item.id} aria-pressed={item.id === variantId} onClick={() => { setVariantId(item.id); setAdded(false); }}>{displaySize(item.title)}</button>)}</div>
     <p className="shop-card-price">Price <strong>{formatMoney(variant.price)}</strong>{variant.compareAtPrice && <del>{formatMoney(variant.compareAtPrice)}</del>}</p>
-    <button type="button" className="shop-button shop-card-add" disabled={disabled} onClick={() => { cart.add({ variantId: variant.id, productId: product.id, name: product.name, size: variant.title, image: product.images[0] || "/auraic-bottle.svg", quantity: 1 }); setAdded(true); }}>{!enabled ? "Orders paused" : added ? "✓ Added to bag" : "Add to bag"} →</button><span role="status" className="sr-only">{added ? `${product.name}, ${variant.title} added to bag` : ""}</span>
+    <button type="button" className="shop-button shop-card-add" disabled={disabled} onClick={() => { cart.add({ variantId: variant.id, productId: product.id, name: product.name, size: variant.title, image: product.images[0] || "/auraic-bottle.svg", quantity: 1 }); setAdded(true); }}>{!enabled ? "Orders paused" : added ? "✓ Added to bag" : "Add to bag"}</button><span role="status" className="sr-only">{added ? `${product.name}, ${variant.title} added to bag` : ""}</span>
   </article>;
 }
 export function Catalog({ products, initialSearch = "", initialAudience = "", initialCollection = "", initialSize = "", enabled }: { products: ShopProduct[]; enabled: boolean; initialSearch?: string; initialAudience?: string; initialCollection?: string; initialSize?: string }) {
