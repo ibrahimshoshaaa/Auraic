@@ -7,9 +7,18 @@ import type { ShopSettings } from "@/lib/storefront/config";
 import { ShopIcon } from "./ShopIcon";
 import { useEffect, useState } from "react";
 
-export function ShopHeader({ announcement }: { announcement: string; menCategory?: string; womenCategory?: string }) {
+export function ShopHeader({ announcement, announcements = [], announcementInterval = 5 }: { announcement: string; announcements?: string[]; announcementInterval?: number; menCategory?: string; womenCategory?: string }) {
   const navigate = useShopNavigation();
   const { lines, favorites, openBag } = useCart(); const [open, setOpen] = useState(false); const [searchOpen, setSearchOpen] = useState(false); const [announcementPaused, setAnnouncementPaused] = useState(false);
+  const [announcementIndex, setAnnouncementIndex] = useState(0);
+  const messages = announcements.length ? announcements : announcement ? [announcement] : [];
+  const messageKey = messages.join("\n");
+  useEffect(() => { setAnnouncementIndex(0); }, [messageKey]);
+  useEffect(() => {
+    if (announcementPaused || messages.length < 2) return;
+    const timer = window.setInterval(() => setAnnouncementIndex(index => (index + 1) % messages.length), announcementInterval * 1000);
+    return () => window.clearInterval(timer);
+  }, [announcementPaused, announcementInterval, messageKey, messages.length]);
   const links = [["/", "Home"], ["/products?audience=men", "For Men"], ["/products?audience=women", "For Women"], ["/samples", "Samples"], ["/contact", "Contact"], ["/policies", "Policies"]];
   useEffect(() => {
     if (!open && !searchOpen) return;
@@ -26,7 +35,7 @@ export function ShopHeader({ announcement }: { announcement: string; menCategory
     return () => { document.body.style.overflow = before; document.removeEventListener("keydown", close); document.querySelector<HTMLButtonElement>(open ? ".shop-menu-button" : ".shop-search-button")?.focus(); };
   }, [open, searchOpen]);
   const count = lines.reduce((sum, line) => sum + line.quantity, 0);
-  return <><div className="shop-header-stack">{announcement && <div className={`shop-announcement ${announcementPaused ? "paused" : ""}`}><div className="shop-announcement-message"><p>{announcement}</p></div><button type="button" onClick={() => setAnnouncementPaused(!announcementPaused)} aria-label={announcementPaused ? "Resume announcement" : "Pause announcement"} aria-pressed={announcementPaused}>{announcementPaused ? "▶" : "Ⅱ"}</button></div>}<header className="shop-header">
+  return <><div className="shop-header-stack">{messages.length > 0 && <div className={`shop-announcement ${announcementPaused ? "paused" : ""}`}><div className="shop-announcement-message"><p key={announcementIndex}>{messages[announcementIndex % messages.length]}</p></div><button type="button" onClick={() => setAnnouncementPaused(!announcementPaused)} aria-label={announcementPaused ? "Resume announcement" : "Pause announcement"} aria-pressed={announcementPaused}>{announcementPaused ? "▶" : "Ⅱ"}</button></div>}<header className="shop-header">
     <Link href="/" className="shop-wordmark" aria-label="Auraic home"><Image src="/auraic-logo.jpg" alt="Auraic" width={220} height={96} priority /></Link>
     <div className="shop-header-actions"><button type="button" className="shop-search-button" onClick={() => setSearchOpen(true)} aria-label="Search fragrances"><ShopIcon name="search"/></button><button type="button" className="shop-header-bag" onClick={openBag} aria-label={`Shopping bag, ${count} items`}><ShopIcon name="bag"/><b>{count}</b></button><button type="button" className="shop-menu-button" aria-label="Open menu" aria-expanded={open} aria-controls="shop-drawer" onClick={() => setOpen(true)}><ShopIcon name="menu"/></button></div>
   </header></div>{open && <div className="shop-drawer-layer"><button className="shop-drawer-backdrop" onClick={() => setOpen(false)} aria-label="Close menu"/><section id="shop-drawer" className="shop-drawer" role="dialog" aria-modal="true" aria-label="Store menu"><header><Image src="/auraic-logo.jpg" alt="Auraic" width={150} height={80}/><button autoFocus onClick={() => setOpen(false)} aria-label="Close menu"><ShopIcon name="close"/></button></header><nav>{links.map(([url,label]) => <Link key={url} href={url} onClick={() => setOpen(false)}>{label}<ShopIcon name="arrow"/></Link>)}</nav><footer><Link onClick={() => setOpen(false)} href="/favorites"><ShopIcon name="heart"/> Wishlist ({favorites.length})</Link><Link onClick={() => setOpen(false)} href="/cart"><ShopIcon name="bag"/> Bag ({count})</Link></footer></section></div>}{searchOpen && <div className="shop-drawer-layer"><button className="shop-drawer-backdrop" onClick={() => setSearchOpen(false)} aria-label="Close search"/><section id="shop-search-dialog" className="shop-search-dialog" role="dialog" aria-modal="true" aria-label="Search fragrances"><header><h2>Find your fragrance</h2><button onClick={() => setSearchOpen(false)} aria-label="Close search"><ShopIcon name="close"/></button></header><form action="/products" onSubmit={event => { event.preventDefault(); const data = new FormData(event.currentTarget); setSearchOpen(false); navigate(`/products?q=${encodeURIComponent(String(data.get("q") || ""))}`); }}><input autoFocus name="q" maxLength={200} placeholder="Search Auraic" aria-label="Fragrance name"/><button type="submit" className="shop-button">Search <ShopIcon name="search"/></button></form></section></div>}</>;
