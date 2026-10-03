@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'api.dart';
+import 'recipe_picker.dart';
+import 'product_images.dart';
 import 'ui.dart';
 
 const shippingGovernorates = ['القاهرة', 'الجيزة', 'الإسكندرية', 'القليوبية', 'المنوفية', 'الغربية', 'الدقهلية', 'الشرقية', 'البحيرة', 'كفر الشيخ', 'دمياط', 'بورسعيد', 'الإسماعيلية', 'السويس', 'الفيوم', 'بني سويف', 'المنيا', 'أسيوط', 'سوهاج', 'قنا', 'الأقصر', 'أسوان', 'مطروح', 'البحر الأحمر', 'الوادي الجديد', 'شمال سيناء', 'جنوب سيناء'];
@@ -121,7 +123,7 @@ class _ProductManagePageState extends State<ProductManagePage> {
   final steps = const ['بيانات العطر', 'الصور', 'الأحجام والوصفات', 'الوصف والنشر', 'المعاينة والتأكيد'];
   bool busy = false;
   String error = '';
-  Json blank() => {'clientId': const Uuid().v4(), 'title': '', 'price': '', 'compareAtPrice': '', 'materials': <Json>[{'materialId': '', 'quantity': ''}]};
+  Json blank() => {'clientId': const Uuid().v4(), 'title': '', 'price': '', 'compareAtPrice': '', 'materials': <Json>[]};
   Future<List<Json>> load() async {
     final available = rows(await widget.api.get('/api/materials'));
     if (widget.productId != null) {
@@ -136,16 +138,18 @@ class _ProductManagePageState extends State<ProductManagePage> {
     }
     if (variants.isEmpty) variants = [blank()];
     offers = variants.any((v) => (double.tryParse(str(v['compareAtPrice'])) ?? 0) > (double.tryParse(str(v['price'])) ?? 0));
+    if (mounted) setState(() {});
     return available;
   }
   Widget field(Json target, String name, String label, {bool number = false, bool required = true, int lines = 1}) => Padding(padding: const EdgeInsets.only(bottom: 16), child: TextFormField(
-    key: ValueKey("${identityHashCode(target)}-$name"), initialValue: str(target[name]), maxLines: lines,
+    key: ValueKey("${identityHashCode(target)}-$name-${target['_titleRevision'] ?? 0}"), initialValue: str(target[name]), maxLines: lines,
     keyboardType: number ? const TextInputType.numberWithOptions(decimal: true) : lines > 1 ? TextInputType.multiline : TextInputType.text,
     decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
     validator: (value) { if (!required && (value ?? '').trim().isEmpty) return null; if ((value ?? '').trim().isEmpty) return 'الحقل مطلوب'; if (number && (double.tryParse(value!) == null || double.parse(value) <= 0)) return 'أدخل قيمة أكبر من صفر'; return null; },
     onChanged: (value) => setState(() => target[name] = value)));
   void next() {
     if (!(form.currentState?.validate() ?? false)) return;
+    if (step == 2 && variants.any((variant) => (variant['materials'] as List).isEmpty || (variant['materials'] as List).any((line) => str(line['materialId']).isEmpty || (double.tryParse(str(line['quantity'])) ?? 0) <= 0))) { setState(() => error = 'اختر خامات كل حجم وحدد كمياتها قبل المتابعة'); return; }
     setState(() { step++; error = ''; });
   }
   Widget costPreview(Json variant, List<Json> available) {
@@ -178,15 +182,16 @@ class _ProductManagePageState extends State<ProductManagePage> {
   }
   @override
   Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: Text(widget.productId == null ? 'إضافة عطر وأحجامه' : 'تعديل المنتج')),
+    bottomNavigationBar: SafeArea(child: Container(padding: const EdgeInsets.all(12), decoration: const BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Color(0xffe5e7eb)))), child: Row(children: [if (step > 0) ...[OutlinedButton(onPressed: busy ? null : () => setState(() => step--), child: const Text('السابق')), const SizedBox(width: 8)], OutlinedButton(onPressed: busy ? null : () => Navigator.pop(context), child: const Text('إلغاء')), const SizedBox(width: 8), Expanded(child: FilledButton(key: ValueKey('step-action-$step'), onPressed: busy || variants.isEmpty ? null : step == 4 ? save : next, child: Text(busy ? 'جارٍ الحفظ…' : step == 4 ? 'تأكيد حفظ المنتج' : step == 3 ? 'معاينة المنتج' : 'التالي')))]))),
     body: FutureBuilder<List<Json>>(future: materials, builder: (context, snapshot) {
       if (!snapshot.hasData) return snapshot.hasError ? Center(child: TextButton(onPressed: () => setState(() => materials = load()), child: Text('${snapshot.error} · إعادة المحاولة'))) : const PageSkeleton();
       final available = snapshot.data!;
       return Form(key: form, child: ListView(padding: const EdgeInsets.all(16), children: [
         if (error.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 16), child: Text(error, style: const TextStyle(color: Colors.red))),
-        Text('الخطوة ${step + 1} من 5 · ${steps[step]}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 12), LinearProgressIndicator(value: (step+1)/5), const SizedBox(height: 24),
+        Row(children: List.generate(5, (index) => Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 3), child: InkWell(onTap: !busy && index < step ? () => setState(() => step = index) : null, borderRadius: BorderRadius.circular(14), child: Container(padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 2), decoration: BoxDecoration(color: step == index ? appNavy : const Color(0xfff4f5f8), borderRadius: BorderRadius.circular(14)), child: Column(children: [Icon(index < step ? Icons.check_circle_outline : [Icons.inventory_2_outlined, Icons.image_outlined, Icons.science_outlined, Icons.description_outlined, Icons.task_alt][index], color: step == index ? Colors.white : appMuted, size: 22), const SizedBox(height: 8), Text(['البيانات', 'الصور', 'الوصفة', 'التفاصيل', 'التأكيد'][index], style: TextStyle(fontSize: 10, color: step == index ? Colors.white : appMuted))]))))))),
+        const SizedBox(height: 24),
         if (step == 0) Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [field(product, 'title', 'اسم العطر، مثال: عود'), DropdownButtonFormField<String>(initialValue: str(product['category']), decoration: const InputDecoration(labelText: 'موجّه إلى', border: OutlineInputBorder()), items: const [DropdownMenuItem(value: 'Men', child: Text('رجالي')), DropdownMenuItem(value: 'Women', child: Text('حريمي')), DropdownMenuItem(value: 'Unisex', child: Text('للجنسين (Unisex)')), DropdownMenuItem(value: 'Samples', child: Text('سامبل / تيستر (Samples فقط)'))], onChanged: busy ? null : (value) => product['category'] = value), const SizedBox(height: 16), const Text('للجنسين يظهر في For Men وFor Women. السامبل يظهر في Samples فقط، وله صور وسعر ووصفة مثل أي منتج.'), const Text('اسم واحد يجمع كل أحجام العطر في المتجر.')] ))),
-        if (step == 1) Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [const Text('الصورة الأولى رئيسية. أضف حتى 8 صور.'), const SizedBox(height: 16), TextFormField(key: const ValueKey('product-images'), initialValue: (product['images'] as List).join('\n'), maxLines: 5, decoration: const InputDecoration(labelText: 'روابط الصور HTTPS، رابط في كل سطر', border: OutlineInputBorder()), validator: (value) { final urls = (value ?? '').split('\n').map((v) => v.trim()).where((v) => v.isNotEmpty).toList(); return urls.length > 8 || urls.any((url) => Uri.tryParse(url)?.scheme != 'https' || (Uri.tryParse(url)?.host ?? '').isEmpty) ? 'أدخل حتى 8 روابط HTTPS صحيحة' : null; }, onChanged: (value) => product['images'] = value.split('\n').map((v) => v.trim()).where((v) => v.isNotEmpty).toList())]))),
+        if (step == 1) ProductImages(api: widget.api, initial: (product['images'] as List).map(str).toList(), onChanged: (images) => product['images'] = images, onBusy: (value) { if (mounted) setState(() => busy = value); }),
         if (step == 2) ...[
 
         const SizedBox(height: 16),
@@ -194,15 +199,12 @@ class _ProductManagePageState extends State<ProductManagePage> {
         const Text('كل حجم له سعر ووصفة مستقلة', style: TextStyle(fontWeight: FontWeight.w800)),
         for (final v in variants) Card(key: ValueKey(v['clientId']), margin: const EdgeInsets.only(top: 14), child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
           Row(children: [const Expanded(child: Text('بيانات الحجم', style: TextStyle(fontWeight: FontWeight.w800))), if (variants.length > 1) IconButton(onPressed: busy ? null : () => setState(() => variants.remove(v)), icon: const Icon(Icons.delete_outline, color: Colors.red))]),
+          Wrap(spacing: 8, children: [2, 5, 10, 30, 50, 100].map((size) => ChoiceChip(label: Text('$size ml'), selected: v['title'] == '$size ml', onSelected: busy ? null : (_) => setState(() { v['title'] = '$size ml'; v['_titleRevision'] = (v['_titleRevision'] as int? ?? 0) + 1; }))).toList()),
           field(v, 'title', 'الحجم، مثال: ٣٠ مل'), field(v, 'price', 'سعر البيع', number: true), if (offers) field(v, 'compareAtPrice', 'السعر قبل الخصم (اختياري لباقي الأحجام)', number: true, required: false),
-          for (final m in (v['materials'] as List).cast<Json>()) Padding(key: ObjectKey(m), padding: const EdgeInsets.only(bottom: 14), child: Column(children: [
-            DropdownButtonFormField<String>(initialValue: available.any((a) => a['id'] == m['materialId']) ? str(m['materialId']) : null, isExpanded: true, decoration: const InputDecoration(labelText: 'الخامة', border: OutlineInputBorder()), items: available.where((a) => a['id'] == m['materialId'] || !(v['materials'] as List).any((other) => other['materialId'] == a['id'])).map((a) => DropdownMenuItem(value: str(a['id']), child: Text('${a['name']} (${a['unit']})', overflow: TextOverflow.ellipsis))).toList(), validator: (value) => value == null ? 'اختر خامة' : null, onChanged: (value) => setState(() => m['materialId'] = value)),
-            const SizedBox(height: 12), field(m, 'quantity', 'الكمية لقطعة واحدة', number: true),
-            if ((v['materials'] as List).length > 1) TextButton(onPressed: busy ? null : () => setState(() => (v['materials'] as List).remove(m)), child: const Text('حذف الخامة')),
-          ])),
+          RecipePicker(materials: available, lines: (v['materials'] as List).map(json).toList(), disabled: busy, onChanged: (lines) => setState(() => v['materials'] = lines)),
           if (variants.indexOf(v) > 0) TextButton(onPressed: busy ? null : () => setState(() => v['materials'] = (variants.first['materials'] as List).map((m) => <String, dynamic>{...json(m)}).toList()), child: const Text('نسخ خامات الحجم الأول ثم تعديل الكميات')),
           costPreview(v, available),
-          TextButton.icon(onPressed: busy || (v['materials'] as List).length >= 30 ? null : () => setState(() => (v['materials'] as List).add(<String, dynamic>{'materialId': '', 'quantity': ''})), icon: const Icon(Icons.add), label: const Text('إضافة خامة')),
+
         ]))),
         const SizedBox(height: 16), OutlinedButton.icon(onPressed: busy || variants.length >= 20 ? null : () => setState(() => variants.add(blank())), icon: const Icon(Icons.add), label: const Text('إضافة حجم آخر')),
         ],
@@ -217,7 +219,7 @@ class _ProductManagePageState extends State<ProductManagePage> {
           for (final v in variants) Card(margin: const EdgeInsets.only(top: 16), child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('${v['title']} · ${v['price']} جنيه', style: const TextStyle(fontWeight: FontWeight.w800)), for (final m in (v['materials'] as List).map(json)) Text('${available.where((a) => a['id'] == m['materialId']).map((a) => a['name']).join()} · ${m['quantity']}'), costPreview(v, available)]))),
           const SizedBox(height: 16), const Text('لم يُحفظ المنتج بعد. راجع التفاصيل ثم أكد الحفظ.'),
         ],
-        const SizedBox(height: 24), Row(children: [if (step > 0) ...[OutlinedButton(onPressed: busy ? null : () => setState(() => step--), child: const Text('السابق')), const SizedBox(width: 12)], Expanded(child: FilledButton(key: ValueKey('step-action-$step'), onPressed: busy || (step >= 2 && available.isEmpty) ? null : step == 4 ? save : next, child: Text(busy ? 'جارٍ الحفظ…' : step == 4 ? 'تأكيد حفظ المنتج' : step == 3 ? 'معاينة المنتج' : 'التالي')))]),
+        const SizedBox(height: 20),
         if (available.isEmpty) const Text('أضف خامات المخزون أولًا'),
       ]));
     }));
