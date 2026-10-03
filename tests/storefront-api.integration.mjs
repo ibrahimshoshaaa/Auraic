@@ -244,7 +244,7 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         await page.goto(`${url}/dashboard/orders?q=${encodeURIComponent(saved.orderNumber)}`);
         const orderCard = page.locator('article').filter({ hasText: saved.orderNumber });
         assert.equal(await orderCard.locator('details').getAttribute('open'), null);
-        assert.equal(await orderCard.getByRole('button', { name: 'تم التجهيز', exact: true }).isVisible(), true);
+        await orderCard.getByRole('button', { name: 'تم التجهيز', exact: true }).waitFor({ state: 'visible' });
         await orderCard.locator('summary').click();
         const whatsapp = orderCard.getByRole('link', { name: 'تأكيد الطلب عبر واتساب', exact: true });
         const whatsappUrl = new URL(await whatsapp.getAttribute('href'));
