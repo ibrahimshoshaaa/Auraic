@@ -183,18 +183,28 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         await page.goto(`${url}/samples`);
         const addSamples = page.getByRole('button', { name: 'ADD TO BAG', exact: false });
         assert.equal(await addSamples.isEnabled(), false);
-        await page.getByRole('button', { name: '2', exact: true }).click();
+        assert.equal(await page.locator('.shop-sample-count button').count(), 2);
+        assert.equal(await page.locator('.shop-sample-select select').count(), 3);
+        await page.getByRole('button', { name: '5', exact: true }).click();
+        assert.equal(await page.locator('.shop-sample-select select').count(), 5);
         await page.locator('.shop-sample-select select').nth(0).selectOption(sample.variants[0].id);
         assert.equal(await addSamples.isEnabled(), false);
         await page.locator('.shop-sample-select select').nth(1).selectOption(sample.variants[0].id);
-        assert.equal(await page.locator('.shop-samples-total').innerText(), '260 LE');
+        assert.equal(await addSamples.isEnabled(), false);
+        for (let index = 2; index < 5; index++) await page.locator('.shop-sample-select select').nth(index).selectOption(sample.variants[0].id);
+        assert.equal(await page.locator('.shop-samples-total').innerText(), '650 LE');
+        await page.getByRole('button', { name: '3', exact: true }).click();
+        assert.equal(await page.locator('.shop-sample-select select').count(), 3);
+        assert.equal(await page.locator('.shop-samples-total').innerText(), '390 LE');
+        await page.getByRole('button', { name: '5', exact: true }).click();
+        assert.equal(await page.locator('.shop-samples-total').innerText(), '650 LE');
         await page.screenshot({ path: 'artifacts/navigation-samples.png', fullPage: true });
         for (const width of [360, 390, 1440]) {
           await page.setViewportSize({ width, height: 900 });
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `No sample overflow at ${width}px`);
         }
         await addSamples.click();
-        await page.waitForFunction(id => JSON.parse(localStorage.getItem('auraic-cart') || '[]').some(line => line.variantId === id && line.quantity === 2), sample.variants[0].id);
+        await page.waitForFunction(id => JSON.parse(localStorage.getItem('auraic-cart') || '[]').some(line => line.variantId === id && line.quantity === 5), sample.variants[0].id);
         assert.equal(await page.getByRole('dialog', { name: 'Shopping bag' }).isVisible(), true);
         await page.getByRole('button', { name: 'Close shopping bag', exact: true }).click();
         await page.goto(`${url}/products/${sampleId}`);
