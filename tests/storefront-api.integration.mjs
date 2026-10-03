@@ -190,19 +190,31 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         const addSamples = page.getByRole('button', { name: 'ADD TO BAG', exact: false });
         assert.equal(await addSamples.isEnabled(), false);
         assert.equal(await page.locator('.shop-sample-count button').count(), 2);
-        assert.equal(await page.locator('.shop-sample-select select').count(), 3);
+        assert.equal(await page.locator('.shop-sample-trigger').count(), 3);
         await page.getByRole('button', { name: '5', exact: true }).click();
-        assert.equal(await page.locator('.shop-sample-select select').count(), 5);
-        await page.locator('.shop-sample-select select').nth(0).selectOption(sample.variants[0].id);
+        assert.equal(await page.locator('.shop-sample-trigger').count(), 5);
+        async function chooseSample(index) {
+          await page.locator('.shop-sample-trigger').nth(index).click();
+          const picker = page.getByRole('dialog', { name: 'Choose your sample' });
+          await picker.waitFor();
+          assert.equal(await picker.locator('.shop-sample-option img').count() > 0, true);
+          await picker.locator('.shop-sample-option').filter({ hasText: sample.title }).first().click();
+          await picker.waitFor({ state: 'hidden' });
+        }
+        await page.locator('.shop-sample-trigger').first().click();
+        await page.getByRole('dialog', { name: 'Choose your sample' }).waitFor();
+        await page.keyboard.press('Escape');
+        await page.getByRole('dialog', { name: 'Choose your sample' }).waitFor({ state: 'hidden' });
+        await chooseSample(0);
         assert.equal(await addSamples.isEnabled(), false);
-        await page.locator('.shop-sample-select select').nth(1).selectOption(sample.variants[0].id);
+        await chooseSample(1);
         assert.equal(await addSamples.isEnabled(), false);
-        for (let index = 2; index < 5; index++) await page.locator('.shop-sample-select select').nth(index).selectOption(sample.variants[0].id);
+        for (let index = 2; index < 5; index++) await chooseSample(index);
         assert.equal(await page.locator('.shop-samples-art img').count(), 1);
         assert.equal(await page.locator('.shop-samples-art img').getAttribute('src'), presentation.samplesImage);
         assert.equal(await page.locator('.shop-samples-total').innerText(), '650 LE');
         await page.getByRole('button', { name: '3', exact: true }).click();
-        assert.equal(await page.locator('.shop-sample-select select').count(), 3);
+        assert.equal(await page.locator('.shop-sample-trigger').count(), 3);
         assert.equal(await page.locator('.shop-samples-total').innerText(), '390 LE');
         await page.getByRole('button', { name: '5', exact: true }).click();
         assert.equal(await page.locator('.shop-samples-total').innerText(), '650 LE');
