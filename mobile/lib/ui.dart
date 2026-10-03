@@ -133,7 +133,7 @@ Widget field(String label, TextEditingController controller,
 
 class DataView extends StatefulWidget {
   const DataView({required this.api, required this.path, required this.item,
-    this.action, this.title, this.subtitle, this.icon, super.key});
+    this.action, this.title, this.subtitle, this.icon, this.rowFilter, super.key});
   final ErpApi api;
   final String path;
   final Widget Function(BuildContext, Json, VoidCallback) item;
@@ -141,6 +141,7 @@ class DataView extends StatefulWidget {
   final String? title;
   final String? subtitle;
   final IconData? icon;
+  final bool Function(Json)? rowFilter;
   @override
   State<DataView> createState() => _DataViewState();
 }
@@ -161,7 +162,7 @@ class _DataViewState extends State<DataView> {
         return Center(child: TextButton.icon(onPressed: reload,
           icon: const Icon(Icons.refresh), label: Text('تعذر التحميل: ${snapshot.error}')));
       }
-      final entries = snapshot.data!;
+      final entries = snapshot.data!.where((row) => widget.rowFilter?.call(row) ?? true).toList();
       return RefreshIndicator(onRefresh: () async { reload(); await future; },
         child: ListView(padding: const EdgeInsets.all(16), children: [
           if (widget.title != null) ...[

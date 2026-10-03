@@ -5,20 +5,28 @@ import 'recipes.dart';
 import 'ui.dart';
 import 'storefront.dart';
 
-class ProductsPage extends StatelessWidget {
+class ProductsPage extends StatefulWidget {
   const ProductsPage({required this.api, required this.canWrite, super.key});
   final ErpApi api;
   final bool canWrite;
 
   @override
+  State<ProductsPage> createState() => _ProductsPageState();
+}
+class _ProductsPageState extends State<ProductsPage> {
+  bool samples = false;
+  ErpApi get api => widget.api;
+  bool get canWrite => widget.canWrite;
+
+  @override
   Widget build(BuildContext context) => DataView(api: api, path: '/api/products',
+    rowFilter: (product) => isSampleCategory(str(product['storefrontCategory'])) == samples,
     title: 'المنتجات', subtitle: 'الأحجام والوصفات والنشر في المتجر', icon: Icons.inventory_2_outlined,
-    action: canWrite ? (context, reload) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      SizedBox(height: 52, child: FilledButton.icon(onPressed: () async {
-        final saved = await openPage<bool>(context, ProductManagePage(api: api));
-        if (saved == true) reload();
-      }, icon: const Icon(Icons.add_circle_outline), label: const Text('إضافة عطر وأحجامه'))),
-    ]) : null,
+    action: (context, reload) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      if (canWrite) Row(children: [for (final sample in [false, true]) Expanded(child: Padding(padding: const EdgeInsets.all(3), child: FilledButton(onPressed: () async { final saved = await openPage<bool>(context, ProductManagePage(api: api, sample: sample)); if (saved == true) reload(); }, child: Text(sample ? 'إضافة سامبلز' : 'إضافة عطر وأحجامه', textAlign: TextAlign.center))))]),
+      const SizedBox(height: 12),
+      SegmentedButton<bool>(segments: const [ButtonSegment(value: false, label: Text('العطور')), ButtonSegment(value: true, label: Text('السامبلز'))], selected: {samples}, onSelectionChanged: (value) => setState(() => samples = value.first)),
+    ]),
     item: (context, product, reload) => Card(margin: const EdgeInsets.only(bottom: 14),
       child: ListTile(contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
       leading: Container(width: 44, height: 44, alignment: Alignment.center,
