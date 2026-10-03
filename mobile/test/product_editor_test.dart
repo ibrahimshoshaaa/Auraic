@@ -19,8 +19,12 @@ class ProductApi extends ErpApi {
 }
 void main() {
   test('samples keep their exclusive category when editing', () {
-    expect(audienceCategory('Samples'), 'Samples');
-    expect(audienceCategory(' samples '), 'Samples');
+    expect(isSampleCategory('Samples'), true);
+    expect(audienceCategory('Samples'), 'Unisex');
+    expect(isSampleCategory('Samples:Women'), true);
+    expect(audienceCategory('Samples:Women'), 'Women');
+    expect(isSampleCategory('Men'), false);
+    expect(isSampleCategory(' samples '), true);
   });
   testWidgets('advancing product steps never saves; review requires explicit confirmation', (tester) async {
     tester.view.physicalSize = const Size(1000, 2400);
