@@ -79,7 +79,9 @@ test('public orders validate server prices, tenant, publication and recipe; retr
     assert.equal((await fetch(`${url}/api/customers`, { headers: adminHeaders })).status, 403);
     await db.user.update({ where: { id: owner.id }, data: { role: 'MANAGER' } });
     assert.equal((await fetch(`${url}/api/customers`, { headers: adminHeaders })).status, 200);
+    assert.equal((await fetch(`${url}/api/admin/storefront/video-signature`, { method: 'POST', headers: adminHeaders })).status, 403);
     await db.user.update({ where: { id: owner.id }, data: { role: 'OWNER' } });
+    assert.equal((await fetch(`${url}/api/admin/storefront/video-signature`, { method: 'POST' })).status, 401);
     const manage = data => fetch(`${url}/api/products/manage`, { method: 'POST', headers: adminHeaders, body: JSON.stringify(data) });
     const settingsRequest = data => fetch(`${url}/api/admin/storefront`, { method: 'PUT', headers: adminHeaders, body: JSON.stringify(data) });
     assert.equal((await settingsRequest({ kind: 'availability', data: { enabled: false } })).status, 200);
@@ -227,6 +229,12 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         assert.equal(whatsappUrl.hostname, 'wa.me');
         assert.ok(whatsappUrl.searchParams.get('text').includes('هل تحب تأكد الأوردر؟'));
         assert.ok(whatsappUrl.searchParams.get('text').includes(saved.items[0].title));
+        await page.goto(`${url}/dashboard/storefront`);
+        await page.route('**/api/admin/storefront/video-signature', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { url: 'https://api.cloudinary.com/v1_1/test/video/upload', fields: { signature: 'test', timestamp: 1, api_key: 'test' } } }) }));
+        await page.route('https://api.cloudinary.com/v1_1/test/video/upload', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ secure_url: 'https://example.com/uploaded-hero.mp4' }) }));
+        await page.getByLabel('رفع فيديو الهيرو', { exact: true }).setInputFiles({ name: 'hero.mp4', mimeType: 'video/mp4', buffer: Buffer.from('test video fixture') });
+        await page.waitForFunction(() => document.querySelector('input[name="heroVideo"]')?.value === 'https://example.com/uploaded-hero.mp4');
+        assert.equal(await page.locator('video[src="https://example.com/uploaded-hero.mp4"]').count(), 1);
         await page.goto(`${url}/dashboard/products`);
         assert.equal(await page.getByRole('heading', { name: 'Exclusive tester', exact: true }).count(), 0);
         await page.getByRole('link', { name: 'السامبلز', exact: true }).click();

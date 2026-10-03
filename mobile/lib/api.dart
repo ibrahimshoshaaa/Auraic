@@ -46,6 +46,19 @@ class ErpApi {
     return decoded['data']['url'].toString();
   }
 
+  Future<String> uploadHeroVideo(List<int> bytes, String filename) async {
+    if (bytes.isEmpty || bytes.length > 20 * 1024 * 1024 || !RegExp(r'\.(mp4|webm)$', caseSensitive: false).hasMatch(filename)) throw const ApiException('اختر فيديو MP4 أو WebM حتى 20 ميجابايت', 422);
+    final signed = await post('/api/admin/storefront/video-signature', {});
+    final data = signed['data'] as Map;
+    final request = http.MultipartRequest('POST', Uri.parse(data['url'] as String));
+    for (final entry in (data['fields'] as Map).entries) { request.fields['${entry.key}'] = '${entry.value}'; }
+    request.files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
+    final response = await http.Response.fromStream(await _client.send(request)).timeout(const Duration(minutes: 3));
+    final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+    if (response.statusCode >= 400 || decoded['secure_url'] == null) throw ApiException(decoded['error']?['message']?.toString() ?? 'تعذر رفع الفيديو', response.statusCode);
+    return decoded['secure_url'] as String;
+  }
+
   Future<void> login(String email, String password) async {
     final result = await post('/api/mobile/auth/login', {
       'email': email.trim(),
