@@ -32,6 +32,20 @@ class ErpApi {
       _request('PATCH', path, body: body);
   Future<dynamic> delete(String path) => _request('DELETE', path);
 
+  Future<String> uploadProductImage(List<int> bytes, String filename) async {
+    if (bytes.length > 3 * 1024 * 1024) throw const ApiException('اختر صورة حتى 3 ميجابايت', 422);
+    final token = await _storage.read(key: _tokenKey);
+    final request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/api/admin/storefront/images'));
+    if (token != null) request.headers['Authorization'] = 'Bearer $token';
+    request.files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
+    final response = await http.Response.fromStream(await _client.send(request).timeout(const Duration(seconds: 60)));
+    dynamic decoded;
+    try { decoded = jsonDecode(utf8.decode(response.bodyBytes)); }
+    on FormatException { throw ApiException('تعذر قراءة رد رفع الصورة', response.statusCode); }
+    if (response.statusCode >= 400) throw ApiException(decoded is Map ? decoded['error']?.toString() ?? 'تعذر رفع الصورة' : 'تعذر رفع الصورة', response.statusCode);
+    return decoded['data']['url'].toString();
+  }
+
   Future<void> login(String email, String password) async {
     final result = await post('/api/mobile/auth/login', {
       'email': email.trim(),

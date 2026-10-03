@@ -199,6 +199,30 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         await page.getByRole('button', { name: 'Close shopping bag', exact: true }).click();
         await page.goto(`${url}/products/${sampleId}`);
         await page.waitForURL(`${url}/samples`);
+        await page.setExtraHTTPHeaders({ authorization: adminHeaders.authorization });
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.goto(`${url}/dashboard/products/new`);
+        await page.getByLabel('اسم العطر', { exact: true }).fill('Button recipe test');
+        await page.screenshot({ path: 'artifacts/navigation-editor-data.png', fullPage: true });
+        await page.getByRole('button', { name: 'التالي', exact: true }).click();
+        assert.equal(await page.getByRole('textbox', { name: 'الصورة الرئيسية', exact: true }).count(), 1);
+        await page.screenshot({ path: 'artifacts/navigation-editor-images.png', fullPage: true });
+        await page.getByRole('button', { name: 'التالي', exact: true }).click();
+        await page.getByRole('button', { name: '30 ml', exact: true }).first().click();
+        await page.getByLabel('سعر البيع (جنيه)', { exact: true }).fill('450');
+        await page.getByRole('button', { name: 'التالي', exact: true }).click();
+        assert.ok(await page.getByRole('alert').isVisible(), 'recipe must be selected before proceeding');
+        await page.getByRole('button', { name: 'اختيار Oil', exact: true }).click();
+        await page.locator('.recipe-picker').getByRole('button', { name: '30 ml', exact: true }).click();
+        await page.screenshot({ path: 'artifacts/navigation-editor-recipe.png', fullPage: true });
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+        await page.getByRole('button', { name: 'التالي', exact: true }).click();
+        await page.getByRole('button', { name: 'معاينة المنتج', exact: true }).click();
+        assert.equal(await db.product.count({ where: { storeId: shop.id, title: 'Button recipe test' } }), 0, 'review must not auto-save');
+        await page.getByRole('button', { name: 'تأكيد حفظ المنتج', exact: true }).click();
+        await page.waitForURL(/dashboard\/products\/managed_/);
+        const buttonProduct = await db.product.findFirstOrThrow({ where: { storeId: shop.id, title: 'Button recipe test' }, include: { variants: { include: { recipes: { include: { versions: { include: { items: true } } } } } } } });
+        assert.equal(Number(buttonProduct.variants[0].recipes[0].versions[0].items[0].quantity), 30);
         assert.deepEqual(errors, []);
       } finally { release(); await browser.close(); }
     }
