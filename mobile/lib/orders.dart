@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'order_whatsapp.dart';
+import 'whatsapp_icon.dart';
 
 import 'api.dart';
 import 'more.dart';
@@ -111,6 +114,7 @@ class _OrdersPageState extends State<OrdersPage> {
             Text('· ${items.length} صنف', style: const TextStyle(
               fontSize: 13, color: Color(0xff718089))),
           ]),
+          if (widget.canWrite && ['NEW', 'PREPARED', 'SHIPPING'].contains(o['manualStatus'])) Padding(padding: const EdgeInsets.only(top: 12), child: SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: updatingOrder == str(o['id']) ? null : () => updateOrder(o, o['manualStatus'] == 'NEW' ? 'PREPARED' : o['manualStatus'] == 'PREPARED' ? 'SHIPPING' : 'DELIVERED', o['manualStatus'] == 'NEW' ? 'تم التجهيز وخصم الخامات' : o['manualStatus'] == 'PREPARED' ? 'جاري الشحن' : 'تم التسليم وتحصيل المبلغ'), icon: const Icon(Icons.check_circle_outline), label: Text(o['manualStatus'] == 'NEW' ? 'تم التجهيز' : o['manualStatus'] == 'PREPARED' ? 'جاري الشحن' : 'تم التسليم وتحصيل المبلغ')))),
         ]),
         children: [
           const Divider(height: 24),
@@ -123,6 +127,7 @@ class _OrdersPageState extends State<OrdersPage> {
               '${str(o['depositAmount'])} $currency'),
           const SizedBox(height: 14),
           _sectionTitle('بيانات العميل'),
+          if (orderWhatsAppUrl(o) != null) Align(alignment: AlignmentDirectional.centerStart, child: IconButton.filled(onPressed: () async { try { final opened = await launchUrl(Uri.parse(orderWhatsAppUrl(o)!), mode: LaunchMode.externalApplication); if (!opened && context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر فتح واتساب'))); } catch (_) { if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر فتح واتساب'))); } }, tooltip: 'تأكيد الطلب عبر واتساب', style: IconButton.styleFrom(backgroundColor: const Color(0xff128c4e)), icon: const WhatsAppIcon())),
           _detailRow(Icons.person_outline, 'الاسم', customer.isEmpty ? 'غير متاح' : customer),
           if (str(o['customerPhone']).trim().isNotEmpty)
             _detailRow(Icons.phone_outlined, 'الهاتف', str(o['customerPhone'])),
@@ -147,10 +152,7 @@ class _OrdersPageState extends State<OrdersPage> {
             label: const Text('عرض حركة استهلاك الخامات'))),
           if (widget.canWrite) const SizedBox(height: 10),
           if (widget.canWrite && o['manualStatus'] != null) ...[
-            if (o['manualStatus'] == 'NEW') action(o, 'PREPARED', 'تم التجهيز وخصم الخامات'),
-            if (o['manualStatus'] == 'PREPARED') action(o, 'SHIPPING', 'جاري الشحن'),
             if (o['manualStatus'] == 'SHIPPING') ...[
-              action(o, 'DELIVERED', 'تم التسليم وتحصيل المبلغ'),
               action(o, 'RETURNED', 'تم الإرجاع وإعادة الخامات', destructive: true),
             ],
           ],
@@ -183,18 +185,20 @@ class _OrdersPageState extends State<OrdersPage> {
       Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600))),
     ]));
 
-  Widget action(Json order, String status, String label, {bool destructive = false}) =>
-    ListTile(leading: Icon(destructive ? Icons.undo : Icons.check_circle_outline),
-      title: Text(label), onTap: () async {
-        if (!await confirm(context, destructive
-          ? 'ستُعاد الخامات للمخزون وتُسجل تكلفة المرتجع. لا يمكن التراجع عن العملية.'
-          : 'تحديث حالة الطلب إلى «$label»؟')) return;
-        try {
-          await perform(context, () => widget.api.post(
-            '/api/orders/${Uri.encodeComponent(str(order['id']))}/manual-status', {'status': status}));
-          reload();
-        } catch (_) { /* The shared helper displays the server error. */ }
-      });
+  String? updatingOrder;
+  Future<void> updateOrder(Json order, String status, String label, {bool destructive = false}) async {
+    if (updatingOrder != null) return;
+    setState(() => updatingOrder = str(order['id']));
+    try {
+      if (!await confirm(context, destructive ? 'ستُعاد الخامات للمخزون وتُسجل تكلفة المرتجع. لا يمكن التراجع عن العملية.' : 'تحديث حالة الطلب إلى «$label»؟')) return;
+      if (!mounted) return;
+      await perform(context, () => widget.api.post('/api/orders/${Uri.encodeComponent(str(order['id']))}/manual-status', {'status': status}));
+      if (mounted) reload();
+    } catch (_) { /* Shared helper displays the server error. */ }
+    finally { if (mounted) setState(() => updatingOrder = null); }
+  }
+  Widget action(Json order, String status, String label, {bool destructive = false}) => ListTile(leading: Icon(destructive ? Icons.undo : Icons.check_circle_outline), title: Text(label), onTap: updatingOrder == null ? () => updateOrder(order, status, label, destructive: destructive) : null);
+
 
 }
 

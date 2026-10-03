@@ -211,6 +211,16 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         await page.waitForURL(`${url}/samples`);
         await page.setExtraHTTPHeaders({ authorization: adminHeaders.authorization });
         await page.setViewportSize({ width: 390, height: 844 });
+        await page.goto(`${url}/dashboard/orders?q=${encodeURIComponent(saved.orderNumber)}`);
+        const orderCard = page.locator('article').filter({ hasText: saved.orderNumber });
+        assert.equal(await orderCard.locator('details').getAttribute('open'), null);
+        assert.equal(await orderCard.getByRole('button', { name: 'تم التجهيز', exact: true }).isVisible(), true);
+        await orderCard.locator('summary').click();
+        const whatsapp = orderCard.getByRole('link', { name: 'تأكيد الطلب عبر واتساب', exact: true });
+        const whatsappUrl = new URL(await whatsapp.getAttribute('href'));
+        assert.equal(whatsappUrl.hostname, 'wa.me');
+        assert.ok(whatsappUrl.searchParams.get('text').includes('هل تحب تأكد الأوردر؟'));
+        assert.ok(whatsappUrl.searchParams.get('text').includes(saved.items[0].title));
         await page.goto(`${url}/dashboard/products`);
         assert.equal(await page.getByRole('heading', { name: 'Exclusive tester', exact: true }).count(), 0);
         await page.getByRole('link', { name: 'السامبلز', exact: true }).click();
