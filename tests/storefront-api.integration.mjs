@@ -124,6 +124,18 @@ test('public orders validate server prices, tenant, publication and recipe; retr
     const homeCollections = await (await fetch(url)).text();
     assert.ok(homeCollections.indexOf('id="offers"') < homeCollections.indexOf('id="bestsellers"'));
     assert.ok(homeCollections.indexOf('id="bestsellers"') < homeCollections.indexOf('id="products"'));
+    const sampleRequest = { ...body, requestId: randomUUID(), title: 'Exclusive tester', category: 'Samples', variants: [{ ...body.variants[0], clientId: randomUUID(), title: '2 ml', price: 130, compareAtPrice: null, materials: [{ materialId: material.id, quantity: 2 }] }] };
+    const sampleSaved = await manage(sampleRequest);
+    assert.equal(sampleSaved.status, 200, await sampleSaved.clone().text());
+    const sampleId = (await sampleSaved.json()).data.productId;
+    const sample = await db.product.findUniqueOrThrow({ where: { id: sampleId }, include: { variants: true } });
+    for (const path of ['/', '/products', '/products?audience=men', '/products?audience=women', '/products?collection=offers', '/products?collection=bestsellers', '/products?q=Exclusive']) {
+      const html = await (await fetch(`${url}${path}`)).text();
+      assert.ok(!html.includes('<h3>Exclusive tester</h3>'), `sample must not be listed on ${path}`);
+    }
+    assert.ok((await (await fetch(`${url}/samples`)).text()).includes('Exclusive tester'));
+    const sampleOrder = await post({ ...order, requestId: randomUUID(), items: [{ variantId: sample.variants[0].id, quantity: 1 }], expectedTotalCents: 17500 });
+    assert.equal(sampleOrder.status, 201, await sampleOrder.clone().text());
     if (process.env.STOREFRONT_BROWSER_TESTS === '1') {
       const { chromium } = await import('playwright');
       const { mkdir } = await import('node:fs/promises');
@@ -167,6 +179,26 @@ test('public orders validate server prices, tenant, publication and recipe; retr
           await page.setViewportSize({ width, height: 900 });
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `No product overflow at ${width}px`);
         }
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.goto(`${url}/samples`);
+        const addSamples = page.getByRole('button', { name: 'ADD TO BAG', exact: false });
+        assert.equal(await addSamples.isEnabled(), false);
+        await page.getByRole('button', { name: '2', exact: true }).click();
+        await page.locator('.shop-sample-select select').nth(0).selectOption(sample.variants[0].id);
+        assert.equal(await addSamples.isEnabled(), false);
+        await page.locator('.shop-sample-select select').nth(1).selectOption(sample.variants[0].id);
+        assert.equal(await page.locator('.shop-samples-total').innerText(), '260 LE');
+        await page.screenshot({ path: 'artifacts/navigation-samples.png', fullPage: true });
+        for (const width of [360, 390, 1440]) {
+          await page.setViewportSize({ width, height: 900 });
+          assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `No sample overflow at ${width}px`);
+        }
+        await addSamples.click();
+        await page.waitForFunction(id => JSON.parse(localStorage.getItem('auraic-cart') || '[]').some(line => line.variantId === id && line.quantity === 2), sample.variants[0].id);
+        assert.equal(await page.getByRole('dialog', { name: 'Shopping bag' }).isVisible(), true);
+        await page.getByRole('button', { name: 'Close shopping bag', exact: true }).click();
+        await page.goto(`${url}/products/${sampleId}`);
+        await page.waitForURL(`${url}/samples`);
         assert.deepEqual(errors, []);
       } finally { release(); await browser.close(); }
     }

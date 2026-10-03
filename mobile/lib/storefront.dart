@@ -8,6 +8,7 @@ const shippingGovernorates = ['القاهرة', 'الجيزة', 'الإسكند�
 
 String audienceCategory(String value) {
   final category = value.trim().toLowerCase();
+  if (category == 'samples') return 'Samples';
   if (['men', 'male', 'رجالي', 'رجال', 'عطور رجالي'].contains(category)) return 'Men';
   if (['women', 'female', 'حريمي', 'نسائي', 'نساء', 'عطور حريمي'].contains(category)) return 'Women';
   return 'Unisex';
@@ -184,7 +185,7 @@ class _ProductManagePageState extends State<ProductManagePage> {
         if (error.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 16), child: Text(error, style: const TextStyle(color: Colors.red))),
         Text('الخطوة ${step + 1} من 5 · ${steps[step]}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
         const SizedBox(height: 12), LinearProgressIndicator(value: (step+1)/5), const SizedBox(height: 24),
-        if (step == 0) Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [field(product, 'title', 'اسم العطر، مثال: عود'), DropdownButtonFormField<String>(initialValue: str(product['category']), decoration: const InputDecoration(labelText: 'موجّه إلى', border: OutlineInputBorder()), items: const [DropdownMenuItem(value: 'Men', child: Text('رجالي')), DropdownMenuItem(value: 'Women', child: Text('حريمي')), DropdownMenuItem(value: 'Unisex', child: Text('للجنسين (Unisex)'))], onChanged: busy ? null : (value) => product['category'] = value), const SizedBox(height: 16), const Text('للجنسين يظهر في For Men وFor Women.'), const Text('اسم واحد يجمع كل أحجام العطر في المتجر.')] ))),
+        if (step == 0) Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [field(product, 'title', 'اسم العطر، مثال: عود'), DropdownButtonFormField<String>(initialValue: str(product['category']), decoration: const InputDecoration(labelText: 'موجّه إلى', border: OutlineInputBorder()), items: const [DropdownMenuItem(value: 'Men', child: Text('رجالي')), DropdownMenuItem(value: 'Women', child: Text('حريمي')), DropdownMenuItem(value: 'Unisex', child: Text('للجنسين (Unisex)')), DropdownMenuItem(value: 'Samples', child: Text('سامبل / تيستر (Samples فقط)'))], onChanged: busy ? null : (value) => product['category'] = value), const SizedBox(height: 16), const Text('للجنسين يظهر في For Men وFor Women. السامبل يظهر في Samples فقط، وله صور وسعر ووصفة مثل أي منتج.'), const Text('اسم واحد يجمع كل أحجام العطر في المتجر.')] ))),
         if (step == 1) Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [const Text('الصورة الأولى رئيسية. أضف حتى 8 صور.'), const SizedBox(height: 16), TextFormField(key: const ValueKey('product-images'), initialValue: (product['images'] as List).join('\n'), maxLines: 5, decoration: const InputDecoration(labelText: 'روابط الصور HTTPS، رابط في كل سطر', border: OutlineInputBorder()), validator: (value) { final urls = (value ?? '').split('\n').map((v) => v.trim()).where((v) => v.isNotEmpty).toList(); return urls.length > 8 || urls.any((url) => Uri.tryParse(url)?.scheme != 'https' || (Uri.tryParse(url)?.host ?? '').isEmpty) ? 'أدخل حتى 8 روابط HTTPS صحيحة' : null; }, onChanged: (value) => product['images'] = value.split('\n').map((v) => v.trim()).where((v) => v.isNotEmpty).toList())]))),
         if (step == 2) ...[
 
