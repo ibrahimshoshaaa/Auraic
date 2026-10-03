@@ -178,6 +178,15 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         const selectedSize = await page.locator('.shop-sticky-bag select').inputValue();
         await page.locator('.shop-sticky-bag .shop-button').click();
         await page.waitForFunction(id => JSON.parse(localStorage.getItem('auraic-cart') || '[]').some(line => line.variantId === id), selectedSize);
+        const disclosures = page.locator('.shop-detail-copy details.shop-policy');
+        for (let index = 0; index < 2; index++) {
+          const disclosure = disclosures.nth(index);
+          assert.ok((await disclosure.boundingBox()).height < 100, 'Closed product policy has compact height');
+          await disclosure.locator('summary').click();
+          assert.equal(await disclosure.locator('p').isVisible(), true);
+          await disclosure.locator('summary').click();
+          assert.ok((await disclosure.boundingBox()).height < 100, 'Closing policy removes content spacing');
+        }
         await page.screenshot({ path: 'artifacts/navigation-product.png', fullPage: true });
         for (const width of [360, 390, 1440]) {
           await page.setViewportSize({ width, height: 900 });
