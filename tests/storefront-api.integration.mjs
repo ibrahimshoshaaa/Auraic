@@ -85,10 +85,11 @@ test('public orders validate server prices, tenant, publication and recipe; retr
     assert.equal((await settingsRequest({ kind: 'availability', data: { enabled: false } })).status, 200);
     assert.equal(JSON.parse((await db.setting.findUnique({ where: { storeId_key: { storeId: shop.id, key: 'storefront' } } })).value).enabled, false);
     assert.equal((await settingsRequest({ kind: 'availability', data: { enabled: true } })).status, 200);
-    const presentation = { heroMode: 'video', heroVideo: 'https://example.com/auraic.mp4', heroInterval: 9, heroTitle: 'Saved hero headline', menCollectionLabel: 'Explore men', womenCollectionLabel: 'Explore women', featuredTitle: 'Our selected fragrances', storyTitle: 'Our Auraic story', menCollectionCategory: 'رجالي', womenCollectionCategory: 'حريمي', menCollectionImage: 'https://example.com/men.jpg' };
+    const presentation = { samplesImage: 'https://example.com/samples-cover.png', heroMode: 'video', heroVideo: 'https://example.com/auraic.mp4', heroInterval: 9, heroTitle: 'Saved hero headline', menCollectionLabel: 'Explore men', womenCollectionLabel: 'Explore women', featuredTitle: 'Our selected fragrances', storyTitle: 'Our Auraic story', menCollectionCategory: 'رجالي', womenCollectionCategory: 'حريمي', menCollectionImage: 'https://example.com/men.jpg' };
     assert.equal((await settingsRequest({ kind: 'settings', data: presentation })).status, 200);
     assert.equal((await settingsRequest({ kind: 'settings', data: { heroInterval: 0 } })).status, 422);
     assert.equal((await settingsRequest({ kind: 'settings', data: { heroVideo: 'javascript:alert(1)' } })).status, 422);
+    assert.equal((await settingsRequest({ kind: 'settings', data: { samplesImage: 'javascript:alert(1)' } })).status, 422);
     // Older mobile clients must preserve the new presentation settings on save.
     assert.equal((await settingsRequest({ kind: 'settings', data: { announcement: 'Auraic offer' } })).status, 200);
     const presentationSaved = JSON.parse((await db.setting.findUnique({ where: { storeId_key: { storeId: shop.id, key: 'storefront' } } })).value);
@@ -180,7 +181,10 @@ test('public orders validate server prices, tenant, publication and recipe; retr
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `No product overflow at ${width}px`);
         }
         await page.setViewportSize({ width: 390, height: 844 });
+        await page.route('https://example.com/samples-cover.png', route => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800" viewBox="0 0 600 800"><rect width="600" height="800" fill="#e7e1d4"/><g transform="translate(160 160) rotate(20)"><rect width="260" height="44" rx="12" fill="#f8f6ef"/><rect width="55" height="44" rx="8" fill="#bfc1bd"/><text x="80" y="28" font-size="18">AURAIC</text></g><g transform="translate(120 390) rotate(-20)"><rect width="260" height="44" rx="12" fill="#f8f6ef"/><rect width="55" height="44" rx="8" fill="#bfc1bd"/><text x="80" y="28" font-size="18">SAMPLES</text></g></svg>' }));
         await page.goto(`${url}/samples`);
+        assert.equal(await page.locator('.shop-samples-art img').count(), 1);
+        assert.equal(await page.locator('.shop-samples-art img').getAttribute('src'), presentation.samplesImage);
         const addSamples = page.getByRole('button', { name: 'ADD TO BAG', exact: false });
         assert.equal(await addSamples.isEnabled(), false);
         assert.equal(await page.locator('.shop-sample-count button').count(), 2);
@@ -192,6 +196,8 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         await page.locator('.shop-sample-select select').nth(1).selectOption(sample.variants[0].id);
         assert.equal(await addSamples.isEnabled(), false);
         for (let index = 2; index < 5; index++) await page.locator('.shop-sample-select select').nth(index).selectOption(sample.variants[0].id);
+        assert.equal(await page.locator('.shop-samples-art img').count(), 1);
+        assert.equal(await page.locator('.shop-samples-art img').getAttribute('src'), presentation.samplesImage);
         assert.equal(await page.locator('.shop-samples-total').innerText(), '650 LE');
         await page.getByRole('button', { name: '3', exact: true }).click();
         assert.equal(await page.locator('.shop-sample-select select').count(), 3);

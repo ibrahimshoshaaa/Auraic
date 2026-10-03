@@ -7,6 +7,7 @@ export const shopSettingsSchema = z.object({
   heroTitle: z.string().trim().min(1, "اكتب عنوان البانر الرئيسي").max(120),
   heroSubtitle: z.string().trim().max(400),
   heroImages: z.array(image).max(8),
+  samplesImage: z.union([z.literal(""), image]).default(""),
   heroMode: z.enum(["images", "video"]).default("images"),
   heroInterval: z.number().int().min(2).max(60).default(6),
   heroVideo: z.union([z.literal(""), image]).default(""),
@@ -40,7 +41,7 @@ export const defaultShopSettings: ShopSettings = {
   featuredEyebrow: "CHOSEN BY AURAIC", featuredTitle: "Best Sellers", offersTitle: "Offers", allProductsTitle: "All Products",
   storyEyebrow: "DESIGNED TO BE FELT", storyTitle: "More than a fragrance.\nA feeling that stays.",
   storyDescription: "Find the fragrance that feels like you. Make your presence unforgettable.", storyButtonLabel: "Find your Auraic",
-  heroImages: [], heroMode: "images", heroInterval: 6, heroVideo: "", menCollectionImage: "", womenCollectionImage: "", menCollectionCategory: "رجالي", womenCollectionCategory: "حريمي", whatsapp: "", contactEmail: "", shippingRates: {}, shippingFee: 0, freeShippingFrom: 0,
+  samplesImage: "", heroImages: [], heroMode: "images", heroInterval: 6, heroVideo: "", menCollectionImage: "", womenCollectionImage: "", menCollectionCategory: "رجالي", womenCollectionCategory: "حريمي", whatsapp: "", contactEmail: "", shippingRates: {}, shippingFee: 0, freeShippingFrom: 0,
   shippingPolicy: "", returnPolicy: "",
 };
 export const productPresentationSchema = z.object({

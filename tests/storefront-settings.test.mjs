@@ -39,3 +39,11 @@ test('checkout accepts optional order notes and limits their size', async () => 
   assert.equal(checkoutSchema.parse({ ...input, note: '  Call before delivery  ' }).note, 'Call before delivery');
   assert.equal(checkoutSchema.safeParse({ ...input, note: 'x'.repeat(501) }).success, false);
 });
+
+test('sample cover is optional for legacy settings and keeps the configured artwork', async () => {
+  const { shopSettingsSchema } = await import('../src/lib/storefront/config.ts');
+  const old = { ...defaultShopSettings }; delete old.samplesImage;
+  assert.equal(resolveShopSettings(old).samplesImage, '');
+  assert.equal(resolveShopSettings({ ...old, samplesImage: 'https://example.com/cover.png' }).samplesImage, 'https://example.com/cover.png');
+  assert.equal(shopSettingsSchema.safeParse({ ...defaultShopSettings, samplesImage: 'javascript:alert(1)' }).success, false);
+});
