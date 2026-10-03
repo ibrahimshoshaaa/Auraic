@@ -198,7 +198,7 @@ test('public orders validate server prices, tenant, publication and recipe; retr
           const picker = page.getByRole('dialog', { name: 'Choose your sample' });
           await picker.waitFor();
           assert.equal(await picker.locator('.shop-sample-option img').count() > 0, true);
-          await picker.locator('.shop-sample-option').filter({ hasText: sample.name }).first().click();
+          await picker.locator('.shop-sample-option').filter({ hasText: sample.title }).first().click();
           await picker.waitFor({ state: 'hidden' });
         }
         await page.locator('.shop-sample-trigger').first().click();
