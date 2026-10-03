@@ -8,9 +8,11 @@ import 'ui.dart';
 
 const shippingGovernorates = ['القاهرة', 'الجيزة', 'الإسكندرية', 'القليوبية', 'المنوفية', 'الغربية', 'الدقهلية', 'الشرقية', 'البحيرة', 'كفر الشيخ', 'دمياط', 'بورسعيد', 'الإسماعيلية', 'السويس', 'الفيوم', 'بني سويف', 'المنيا', 'أسيوط', 'سوهاج', 'قنا', 'الأقصر', 'أسوان', 'مطروح', 'البحر الأحمر', 'الوادي الجديد', 'شمال سيناء', 'جنوب سيناء'];
 
+bool isSampleCategory(String value) => RegExp(r"^samples(?::(?:men|women|unisex))?$").hasMatch(value.trim().toLowerCase());
+
 String audienceCategory(String value) {
-  final category = value.trim().toLowerCase();
-  if (category == 'samples') return 'Samples';
+  final category = value.trim().toLowerCase().replaceFirst('samples:', '');
+
   if (['men', 'male', 'رجالي', 'رجال', 'عطور رجالي'].contains(category)) return 'Men';
   if (['women', 'female', 'حريمي', 'نسائي', 'نساء', 'عطور حريمي'].contains(category)) return 'Women';
   return 'Unisex';
@@ -105,9 +107,10 @@ class _StorefrontSettingsState extends State<StorefrontSettings> {
 }
 
 class ProductManagePage extends StatefulWidget {
-  const ProductManagePage({required this.api, this.productId, super.key});
+  const ProductManagePage({required this.api, this.productId, this.sample = false, super.key});
   final ErpApi api;
   final String? productId;
+  final bool sample;
   @override
   State<ProductManagePage> createState() => _ProductManagePageState();
 }
@@ -117,6 +120,7 @@ class _ProductManagePageState extends State<ProductManagePage> {
   Json product = {'title': '', 'description': '', 'category': 'Unisex', 'inspiredBy': '', 'scentFamily': '', 'images': <String>[], 'published': false, 'featured': false};
   List<Json> variants = [];
   late Future<List<Json>> materials = load();
+  late bool sampleType = widget.sample;
   bool offers = false;
   void toggleOffers(bool value) => setState(() { offers = value; if (!value) { for (final v in variants) { v['compareAtPrice'] = ''; } } });
   int step = 0;
@@ -128,6 +132,7 @@ class _ProductManagePageState extends State<ProductManagePage> {
     final available = rows(await widget.api.get('/api/materials'));
     if (widget.productId != null) {
       final p = json((await widget.api.get('/api/products/${widget.productId}'))['data']);
+      sampleType = isSampleCategory(str(p['storefrontCategory']));
       product = {'title': p['title'], 'description': p['storefrontDescription'], 'category': audienceCategory(str(p['storefrontCategory'])), 'inspiredBy': str(p['storefrontInspiredBy']), 'scentFamily': str(p['storefrontScentFamily']), 'images': p['storefrontImages'], 'published': p['storefrontPublished'], 'featured': p['storefrontFeatured']};
       variants = (p['variants'] as List).map(json).where((v) => v['active'] == true).map((v) {
         final recipes = rows({'data': v['recipes']});
@@ -173,7 +178,7 @@ class _ProductManagePageState extends State<ProductManagePage> {
     if (offers && !variants.any((v) => (double.tryParse(str(v['compareAtPrice'])) ?? 0) > (double.tryParse(str(v['price'])) ?? 0))) { setState(() { error = 'أدخل سعرًا قبل الخصم أعلى من سعر البيع لحجم واحد على الأقل'; step = 2; }); return; }
     setState(() { busy = true; error = ''; });
     try {
-      final data = <String, dynamic>{...product, 'requestId': requestId, if (widget.productId != null) 'productId': widget.productId,
+      final data = <String, dynamic>{...product, 'category': sampleType ? 'Samples:${product['category']}' : product['category'], 'requestId': requestId, if (widget.productId != null) 'productId': widget.productId,
         'variants': variants.map((v) => {...v, 'price': double.tryParse(str(v['price'])), 'compareAtPrice': str(v['compareAtPrice']).isEmpty ? null : double.tryParse(str(v['compareAtPrice'])), 'materials': (v['materials'] as List).map(json).map((m) => {'materialId': m['materialId'], 'quantity': double.tryParse(str(m['quantity']))}).toList()}).toList()};
       await widget.api.post('/api/products/manage', data);
       if (mounted) Navigator.pop(context, true);
@@ -181,7 +186,7 @@ class _ProductManagePageState extends State<ProductManagePage> {
     finally { if (mounted) setState(() => busy = false); }
   }
   @override
-  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: Text(widget.productId == null ? 'إضافة عطر وأحجامه' : 'تعديل المنتج')),
+  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: Text(widget.productId == null ? (sampleType ? 'إضافة سامبلز' : 'إضافة عطر وأحجامه') : 'تعديل المنتج')),
     bottomNavigationBar: SafeArea(child: Container(padding: const EdgeInsets.all(12), decoration: const BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Color(0xffe5e7eb)))), child: Row(children: [if (step > 0) ...[OutlinedButton(onPressed: busy ? null : () => setState(() => step--), child: const Text('السابق')), const SizedBox(width: 8)], OutlinedButton(onPressed: busy ? null : () => Navigator.pop(context), child: const Text('إلغاء')), const SizedBox(width: 8), Expanded(child: FilledButton(key: ValueKey('step-action-$step'), onPressed: busy || variants.isEmpty ? null : step == 4 ? save : next, child: Text(busy ? 'جارٍ الحفظ…' : step == 4 ? 'تأكيد حفظ المنتج' : step == 3 ? 'معاينة المنتج' : 'التالي')))]))),
     body: FutureBuilder<List<Json>>(future: materials, builder: (context, snapshot) {
       if (!snapshot.hasData) return snapshot.hasError ? Center(child: TextButton(onPressed: () => setState(() => materials = load()), child: Text('${snapshot.error} · إعادة المحاولة'))) : const PageSkeleton();
@@ -190,7 +195,7 @@ class _ProductManagePageState extends State<ProductManagePage> {
         if (error.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 16), child: Text(error, style: const TextStyle(color: Colors.red))),
         Row(children: List.generate(5, (index) => Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 3), child: InkWell(onTap: !busy && index < step ? () => setState(() => step = index) : null, borderRadius: BorderRadius.circular(14), child: Container(padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 2), decoration: BoxDecoration(color: step == index ? appNavy : const Color(0xfff4f5f8), borderRadius: BorderRadius.circular(14)), child: Column(children: [Icon(index < step ? Icons.check_circle_outline : [Icons.inventory_2_outlined, Icons.image_outlined, Icons.science_outlined, Icons.description_outlined, Icons.task_alt][index], color: step == index ? Colors.white : appMuted, size: 22), const SizedBox(height: 8), Text(['البيانات', 'الصور', 'الوصفة', 'التفاصيل', 'التأكيد'][index], style: TextStyle(fontSize: 10, color: step == index ? Colors.white : appMuted))]))))))),
         const SizedBox(height: 24),
-        if (step == 0) Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [field(product, 'title', 'اسم العطر، مثال: عود'), DropdownButtonFormField<String>(initialValue: str(product['category']), decoration: const InputDecoration(labelText: 'موجّه إلى', border: OutlineInputBorder()), items: const [DropdownMenuItem(value: 'Men', child: Text('رجالي')), DropdownMenuItem(value: 'Women', child: Text('حريمي')), DropdownMenuItem(value: 'Unisex', child: Text('للجنسين (Unisex)')), DropdownMenuItem(value: 'Samples', child: Text('سامبل / تيستر (Samples فقط)'))], onChanged: busy ? null : (value) => product['category'] = value), const SizedBox(height: 16), const Text('للجنسين يظهر في For Men وFor Women. السامبل يظهر في Samples فقط، وله صور وسعر ووصفة مثل أي منتج.'), const Text('اسم واحد يجمع كل أحجام العطر في المتجر.')] ))),
+        if (step == 0) Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [field(product, 'title', 'اسم العطر، مثال: عود'), DropdownButtonFormField<bool>(initialValue: sampleType, decoration: const InputDecoration(labelText: 'نوع المنتج'), items: const [DropdownMenuItem(value: false, child: Text('عطر')), DropdownMenuItem(value: true, child: Text('سامبل / تيستر'))], onChanged: busy ? null : (value) => setState(() => sampleType = value ?? false)), const SizedBox(height: 16), DropdownButtonFormField<String>(initialValue: str(product['category']), decoration: const InputDecoration(labelText: 'موجّه إلى', border: OutlineInputBorder()), items: const [DropdownMenuItem(value: 'Men', child: Text('رجالي')), DropdownMenuItem(value: 'Women', child: Text('حريمي')), DropdownMenuItem(value: 'Unisex', child: Text('للجنسين (Unisex)'))], onChanged: busy ? null : (value) => product['category'] = value), const SizedBox(height: 16), const Text('للجنسين يظهر في For Men وFor Women. السامبل يظهر في Samples فقط، وله صور وسعر ووصفة مثل أي منتج.'), const Text('اسم واحد يجمع كل أحجام العطر في المتجر.')] ))),
         if (step == 1) ProductImages(api: widget.api, initial: (product['images'] as List).map(str).toList(), onChanged: (images) => product['images'] = images, onBusy: (value) { if (mounted) setState(() => busy = value); }),
         if (step == 2) ...[
 

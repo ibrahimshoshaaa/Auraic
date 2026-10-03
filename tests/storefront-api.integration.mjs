@@ -124,7 +124,7 @@ test('public orders validate server prices, tenant, publication and recipe; retr
     const homeCollections = await (await fetch(url)).text();
     assert.ok(homeCollections.indexOf('id="offers"') < homeCollections.indexOf('id="bestsellers"'));
     assert.ok(homeCollections.indexOf('id="bestsellers"') < homeCollections.indexOf('id="products"'));
-    const sampleRequest = { ...body, requestId: randomUUID(), title: 'Exclusive tester', category: 'Samples', variants: [{ ...body.variants[0], clientId: randomUUID(), title: '2 ml', price: 130, compareAtPrice: null, materials: [{ materialId: material.id, quantity: 2 }] }] };
+    const sampleRequest = { ...body, requestId: randomUUID(), title: 'Exclusive tester', category: 'Samples:Women', variants: [{ ...body.variants[0], clientId: randomUUID(), title: '2 ml', price: 130, compareAtPrice: null, materials: [{ materialId: material.id, quantity: 2 }] }] };
     const sampleSaved = await manage(sampleRequest);
     assert.equal(sampleSaved.status, 200, await sampleSaved.clone().text());
     const sampleId = (await sampleSaved.json()).data.productId;
@@ -211,6 +211,13 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         await page.waitForURL(`${url}/samples`);
         await page.setExtraHTTPHeaders({ authorization: adminHeaders.authorization });
         await page.setViewportSize({ width: 390, height: 844 });
+        await page.goto(`${url}/dashboard/products`);
+        assert.equal(await page.getByRole('heading', { name: 'Exclusive tester', exact: true }).count(), 0);
+        await page.getByRole('link', { name: 'السامبلز', exact: true }).click();
+        await page.getByRole('heading', { name: 'Exclusive tester', exact: true }).waitFor();
+        await page.getByRole('link', { name: '+ إضافة سامبلز', exact: true }).click();
+        assert.equal(await page.getByLabel('نوع المنتج', { exact: true }).inputValue(), 'samples');
+        assert.equal(await page.getByLabel('موجّه إلى', { exact: true }).inputValue(), 'Unisex');
         await page.goto(`${url}/dashboard/products/new`);
         await page.getByLabel('اسم العطر', { exact: true }).fill('Button recipe test');
         await page.screenshot({ path: 'artifacts/navigation-editor-data.png', fullPage: true });

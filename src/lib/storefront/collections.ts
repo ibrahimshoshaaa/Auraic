@@ -1,7 +1,7 @@
-export function isSample(category: string) { return category.trim().toLowerCase() === "samples"; }
+export function isSample(category: string) { return /^samples(?::(?:men|women|unisex))?$/.test(category.trim().toLowerCase()); }
 export type Audience = "men" | "women" | "unisex";
 export function productAudience(category: string): Audience {
-  const value = category.trim().toLowerCase();
+  const value = category.trim().toLowerCase().replace(/^samples:/, "");
   if (["men", "male", "رجالي", "رجال", "عطور رجالي"].includes(value)) return "men";
   if (["women", "female", "حريمي", "نسائي", "نساء", "عطور حريمي"].includes(value)) return "women";
   return "unisex";
