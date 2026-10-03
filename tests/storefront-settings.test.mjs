@@ -47,3 +47,14 @@ test('sample cover is optional for legacy settings and keeps the configured artw
   assert.equal(resolveShopSettings({ ...old, samplesImage: 'https://example.com/cover.png' }).samplesImage, 'https://example.com/cover.png');
   assert.equal(shopSettingsSchema.safeParse({ ...defaultShopSettings, samplesImage: 'javascript:alert(1)' }).success, false);
 });
+
+
+test('announcement rotation validates messages and duration and supports old settings', async () => {
+  const { shopSettingsSchema } = await import('../src/lib/storefront/config.ts');
+  const old = { ...defaultShopSettings }; delete old.announcements; delete old.announcementInterval;
+  assert.deepEqual(shopSettingsSchema.parse(old).announcements, []);
+  assert.equal(shopSettingsSchema.parse(old).announcementInterval, 5);
+  assert.equal(shopSettingsSchema.safeParse({ ...old, announcements: Array(11).fill('Offer') }).success, false);
+  for (const announcementInterval of [0, 1, 61, 2.5]) assert.equal(shopSettingsSchema.safeParse({ ...old, announcementInterval }).success, false);
+  assert.deepEqual(shopSettingsSchema.parse({ ...old, announcements: [' Offer ', 'Delivery'], announcementInterval: 2 }).announcements, ['Offer', 'Delivery']);
+});

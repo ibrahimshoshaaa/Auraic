@@ -87,7 +87,7 @@ test('public orders validate server prices, tenant, publication and recipe; retr
     assert.equal((await settingsRequest({ kind: 'availability', data: { enabled: false } })).status, 200);
     assert.equal(JSON.parse((await db.setting.findUnique({ where: { storeId_key: { storeId: shop.id, key: 'storefront' } } })).value).enabled, false);
     assert.equal((await settingsRequest({ kind: 'availability', data: { enabled: true } })).status, 200);
-    const presentation = { samplesImage: 'https://example.com/samples-cover.png', heroMode: 'video', heroVideo: 'https://example.com/auraic.mp4', heroInterval: 9, heroTitle: 'Saved hero headline', menCollectionLabel: 'Explore men', womenCollectionLabel: 'Explore women', featuredTitle: 'Our selected fragrances', storyTitle: 'Our Auraic story', menCollectionCategory: 'رجالي', womenCollectionCategory: 'حريمي', menCollectionImage: 'https://example.com/men.jpg' };
+    const presentation = { announcements: ['First announcement', 'Second announcement'], announcementInterval: 2, samplesImage: 'https://example.com/samples-cover.png', heroMode: 'video', heroVideo: 'https://example.com/auraic.mp4', heroInterval: 9, heroTitle: 'Saved hero headline', menCollectionLabel: 'Explore men', womenCollectionLabel: 'Explore women', featuredTitle: 'Our selected fragrances', storyTitle: 'Our Auraic story', menCollectionCategory: 'رجالي', womenCollectionCategory: 'حريمي', menCollectionImage: 'https://example.com/men.jpg' };
     assert.equal((await settingsRequest({ kind: 'settings', data: presentation })).status, 200);
     assert.equal((await settingsRequest({ kind: 'settings', data: { heroInterval: 0 } })).status, 422);
     assert.equal((await settingsRequest({ kind: 'settings', data: { heroVideo: 'javascript:alert(1)' } })).status, 422);
@@ -95,6 +95,7 @@ test('public orders validate server prices, tenant, publication and recipe; retr
     // Older mobile clients must preserve the new presentation settings on save.
     assert.equal((await settingsRequest({ kind: 'settings', data: { announcement: 'Auraic offer' } })).status, 200);
     const presentationSaved = JSON.parse((await db.setting.findUnique({ where: { storeId_key: { storeId: shop.id, key: 'storefront' } } })).value);
+    assert.deepEqual(presentationSaved.announcements, presentation.announcements); assert.equal(presentationSaved.announcementInterval, 2);
     assert.equal(presentationSaved.heroMode, 'video'); assert.equal(presentationSaved.heroInterval, 9);
     assert.equal(presentationSaved.menCollectionImage, presentation.menCollectionImage);
     const homepage = await (await fetch(url)).text();
@@ -185,6 +186,13 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         await page.setViewportSize({ width: 390, height: 844 });
         await page.route('https://example.com/samples-cover.png', route => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800" viewBox="0 0 600 800"><rect width="600" height="800" fill="#e7e1d4"/><g transform="translate(160 160) rotate(20)"><rect width="260" height="44" rx="12" fill="#f8f6ef"/><rect width="55" height="44" rx="8" fill="#bfc1bd"/><text x="80" y="28" font-size="18">AURAIC</text></g><g transform="translate(120 390) rotate(-20)"><rect width="260" height="44" rx="12" fill="#f8f6ef"/><rect width="55" height="44" rx="8" fill="#bfc1bd"/><text x="80" y="28" font-size="18">SAMPLES</text></g></svg>' }));
         await page.goto(`${url}/samples`);
+        await page.waitForFunction(() => document.querySelector('.shop-announcement-message p')?.textContent === 'Second announcement');
+        await page.getByRole('button', { name: 'Pause announcement', exact: true }).click();
+        const pausedMessage = await page.locator('.shop-announcement-message p').innerText();
+        await page.waitForTimeout(2200);
+        assert.equal(await page.locator('.shop-announcement-message p').innerText(), pausedMessage);
+        await page.getByRole('button', { name: 'Resume announcement', exact: true }).click();
+        await page.waitForFunction(previous => document.querySelector('.shop-announcement-message p')?.textContent !== previous, pausedMessage);
         // Wait for streamed page hydration before counting the cover image.
         await page.waitForFunction(() => document.querySelectorAll(".shop-samples-art img").length === 1);
         assert.equal(await page.locator('.shop-samples-art img').count(), 1);
