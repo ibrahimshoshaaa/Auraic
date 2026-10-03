@@ -1,3 +1,4 @@
+import { isSample } from "@/lib/storefront/collections";
 import { db } from "@/lib/db";
 import { activeProductStatus } from "@/lib/active-product";
 import { defaultShopSettings, resolveShopSettings } from "@/lib/storefront/config";
@@ -16,7 +17,7 @@ export async function getPublicShop() {
   const settings = await getShopSettings(store.id);
   return { ...store, settings };
 }
-export async function getPublicProducts(storeId: string) {
+export async function getPublicProducts(storeId: string, collection: "fragrances" | "samples" | "all" = "fragrances") {
   const products = await db.product.findMany({
     where: { storeId, storefrontPublished: true, ...activeProductStatus },
     select: { id: true, title: true, storefrontDescription: true, storefrontCategory: true,
@@ -25,7 +26,7 @@ export async function getPublicProducts(storeId: string) {
         select: { id: true, title: true, price: true, compareAtPrice: true }, orderBy: { price: "asc" } } },
     orderBy: [{ storefrontFeatured: "desc" }, { createdAt: "desc" }],
   });
-  return products.filter(product => product.variants.length).map(product => ({
+  return products.filter(product => product.variants.length && (collection === "all" || isSample(product.storefrontCategory) === (collection === "samples"))).map(product => ({
     id: product.id, name: product.title, description: product.storefrontDescription,
     inspiredBy: product.storefrontInspiredBy, scentFamily: product.storefrontScentFamily,
     category: product.storefrontCategory, images: product.storefrontImages, featured: product.storefrontFeatured,

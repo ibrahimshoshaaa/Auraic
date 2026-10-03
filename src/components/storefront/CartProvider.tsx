@@ -1,10 +1,11 @@
 "use client";
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
+import { mergeCartItems } from "@/lib/storefront/cart-items";
 import { z } from "zod";
 
 const lineSchema = z.object({ variantId: z.string().max(100), productId: z.string().max(100), name: z.string().max(250), size: z.string().max(250), image: z.string().max(2000), quantity: z.number().int().min(1).max(20) });
 export type CartLine = z.infer<typeof lineSchema>;
-const Cart = createContext<{ note: string; setNote: (value: string) => void; bagOpen: boolean; openBag: () => void; closeBag: () => void; lines: CartLine[]; ready: boolean; favorites: string[]; toggleFavorite: (id: string) => void; add: (line: CartLine) => void; update: (id: string, quantity: number) => void; clear: () => void } | null>(null);
+const Cart = createContext<{ note: string; setNote: (value: string) => void; bagOpen: boolean; openBag: () => void; closeBag: () => void; lines: CartLine[]; ready: boolean; favorites: string[]; toggleFavorite: (id: string) => void; add: (line: CartLine) => void; addMany: (items: CartLine[]) => boolean; update: (id: string, quantity: number) => void; clear: () => void } | null>(null);
 export function CartProvider({ children }: { children: ReactNode }) {
   const [note, setNote] = useState("");
   const [bagOpen, setBagOpen] = useState(false);
@@ -27,6 +28,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return found ? current.map(item => item.variantId === line.variantId ? { ...item, quantity: Math.min(20, item.quantity + line.quantity) } : item)
       : current.length < 20 ? [...current, line] : current;
   });
-  return <Cart.Provider value={{ note, setNote: value => setNote(value.slice(0, 500)), bagOpen, openBag, closeBag, lines, ready, favorites, toggleFavorite: id => setFavorites(current => current.includes(id) ? current.filter(item => item !== id) : current.length < 200 ? [...current, id] : current), add, update: (id, quantity) => setLines(current => quantity <= 0 ? current.filter(item => item.variantId !== id) : current.map(item => item.variantId === id ? { ...item, quantity: Math.min(20, quantity) } : item)), clear: () => { setLines([]); setNote(""); } }}>{children}</Cart.Provider>;
+  const addMany = (items: CartLine[]) => {
+    if (!mergeCartItems(lines, items)) return false;
+    setLines(current => mergeCartItems(current, items) ?? current);
+    return true;
+  };
+  return <Cart.Provider value={{ note, setNote: value => setNote(value.slice(0, 500)), bagOpen, openBag, closeBag, lines, ready, favorites, addMany, toggleFavorite: id => setFavorites(current => current.includes(id) ? current.filter(item => item !== id) : current.length < 200 ? [...current, id] : current), add, update: (id, quantity) => setLines(current => quantity <= 0 ? current.filter(item => item.variantId !== id) : current.map(item => item.variantId === id ? { ...item, quantity: Math.min(20, quantity) } : item)), clear: () => { setLines([]); setNote(""); } }}>{children}</Cart.Provider>;
 }
 export function useCart() { const value = useContext(Cart); if (!value) throw new Error("CartProvider required"); return value; }

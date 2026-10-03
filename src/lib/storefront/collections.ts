@@ -1,3 +1,4 @@
+export function isSample(category: string) { return category.trim().toLowerCase() === "samples"; }
 export type Audience = "men" | "women" | "unisex";
 export function productAudience(category: string): Audience {
   const value = category.trim().toLowerCase();
@@ -6,6 +7,7 @@ export function productAudience(category: string): Audience {
   return "unisex";
 }
 export function matchesAudience(category: string, audience: string) {
+  if (isSample(category)) return false;
   const target = productAudience(category);
   return target === audience || target === "unisex" && (audience === "men" || audience === "women");
 }

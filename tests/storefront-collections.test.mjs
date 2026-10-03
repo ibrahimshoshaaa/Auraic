@@ -13,3 +13,13 @@ test('offers require a real discount on at least one size', () => {
   assert.equal(hasOffer({ variants: [{price: 450, compareAtPrice: 450}] }), false);
   assert.equal(hasOffer({ variants: [{price: 450, compareAtPrice: null}] }), false);
 });
+
+test('samples stay out of both audience collections', async () => {
+  const { isSample } = await import('../src/lib/storefront/collections.ts');
+  assert.equal(isSample('Samples'), true);
+  assert.equal(isSample(' samples '), true);
+  assert.equal(isSample('Unisex'), false);
+  assert.equal(matchesAudience('Samples', 'men'), false);
+  assert.equal(matchesAudience('Samples', 'women'), false);
+  assert.equal(matchesAudience('Samples', 'unisex'), false);
+});
