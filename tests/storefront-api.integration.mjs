@@ -252,6 +252,9 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         assert.ok(whatsappUrl.searchParams.get('text').includes('هل تحب تأكد الأوردر؟'));
         assert.ok(whatsappUrl.searchParams.get('text').includes(saved.items[0].title));
         await page.goto(`${url}/dashboard/storefront`);
+        await page.getByRole('button', { name: 'التواصل', exact: true }).click();
+        await page.getByRole('button', { name: 'التصميم والبانرات', exact: true }).click();
+        await page.getByRole('heading', { name: 'هوية الموقع والواجهة الرئيسية', exact: true }).waitFor({ state: 'visible' });
         await page.route('**/api/admin/storefront/video-signature', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { url: 'https://api.cloudinary.com/v1_1/test/video/upload', fields: { signature: 'test', timestamp: 1, api_key: 'test' } } }) }));
         await page.route('https://api.cloudinary.com/v1_1/test/video/upload', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ secure_url: 'https://example.com/uploaded-hero.mp4' }) }));
         await page.getByLabel('رفع فيديو الهيرو', { exact: true }).setInputFiles({ name: 'hero.mp4', mimeType: 'video/mp4', buffer: Buffer.from('test video fixture') });
