@@ -211,7 +211,7 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         await page.getByRole('button', { name: '30 ml', exact: true }).first().click();
         await page.getByLabel('سعر البيع (جنيه)', { exact: true }).fill('450');
         await page.getByRole('button', { name: 'التالي', exact: true }).click();
-        assert.ok(await page.getByRole('alert').isVisible(), 'recipe must be selected before proceeding');
+        assert.ok(await page.getByRole('alert').filter({ hasText: 'اختر خامات كل حجم' }).isVisible(), 'recipe must be selected before proceeding');
         await page.getByRole('button', { name: 'اختيار Oil', exact: true }).click();
         await page.locator('.recipe-picker').getByRole('button', { name: '30 ml', exact: true }).click();
         await page.screenshot({ path: 'artifacts/navigation-editor-recipe.png', fullPage: true });
