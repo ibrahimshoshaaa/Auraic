@@ -128,10 +128,8 @@
 .shop-benefits>div>span{align-self:start}
 @supports not (grid-template-rows:subgrid){.shop-benefits>div{grid-template-rows:40px minmax(3.3em,auto) auto}}
 
-/* Both image controls share one overlay row and one vertical center. */
+/* Keep the original size badge offset and dimensions; align only the heart to its center. */
 .shop-card-photo{position:relative}
-.shop-card-photo .shop-card-photo-link{display:block;margin:0;padding:0}
-.shop-card-photo-controls{position:absolute;inset:12px 12px auto;display:flex;justify-content:space-between;align-items:center;z-index:2;pointer-events:none;min-height:38px}
+.shop-card-photo-controls{position:absolute;inset:22px 12px auto;height:28.5px;display:flex;justify-content:space-between;align-items:center;z-index:2;pointer-events:none}
 .shop-fragrance-card .shop-card-photo-controls .shop-favorite,.shop-fragrance-card .shop-card-photo-controls .shop-card-size{position:static;margin:0;pointer-events:auto;flex:none}
-.shop-card-photo-controls .shop-card-size{display:flex;align-items:center;justify-content:center;min-height:38px}
-@media(max-width:760px){.shop-card-photo-controls{inset:10px 10px auto}}
+@media(max-width:760px){.shop-card-photo-controls{inset:20px 10px auto;height:27px}}
