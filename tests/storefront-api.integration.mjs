@@ -276,6 +276,7 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         await page.getByRole('link', { name: '+ إضافة سامبلز', exact: true }).click();
         assert.equal(await page.getByLabel('نوع المنتج', { exact: true }).inputValue(), 'samples');
         assert.equal(await page.getByLabel('موجّه إلى', { exact: true }).inputValue(), 'Unisex');
+        await db.material.update({ where: { id: material.id }, data: { unit: 'مل' } });
         await page.goto(`${url}/dashboard/products/new`);
         await page.getByLabel('اسم العطر', { exact: true }).fill('Button recipe test');
         await page.screenshot({ path: 'artifacts/navigation-editor-data.png', fullPage: true });
@@ -288,7 +289,8 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         await page.getByRole('button', { name: 'التالي', exact: true }).click();
         assert.ok(await page.getByRole('alert').filter({ hasText: 'اختر خامات كل حجم' }).isVisible(), 'recipe must be selected before proceeding');
         await page.getByRole('button', { name: 'اختيار Oil', exact: true }).click();
-        await page.locator('.recipe-picker').getByRole('button', { name: '30 ml', exact: true }).click();
+        for (const amount of [5, 10, 15, 20, 25, 30]) assert.equal(await page.locator('.recipe-picker').getByRole('button', { name: `${amount} مل`, exact: true }).count(), 1);
+        await page.locator('.recipe-picker').getByRole('button', { name: '30 مل', exact: true }).click();
         await page.screenshot({ path: 'artifacts/navigation-editor-recipe.png', fullPage: true });
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
         await page.getByRole('button', { name: 'التالي', exact: true }).click();
