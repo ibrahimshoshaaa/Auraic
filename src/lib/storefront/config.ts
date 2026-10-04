@@ -5,6 +5,8 @@ export const shopSettingsSchema = z.object({
   enabled: z.boolean(),
   announcement: z.string().trim().max(160),
   announcements: z.array(z.string().trim().min(1).max(160)).max(10).default([]),
+  announcementBackground: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#3F3A60"),
+  announcementTextColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#FAEAB1"),
   announcementInterval: z.number().int().min(2).max(60).default(5),
   heroTitle: z.string().trim().min(1, "اكتب عنوان البانر الرئيسي").max(120),
   heroSubtitle: z.string().trim().max(400),
@@ -37,7 +39,7 @@ export const shopSettingsSchema = z.object({
 });
 export type ShopSettings = z.infer<typeof shopSettingsSchema>;
 export const defaultShopSettings: ShopSettings = {
-  announcements: [], announcementInterval: 5,
+  announcements: [], announcementInterval: 5, announcementBackground: "#3F3A60", announcementTextColor: "#FAEAB1",
   enabled: false, announcement: "DESIGNED TO BE FELT, NOT JUST SMELLED",
   heroTitle: "Discover Auraic.\nFind your\nfragrance.", heroSubtitle: "Find the fragrance that feels like you.",
   menCollectionLabel: "SHOP FOR MEN", womenCollectionLabel: "SHOP FOR WOMEN",
