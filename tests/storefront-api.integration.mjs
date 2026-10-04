@@ -282,6 +282,7 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         await page.screenshot({ path: 'artifacts/navigation-editor-data.png', fullPage: true });
         await page.getByRole('button', { name: 'التالي', exact: true }).click();
         assert.equal(await page.getByRole('textbox', { name: 'الصورة الرئيسية', exact: true }).count(), 1);
+        await page.route('https://res.cloudinary.com/demo/image/upload/**', route => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="56" height="66"><rect width="56" height="66" fill="navy"/></svg>' }));
         await page.getByRole('textbox', { name: 'الصورة الرئيسية', exact: true }).fill('https://res.cloudinary.com/demo/image/upload/' + 'long-image-name-'.repeat(20) + '.jpg');
         for (const width of [360, 390, 1280]) {
           await page.setViewportSize({ width, height: 844 });
@@ -305,7 +306,9 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         await page.getByRole('button', { name: 'التالي', exact: true }).click();
         await page.getByRole('button', { name: 'معاينة المنتج', exact: true }).click();
         assert.equal(await db.product.count({ where: { storeId: shop.id, title: 'Button recipe test' } }), 0, 'review must not auto-save');
+        const productSaved = page.waitForResponse(r => r.url().endsWith('/api/products/manage') && r.request().method() === 'POST');
         await page.getByRole('button', { name: 'تأكيد حفظ المنتج', exact: true }).click();
+        const productSaveResponse = await productSaved; assert.ok(productSaveResponse.ok(), await productSaveResponse.text());
         await page.waitForURL(/dashboard\/products\/managed_/, { waitUntil: 'domcontentloaded' });
         const buttonProduct = await db.product.findFirstOrThrow({ where: { storeId: shop.id, title: 'Button recipe test' }, include: { variants: { include: { recipes: { include: { versions: { include: { items: true } } } } } } } });
         assert.equal(Number(buttonProduct.variants[0].recipes[0].versions[0].items[0].quantity), 30);
