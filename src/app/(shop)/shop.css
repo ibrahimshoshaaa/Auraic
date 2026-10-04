@@ -182,3 +182,14 @@
 .shop-card-badges{display:flex;align-items:center;justify-content:flex-end;gap:7px;min-width:0;max-width:calc(100% - 50px);height:100%;margin-left:auto}
 .shop-card-badges .shop-card-custom-badge{position:static;display:flex;align-items:center;height:100%;min-width:0;max-width:none;flex:0 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:1px solid transparent;line-height:1.5}
 .shop-card-badges .shop-card-size{flex-shrink:0}
+
+/* Align the main product purchase controls with the compact quick-buy bar. */
+.shop-fragrance-detail .shop-add-row{display:grid;grid-template-columns:112px minmax(0,1fr);gap:12px;align-items:stretch;margin-top:24px}
+.shop-fragrance-detail .shop-quantity{display:grid;grid-template-columns:1fr 28px 1fr;height:54px;min-width:0;border-radius:12px;background:#242140;border-color:#FAEAB144;overflow:hidden}
+.shop-fragrance-detail .shop-quantity button{display:flex;align-items:center;justify-content:center;padding:0;min-width:0;height:100%;font-size:21px;transition:background .15s}
+.shop-fragrance-detail .shop-quantity button:not(:disabled):hover{background:#3F3A60}
+.shop-fragrance-detail .shop-quantity span{width:auto;font-size:15px;font-weight:600;align-self:center}
+.shop-fragrance-detail .shop-add-row>.shop-button{min-width:0;min-height:54px;padding:10px 14px;border-radius:12px;border-color:#FAEAB166;background:#242140;font-size:13px;line-height:1.4;letter-spacing:.02em;text-transform:none}
+.shop-fragrance-detail .shop-buy-now{min-height:54px;margin-top:12px;border-radius:12px;font-size:14px;gap:12px;border-color:#FAEAB1}
+.shop-fragrance-detail .shop-buy-now svg{width:19px;height:19px}
+@media(max-width:380px){.shop-fragrance-detail .shop-add-row{grid-template-columns:100px minmax(0,1fr);gap:9px}.shop-fragrance-detail .shop-add-row>.shop-button{font-size:12px;padding-inline:8px}}
