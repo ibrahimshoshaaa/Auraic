@@ -119,3 +119,11 @@
 .auraic-shop details>summary::-webkit-details-marker{display:none}
 .auraic-shop details>summary::after{content:"";display:inline-block;flex:none;width:18px;height:18px;margin-left:10px;vertical-align:middle;background:currentColor;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center/contain no-repeat;transition:transform .18s}
 .auraic-shop details[open]>summary::after{transform:rotate(180deg)}
+
+/* Share row heights across the three benefit columns. */
+.shop-benefits{grid-template-rows:auto auto auto;row-gap:8px}
+.shop-benefits>div{grid-row:1 / 4;grid-template-rows:subgrid;align-items:start}
+.shop-benefits>div>svg{align-self:center}
+.shop-benefits b{align-self:start;line-height:1.65}
+.shop-benefits>div>span{align-self:start}
+@supports not (grid-template-rows:subgrid){.shop-benefits>div{grid-template-rows:40px minmax(3.3em,auto) auto}}
