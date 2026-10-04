@@ -204,3 +204,23 @@
 .auraic-shop .shop-fragrance-card .shop-card-add{min-height:46px;padding:12px 16px;border:1px solid #FAEAB144;border-radius:10px;background:#19183B;clip-path:none;font-size:12px;font-weight:600;letter-spacing:.055em}
 .auraic-shop .shop-fragrance-card .shop-card-add:hover{background:#242140;border-color:#FAEAB188}
 .auraic-shop .shop-fragrance-card .shop-card-sizes button:focus-visible,.auraic-shop .shop-fragrance-card .shop-card-add:focus-visible{outline:2px solid #FAEAB1;outline-offset:3px}
+
+/* Rounded catalog filters with readable mobile labels and selections. */
+.auraic-shop .shop-filter-toolbar{gap:12px}
+.auraic-shop .shop-filter-button,.auraic-shop .shop-sort-control{min-height:54px;border-radius:12px;padding:12px 14px;font-size:12px;letter-spacing:.025em}
+.auraic-shop .shop-filter-button svg{flex-shrink:0}
+.auraic-shop .shop-filter-button span{display:flex;align-items:center;justify-content:center;min-width:28px;height:28px;border:0;border-radius:7px;background:#19183B12;padding:0 7px}
+.auraic-shop .shop-sort-control{display:grid;gap:5px;align-content:center;background:#242140;border-color:#FAEAB144}
+.auraic-shop .shop-sort-label{font-size:10px;line-height:1.2;color:#c6c0d7;letter-spacing:.03em}
+.auraic-shop .shop-sort-control select{width:100%;max-width:none;font-size:11px;text-align:left;line-height:1.5}
+.auraic-shop .shop-collection-filters{gap:12px;margin-top:12px}
+.auraic-shop .shop-collection-filters label{border-radius:12px;padding:12px 14px;background:#242140;border-color:#FAEAB144;font-size:10px;gap:8px;letter-spacing:.04em}
+.auraic-shop .shop-collection-filters select,.auraic-shop .shop-collection-filters input{font-size:12px;line-height:1.5;min-height:26px}
+.auraic-shop .shop-collection-filters label:focus-within,.auraic-shop .shop-sort-control:focus-within{border-color:#FAEAB1}
+.auraic-shop .shop-applied-filters button{border-radius:8px}
+@media(max-width:760px){
+.auraic-shop .shop-collection-filters{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.auraic-shop .shop-collection-filters label:nth-child(3),.auraic-shop .shop-collection-search{grid-column:1/-1}
+.auraic-shop .shop-filter-button,.auraic-shop .shop-sort-control{padding:11px 12px}
+.auraic-shop .shop-collection-filters input{font-size:16px}
+}
