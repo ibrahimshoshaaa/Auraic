@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const [orders, count] = await Promise.all([
       db.order.findMany({ where, orderBy: [{ occurredAt: "desc" }, { id: "desc" }], skip: (page - 1) * 25, take: 25, select: {
         id: true, orderNumber: true, occurredAt: true, financialStatus: true, fulfillmentStatus: true, manualStatus: true,
-        currency: true, total: true, netSales: true, depositAmount: true, customerRef: true, customerPhone: true, customerAddress: true,
+        couponCode: true, discount: true, currency: true, total: true, netSales: true, depositAmount: true, customerRef: true, customerPhone: true, customerAddress: true,
         items: { select: { id: true, title: true, quantity: true, finalLinePrice: true, consumptionStatus: true } },
       } }),
       db.order.count({ where }),

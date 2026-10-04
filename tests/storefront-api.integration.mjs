@@ -49,7 +49,7 @@ test('public orders validate server prices, tenant, publication and recipe; retr
     // The same authenticated management API serves web sessions and mobile tokens.
     const owner = await db.user.create({ data: { storeId: shop.id, email: `owner-${shop.id}@example.com`, role: 'OWNER', status: 'ACTIVE' } });
     const token = `perf_${randomBytes(32).toString('base64url')}`;
-    await db.mobileSession.create({ data: { storeId: shop.id, userId: owner.id, tokenHash: createHash('sha256').update(token).digest('hex'), expiresAt: new Date(Date.now() + 60000) } });
+    await db.mobileSession.create({ data: { storeId: shop.id, userId: owner.id, tokenHash: createHash('sha256').update(token).digest('hex'), expiresAt: new Date(Date.now() + 300000) } });
     const adminHeaders = { ...headers, authorization: `Bearer ${token}` };
     // Customer management must reconcile channels while keeping customer PII tenant-scoped.
     assert.equal((await fetch(`${url}/api/customers`)).status, 401);
@@ -282,6 +282,7 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         await page.screenshot({ path: 'artifacts/navigation-editor-data.png', fullPage: true });
         await page.getByRole('button', { name: 'التالي', exact: true }).click();
         assert.equal(await page.getByRole('textbox', { name: 'الصورة الرئيسية', exact: true }).count(), 1);
+        await page.route('https://res.cloudinary.com/demo/image/upload/**', route => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="56" height="66"><rect width="56" height="66" fill="navy"/></svg>' }));
         await page.getByRole('textbox', { name: 'الصورة الرئيسية', exact: true }).fill('https://res.cloudinary.com/demo/image/upload/' + 'long-image-name-'.repeat(20) + '.jpg');
         for (const width of [360, 390, 1280]) {
           await page.setViewportSize({ width, height: 844 });
@@ -305,7 +306,9 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         await page.getByRole('button', { name: 'التالي', exact: true }).click();
         await page.getByRole('button', { name: 'معاينة المنتج', exact: true }).click();
         assert.equal(await db.product.count({ where: { storeId: shop.id, title: 'Button recipe test' } }), 0, 'review must not auto-save');
+        const productSaved = page.waitForResponse(r => r.url().endsWith('/api/products/manage') && r.request().method() === 'POST');
         await page.getByRole('button', { name: 'تأكيد حفظ المنتج', exact: true }).click();
+        const productSaveResponse = await productSaved; assert.ok(productSaveResponse.ok(), await productSaveResponse.text());
         await page.waitForURL(/dashboard\/products\/managed_/, { waitUntil: 'domcontentloaded' });
         const buttonProduct = await db.product.findFirstOrThrow({ where: { storeId: shop.id, title: 'Button recipe test' }, include: { variants: { include: { recipes: { include: { versions: { include: { items: true } } } } } } } });
         assert.equal(Number(buttonProduct.variants[0].recipes[0].versions[0].items[0].quantity), 30);
@@ -380,6 +383,84 @@ test('public orders validate server prices, tenant, publication and recipe; retr
     assert.equal(twoMonths.data.roas.spend, 20000); assert.equal(twoMonths.data.roas.ratio, 0.045);
     const emptyReport = await (await fetch(`${url}/api/mobile/home?period=custom&from=2026-07-01&to=2026-07-31`, { headers: adminHeaders })).json();
     assert.equal(emptyReport.data.roas.ratio, null); assert.equal(emptyReport.data.profit.margin, null);
+    // Coupons: tenant-safe management, authoritative pricing, limits, and retries.
+    const couponApi = (method, body) => fetch(`${url}/api/admin/coupons`, { method, headers: adminHeaders, ...(body ? { body: JSON.stringify(body) } : {}) });
+    assert.equal((await fetch(`${url}/api/admin/coupons`)).status, 401);
+    const employee = await db.user.create({ data: { storeId: shop.id, email: `coupon-employee-${shop.id}@example.com`, role: 'EMPLOYEE', status: 'ACTIVE' } });
+    const employeeToken = `perf_${randomBytes(32).toString('base64url')}`;
+    await db.mobileSession.create({ data: { storeId: shop.id, userId: employee.id, tokenHash: createHash('sha256').update(employeeToken).digest('hex'), expiresAt: new Date(Date.now() + 300000) } });
+    assert.equal((await fetch(`${url}/api/admin/coupons`, { headers: { authorization: `Bearer ${employeeToken}` } })).status, 403);
+    const couponPayload = { code: ' save10 ', type: 'percent', value: 10, minOrder: 400, minItems: 2, maxDiscount: 40, maxUses: 1, freeShipping: false, active: true };
+    assert.equal((await couponApi('POST', { ...couponPayload, value: 101 })).status, 422);
+    assert.equal((await couponApi('POST', { ...couponPayload, productId: foreign.id })).status, 422);
+    assert.equal((await couponApi('POST', couponPayload)).status, 201);
+    assert.equal((await couponApi('POST', couponPayload)).status, 409);
+    const c = await db.coupon.findUniqueOrThrow({ where: { storeId_code: { storeId: shop.id, code: 'SAVE10' } } });
+    const foreignCoupon = await db.coupon.create({ data: { storeId: other.id, code: 'FOREIGN', type: 'fixed', value: 999 } });
+    const list = await (await couponApi('GET')).json(); assert.equal(list.data.coupons.length, 1);
+    assert.equal((await couponApi('PUT', { ...couponPayload, id: foreignCoupon.id })).status, 404);
+    assert.equal((await fetch(`${url}/api/admin/coupons?id=${foreignCoupon.id}`, { method: 'DELETE', headers: adminHeaders })).status, 404);
+    const preview = (code, items = order.items) => fetch(`${url}/api/storefront/coupons`, { method: 'POST', headers, body: JSON.stringify({ code, items, governorate: order.governorate, subtotal: 1, discount: 99999 }) });
+    assert.equal((await preview('FOREIGN')).status, 409);
+    const q = await preview('save10'); assert.equal(q.status, 200, await q.clone().text());
+    const qData = (await q.json()).data; assert.equal(qData.discountCents, 4000); assert.equal(qData.totalCents, 50500);
+    assert.equal((await db.coupon.findUniqueOrThrow({ where: { id: c.id } })).usedCount, 0);
+    assert.equal((await preview('SAVE10', [{ variantId: variant.id, quantity: 1 }])).status, 409);
+    const couponPost = data => fetch(`${url}/api/storefront/checkout`, { method: 'POST', headers: { ...headers, 'x-forwarded-for': '192.0.2.41' }, body: JSON.stringify(data) });
+    assert.equal((await couponPost({ ...order, requestId: randomUUID(), couponCode: 'SAVE10', expectedTotalCents: 1 })).status, 409);
+    assert.equal((await db.coupon.findUniqueOrThrow({ where: { id: c.id } })).usedCount, 0, 'price mismatch rolls back usage');
+    const couponOrder = { ...order, requestId: randomUUID(), couponCode: 'SAVE10', expectedTotalCents: 50500 };
+    const simultaneousRetry = await Promise.all([couponPost(couponOrder), couponPost(couponOrder)]);
+    assert.deepEqual(simultaneousRetry.map(r => r.status).sort(), [200, 201]);
+    const discountedOrder = await db.order.findUniqueOrThrow({ where: { id: `web_${couponOrder.requestId}` }, include: { items: true } });
+    assert.equal(Number(discountedOrder.discount), 40); assert.equal(Number(discountedOrder.netSales), 460);
+    assert.equal(discountedOrder.couponCode, 'SAVE10'); assert.equal(Number(discountedOrder.items[0].discount), 40); assert.equal(Number(discountedOrder.items[0].finalLinePrice), 460);
+    assert.equal((await db.coupon.findUniqueOrThrow({ where: { id: c.id } })).usedCount, 1);
+    assert.equal((await preview('SAVE10')).status, 409);
+    await couponApi('PUT', { ...couponPayload, id: c.id, maxUses: 2 });
+    const lastUse = await Promise.all([couponPost({ ...couponOrder, requestId: randomUUID() }), couponPost({ ...couponOrder, requestId: randomUUID() })]);
+    assert.deepEqual(lastUse.map(r => r.status).sort(), [201, 409]);
+    assert.equal((await db.coupon.findUniqueOrThrow({ where: { id: c.id } })).usedCount, 2, 'only one order takes the final use');
+    for (const conditions of [{ active: false }, { expiresAt: '2020-01-01T00:00:00Z' }, { startsAt: '2099-01-01T00:00:00Z' }, { scope: 'SAMPLES' }]) {
+      await couponApi('PUT', { ...couponPayload, id: c.id, maxUses: 0, ...conditions });
+      assert.equal((await preview('SAVE10')).status, 409);
+    }
+    assert.equal((await couponApi('POST', { code: 'SHIPFREE', type: 'fixed', value: 0, freeShipping: true })).status, 201);
+    assert.equal((await (await preview('SHIPFREE')).json()).data.shippingCents, 0);
+    const freeOrder = await couponPost({ ...order, requestId: randomUUID(), couponCode: 'SHIPFREE', expectedTotalCents: 50000 });
+    assert.equal(freeOrder.status, 201, await freeOrder.clone().text());
+    assert.equal((await couponApi('POST', { code: 'FIXED', type: 'fixed', value: 25 })).status, 201);
+    assert.equal((await (await preview('FIXED')).json()).data.discountCents, 2500);
+    if (process.env.STOREFRONT_BROWSER_TESTS === '1') {
+      const { chromium } = await import('playwright'); const browser = await chromium.launch();
+      try {
+        const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+        await page.route('**/api/admin/coupons**', route => route.continue({ headers: { ...route.request().headers(), authorization: `Bearer ${token}` } }));
+        // The same page can use the existing bearer session through request headers.
+        await page.setExtraHTTPHeaders({ authorization: `Bearer ${token}` });
+        await page.goto(`${url}/dashboard/coupons`);
+        await page.getByText('FIXED', { exact: true }).waitFor();
+        await page.getByRole('button', { name: '+ كوبون جديد', exact: true }).click();
+        await page.getByLabel('كود الخصم', { exact: true }).fill('BROWSER10');
+        await page.getByRole('button', { name: 'حفظ الكوبون', exact: true }).click();
+        await page.getByText('BROWSER10', { exact: true }).waitFor();
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+        await page.screenshot({ path: 'artifacts/navigation-coupons-admin.png', fullPage: true });
+        await page.addInitScript(({ variant, product }) => localStorage.setItem('auraic-cart', JSON.stringify([{ variantId: variant.id, productId: product.id, name: product.title, size: variant.title, image: '', quantity: 2 }])), { variant: { id: variant.id, title: variant.title }, product: { id: product.id, title: product.title } });
+        await page.goto(`${url}/checkout`);
+        await page.getByRole('heading', { name: 'Delivery details', exact: true }).waitFor();
+        await page.locator('select[name="governorate"]').selectOption('المنوفية');
+        await page.getByLabel('Discount code', { exact: true }).fill('BROWSER10');
+        await page.getByRole('button', { name: 'Apply', exact: true }).click();
+        await page.getByRole('status').filter({ hasText: 'BROWSER10 applied' }).waitFor();
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+        await page.screenshot({ path: 'artifacts/navigation-coupon-checkout.png', fullPage: true });
+        await page.getByRole('button', { name: 'Remove', exact: true }).click();
+        assert.equal(await page.getByRole('status').filter({ hasText: 'BROWSER10 applied' }).count(), 0);
+      } finally { await browser.close(); }
+    }
+    assert.equal((await fetch(`${url}/api/admin/coupons?id=${c.id}`, { method: 'DELETE', headers: adminHeaders })).status, 200);
+    assert.equal((await db.order.findUniqueOrThrow({ where: { id: discountedOrder.id } })).couponCode, 'SAVE10', 'deletion preserves historical coupon snapshot');
   } finally {
     if (child) { child.kill('SIGTERM'); await new Promise(resolve => child.once('exit', resolve)); }
     await db.order.deleteMany({ where: { storeId: { in: [shop.id, other.id] } } });
