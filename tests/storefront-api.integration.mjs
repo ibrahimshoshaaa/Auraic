@@ -455,6 +455,11 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         await page.getByRole('status').filter({ hasText: 'BROWSER10 applied' }).waitFor();
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
         await page.screenshot({ path: 'artifacts/navigation-coupon-checkout.png', fullPage: true });
+        await page.locator('select[name="governorate"]').selectOption('القليوبية');
+        assert.equal(await page.getByRole('button', { name: 'CONFIRM ORDER →', exact: true }).isDisabled(), true, 'changing delivery cannot silently discard an applied coupon');
+        await page.getByRole('button', { name: 'Apply', exact: true }).click();
+        await page.getByRole('status').filter({ hasText: 'BROWSER10 applied' }).waitFor();
+        assert.equal(await page.getByRole('button', { name: 'CONFIRM ORDER →', exact: true }).isEnabled(), true);
         await page.getByRole('button', { name: 'Remove', exact: true }).click();
         assert.equal(await page.getByRole('status').filter({ hasText: 'BROWSER10 applied' }).count(), 0);
       } finally { await browser.close(); }
