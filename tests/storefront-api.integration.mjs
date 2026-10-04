@@ -455,11 +455,12 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         await page.getByRole('status').filter({ hasText: 'BROWSER10 applied' }).waitFor();
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
         await page.screenshot({ path: 'artifacts/navigation-coupon-checkout.png', fullPage: true });
+        const refreshedCoupon = page.waitForResponse(response => response.url().endsWith('/api/storefront/coupons') && response.request().method() === 'POST');
         await page.locator('select[name="governorate"]').selectOption('القليوبية');
-        assert.equal(await page.getByRole('button', { name: 'CONFIRM ORDER →', exact: true }).isDisabled(), true, 'changing delivery cannot silently discard an applied coupon');
-        await page.getByRole('button', { name: 'Apply', exact: true }).click();
-        await page.getByRole('status').filter({ hasText: 'BROWSER10 applied' }).waitFor();
-        assert.equal(await page.getByRole('button', { name: 'CONFIRM ORDER →', exact: true }).isEnabled(), true);
+        assert.equal((await refreshedCoupon).ok(), true, 'changing delivery automatically reapplies the coupon');
+        await page.waitForFunction(() => !document.querySelector('.shop-checkout-confirm-bar button').disabled);
+        assert.equal(await page.getByRole('status').filter({ hasText: 'BROWSER10 applied' }).count(), 1);
+        assert.match(await page.locator('.shop-order-summary').innerText(), /−50 LE/, 'discount remains after changing governorate without clicking Apply');
         await page.getByRole('button', { name: 'Remove', exact: true }).click();
         assert.equal(await page.getByRole('status').filter({ hasText: 'BROWSER10 applied' }).count(), 0);
       } finally { await browser.close(); }
