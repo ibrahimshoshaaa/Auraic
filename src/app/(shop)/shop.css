@@ -176,3 +176,9 @@
 .auraic-shop:has(.shop-sticky-bag) .shop-whatsapp{bottom:calc(132px + env(safe-area-inset-bottom))}
 .auraic-shop:has(.shop-sticky-bag) .shop-footer{padding-bottom:calc(145px + env(safe-area-inset-bottom))}
 }
+
+/* Keep the size badge anchored at the right; align the optional discount beside it. */
+.shop-card-photo-controls{gap:12px}
+.shop-card-badges{display:flex;align-items:center;justify-content:flex-end;gap:7px;min-width:0;max-width:calc(100% - 50px);height:100%;margin-left:auto}
+.shop-card-badges .shop-card-custom-badge{position:static;display:flex;align-items:center;height:100%;min-width:0;max-width:none;flex:0 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:1px solid transparent;line-height:1.5}
+.shop-card-badges .shop-card-size{flex-shrink:0}
