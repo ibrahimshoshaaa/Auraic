@@ -1,4 +1,5 @@
 "use client";
+import { ShopIcon } from "./ShopIcon";
 import Image from "next/image";
 import Link from "next/link";
 import { useShopNavigation } from "./ShopNavigation";
@@ -31,7 +32,7 @@ export function ProductDetail({ product, enabled }: { product: ShopProduct; enab
       {product.inspiredBy && <p className="shop-inspired"><span>INSPIRED BY</span><strong>{product.inspiredBy}</strong></p>}
       <div className="shop-fragrance-tags"><span>{productAudience(product.category) === "men" ? "FOR MEN" : productAudience(product.category) === "women" ? "FOR WOMEN" : "UNISEX"}</span>{product.scentFamily && <span>{product.scentFamily}</span>}</div>
       <h1>{product.name}</h1>
-      <button type="button" className="shop-favorite-detail" disabled={!cart.ready} onClick={() => cart.toggleFavorite(product.id)} aria-pressed={cart.favorites.includes(product.id)}>{cart.favorites.includes(product.id) ? "♥ Saved to wishlist" : "♡ Add to wishlist"}</button>
+      <button type="button" className="shop-favorite-detail" disabled={!cart.ready} onClick={() => cart.toggleFavorite(product.id)} aria-pressed={cart.favorites.includes(product.id)}><ShopIcon name="heart" fill={cart.favorites.includes(product.id) ? "currentColor" : "none"}/>{cart.favorites.includes(product.id) ? "Saved to wishlist" : "Add to wishlist"}</button>
       <p className="shop-description">{product.description || "Choose your size and discover the Auraic experience."}</p>
       <p className="shop-detail-price">{variant.compareAtPrice && <del>{formatMoney(variant.compareAtPrice)}</del>} {formatMoney(variant.price)}</p>
       <h3>CHOOSE SIZE</h3><div className="shop-variant-buttons">{product.variants.map(item => <button type="button" aria-pressed={item.id === variantId} key={item.id} onClick={() => { setVariantId(item.id); setAdded(false); }}><strong>{item.title}</strong><small>{formatMoney(item.price)}</small></button>)}</div>
