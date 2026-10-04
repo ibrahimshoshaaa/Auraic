@@ -9,6 +9,10 @@ class CouponApi extends ErpApi {
 }
 void main() {
  testWidgets('mobile coupon editor saves matching web rules and normalized code', (tester) async {
+  tester.view.physicalSize = const Size(390, 844);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
   final api = CouponApi();
   await tester.pumpWidget(MaterialApp(home: CouponEditor(api: api, products: const [])));
   await tester.pumpAndSettle();
@@ -19,7 +23,9 @@ void main() {
   await tester.ensureVisible(field('عدد الاستخدامات · 0 = غير محدود'));
   await tester.enterText(field('عدد الاستخدامات · 0 = غير محدود'), '20');
   await tester.ensureVisible(find.text('شحن مجاني'));
+  await tester.pumpAndSettle();
   await tester.tap(find.text('شحن مجاني'));
+  await tester.pumpAndSettle();
   await tester.ensureVisible(find.text('حفظ الكوبون'));
   await tester.tap(find.text('حفظ الكوبون'));
   await tester.pumpAndSettle();
