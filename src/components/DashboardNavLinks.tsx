@@ -15,11 +15,12 @@ const nav = [
   { label: "التقارير", href: "/dashboard/reports", mark: "▥" },
   { label: "الإعدادات", href: "/dashboard/settings", mark: "⚙" },
   { label: "إدارة المتجر", href: "/dashboard/storefront", mark: "♧" },
+  { label: "الكوبونات", href: "/dashboard/coupons", mark: "%" },
   { label: "العملاء", href: "/dashboard/customers", mark: "♙" },
   { label: "زيارة المتجر", href: "/", mark: "↗" },
 ];
 
-export function NavLinks({ compact = false, canCreateOrder = false, canReadCustomers = false }: { compact?: boolean; canCreateOrder?: boolean; canReadCustomers?: boolean }) {
+export function NavLinks({ compact = false, canCreateOrder = false, canReadCustomers = false, canManageCoupons = false }: { compact?: boolean; canCreateOrder?: boolean; canReadCustomers?: boolean; canManageCoupons?: boolean }) {
   const pathname = usePathname();
   if (compact) {
     const tabs = [nav[0], nav[1],
@@ -40,7 +41,7 @@ export function NavLinks({ compact = false, canCreateOrder = false, canReadCusto
     </>;
   }
   return <nav aria-label="التنقل الرئيسي" className="grid gap-1 p-3">
-    {nav.filter(item => item.href !== "/dashboard/customers" || canReadCustomers).map(({ label, href, mark }) => {
+    {nav.filter(item => (item.href !== "/dashboard/customers" || canReadCustomers) && (item.href !== "/dashboard/coupons" || canManageCoupons)).map(({ label, href, mark }) => {
       const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(`${href}/`));
       return <Link key={href} href={href} aria-current={active ? "page" : undefined}
         onClick={(event) => event.currentTarget.closest("details")?.removeAttribute("open")}

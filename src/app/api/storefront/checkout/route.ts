@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHmac } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { checkoutSchema, shippingFeeFor } from "@/lib/storefront/config";
-import { checkoutTotals } from "@/lib/storefront/pricing";
+import { checkoutSchema } from "@/lib/storefront/config";
+import { quoteOrder, QuoteError } from "@/services/storefront/quote";
+import { CouponError } from "@/lib/storefront/coupons";
 import { getPublicShop } from "@/services/storefront/catalog";
-import { activeProductStatus } from "@/lib/active-product";
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,32 +30,29 @@ export async function POST(request: NextRequest) {
     const orderId = `web_${input.requestId}`;
     const existing = await db.order.findFirst({ where: { id: orderId, storeId: shop.id }, select: { orderNumber: true, total: true } });
     if (existing) return NextResponse.json({ data: { orderNumber: existing.orderNumber, total: Number(existing.total) } });
-    const ids = input.items.map(item => item.variantId);
-    if (new Set(ids).size !== ids.length) return NextResponse.json({ error: "الصنف مكرر في السلة" }, { status: 422 });
-    const variants = await db.productVariant.findMany({
-      where: { storeId: shop.id, id: { in: ids }, active: true, price: { gt: 0 },
-        product: { storefrontPublished: true, ...activeProductStatus },
-        recipes: { some: { active: true, versions: { some: { isCurrent: true, items: { some: {} } } } } } },
-      include: { product: { select: { title: true } } },
-    });
-    if (variants.length !== ids.length) return NextResponse.json({ error: "أحد العطور لم يعد متاحًا. راجع السلة." }, { status: 409 });
-    const byId = new Map(variants.map(variant => [variant.id, variant]));
-    const totals = checkoutTotals(input.items.map(item => ({ quantity: item.quantity, price: Number(byId.get(item.variantId)!.price) })), shippingFeeFor(shop.settings, input.governorate), shop.settings.freeShippingFrom);
-    if (totals.totalCents !== input.expectedTotalCents) return NextResponse.json({ error: "تغير السعر أو الشحن. حدّث الصفحة لمراجعة الإجمالي قبل التأكيد." }, { status: 409 });
     const decimal = (cents: number) => new Prisma.Decimal(cents).div(100);
     const orderNumber = `A-${input.requestId.slice(0, 12).toUpperCase()}`;
+    let finalTotal = 0; let reused = false; let confirmedNumber = orderNumber;
     try {
       await db.$transaction(async tx => {
+        // Serialize retries before reserving any coupon usage.
+        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${orderId}, 0))::text`;
+        const retry = await tx.order.findFirst({ where: { id: orderId, storeId: shop.id }, select: { total: true, orderNumber: true } });
+        if (retry) { finalTotal = Math.round(Number(retry.total) * 100); confirmedNumber = retry.orderNumber || orderNumber; reused = true; return; }
+        const { byId, totals, coupon, lineDiscounts } = await quoteOrder(tx, shop.id, shop.settings, input.items, input.governorate, input.couponCode, true);
+        if (totals.totalCents !== input.expectedTotalCents) throw new QuoteError("Prices or shipping have changed. Review your bag and reapply your coupon.");
+        finalTotal = totals.totalCents;
+        if (coupon) await tx.coupon.update({ where: { id: coupon.id }, data: { usedCount: { increment: 1 } } });
         await tx.order.create({ data: {
           id: orderId, storeId: shop.id, orderNumber, financialStatus: "PENDING", fulfillmentStatus: "UNFULFILLED", manualStatus: "NEW",
-          currency: "EGP", subtotal: decimal(totals.subtotalCents), shipping: decimal(totals.shippingCents), tax: 0, discount: 0,
-          total: decimal(totals.totalCents), netSales: decimal(totals.subtotalCents), refunded: 0,
+          currency: "EGP", subtotal: decimal(totals.subtotalCents), shipping: decimal(totals.shippingCents), tax: 0, discount: decimal(totals.discountCents), couponCode: coupon?.code,
+          total: decimal(totals.totalCents), netSales: decimal(totals.subtotalCents - totals.discountCents), refunded: 0,
           customerRef: input.name, customerPhone: input.phone, customerAddress: `${input.governorate} · ${input.address}`, occurredAt: new Date(),
-          items: { create: input.items.map(item => {
+          items: { create: input.items.map((item, index) => {
             const variant = byId.get(item.variantId)!;
             const priceCents = Math.round(Number(variant.price) * 100);
             return { variantId: variant.id, title: `${variant.product.title} · ${variant.title}`, sku: variant.sku,
-              quantity: item.quantity, originalPrice: decimal(priceCents), finalLinePrice: decimal(priceCents * item.quantity), discount: 0, refunded: 0 };
+              quantity: item.quantity, originalPrice: decimal(priceCents), finalLinePrice: decimal(priceCents * item.quantity - lineDiscounts[index]), discount: decimal(lineDiscounts[index]), refunded: 0 };
           }) },
         } });
         await tx.auditLog.create({ data: { storeId: shop.id, action: "CREATE", entity: "Order", entityId: orderId, metadata: { source: "STOREFRONT", payment: "COD", note: input.note } } });
@@ -66,8 +63,9 @@ export async function POST(request: NextRequest) {
       if (!duplicate) throw error;
       return NextResponse.json({ data: { orderNumber: duplicate.orderNumber, total: Number(duplicate.total) } });
     }
-    return NextResponse.json({ data: { orderNumber, total: totals.totalCents / 100 } }, { status: 201 });
+    return NextResponse.json({ data: { orderNumber: confirmedNumber, total: finalTotal / 100 } }, { status: reused ? 200 : 201 });
   } catch (error) {
+    if (error instanceof QuoteError || error instanceof CouponError) return NextResponse.json({ error: error.message }, { status: 409 });
     if (error instanceof SyntaxError) return NextResponse.json({ error: "راجع بيانات الطلب" }, { status: 422 });
     console.error("Storefront checkout failed", error);
     return NextResponse.json({ error: "تعذر تسجيل الطلب. حاول ثانية بنفس السلة." }, { status: 500 });

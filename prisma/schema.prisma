@@ -53,6 +53,7 @@ model Store {
   expenses                   Expense[]
   expenseCategories           ExpenseCategory[]
   orders                     Order[]
+  coupons                    Coupon[]
 }
 
 model User {
@@ -456,6 +457,7 @@ model Order {
   shipping        Decimal?    @db.Decimal(18, 4)
   tax             Decimal?    @db.Decimal(18, 4)
   discount        Decimal?    @db.Decimal(18, 4)
+  couponCode      String?
   total           Decimal?    @db.Decimal(18, 4)
   refunded        Decimal?    @db.Decimal(18, 4)
   netSales        Decimal?    @db.Decimal(18, 4)
@@ -515,4 +517,29 @@ model StorefrontRateLimit {
   count Int @default(1)
   expiresAt DateTime
   @@index([expiresAt])
+}
+
+model Coupon {
+  id           String   @id @default(cuid())
+  storeId      String
+  code         String
+  type         String
+  value        Decimal  @db.Decimal(18, 4)
+  minOrder     Decimal  @default(0) @db.Decimal(18, 4)
+  minItems     Int      @default(0)
+  maxDiscount  Decimal? @db.Decimal(18, 4)
+  maxUses      Int      @default(0)
+  usedCount    Int      @default(0)
+  startsAt     DateTime?
+  expiresAt    DateTime?
+  productId    String?
+  scope        String   @default("ALL")
+  freeShipping Boolean  @default(false)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  store        Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, code])
+  @@index([storeId, createdAt])
 }

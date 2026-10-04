@@ -125,6 +125,7 @@ class _OrdersPageState extends State<OrdersPage> {
           if (str(o['depositAmount']).isNotEmpty)
             _detailRow(Icons.account_balance_wallet_outlined, 'الديبوزت',
               '${str(o['depositAmount'])} $currency'),
+          if (str(o['couponCode']).isNotEmpty) _detailRow(Icons.local_offer_outlined, 'الكوبون', '${o['couponCode']} · خصم ${statistic(o['discount'])} $currency'),
           const SizedBox(height: 14),
           _sectionTitle('بيانات العميل'),
           if (orderWhatsAppUrl(o) != null) Align(alignment: AlignmentDirectional.centerStart, child: IconButton.filled(onPressed: () async { try { final opened = await launchUrl(Uri.parse(orderWhatsAppUrl(o)!), mode: LaunchMode.externalApplication); if (!opened && context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر فتح واتساب'))); } catch (_) { if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر فتح واتساب'))); } }, tooltip: 'تأكيد الطلب عبر واتساب', style: IconButton.styleFrom(backgroundColor: const Color(0xff128c4e)), icon: const WhatsAppIcon())),

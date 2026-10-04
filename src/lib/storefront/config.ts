@@ -58,7 +58,8 @@ export const governorates = ["القاهرة", "الجيزة", "الإسكندر
 export const checkoutSchema = z.object({
   note: z.string().trim().max(500).default(""),
   requestId: z.uuid(), name: z.string().trim().min(2).max(100),
-  expectedTotalCents: z.number().int().positive().max(1000000000),
+  couponCode: z.string().trim().toUpperCase().max(40).default(""),
+  expectedTotalCents: z.number().int().nonnegative().max(1000000000),
   phone: z.string().regex(/^01[0125]\d{8}$/, "راجع رقم الموبايل المصري"),
   governorate: z.enum(governorates), address: z.string().trim().min(10).max(400),
   items: z.array(z.object({ variantId: z.string().min(1).max(100), quantity: z.number().int().min(1).max(20) })).min(1).max(20),

@@ -86,3 +86,12 @@
 .auraic-shop .shop-featured{padding-top:24px}.auraic-shop .shop-featured .shop-section-heading{margin-bottom:24px}.auraic-shop .shop-header-actions .shop-header-bag{width:36px;height:44px;flex:none}.auraic-shop .shop-header-bag svg{width:30px;height:30px}.auraic-shop .shop-header-bag b{top:auto;bottom:0;right:-7px;min-width:22px;height:22px;border-radius:50%;padding:0 5px;background:#FAEAB1;color:#19183B;font-size:12px;font-weight:600;line-height:1}@media(max-width:760px){.auraic-shop .shop-featured{padding-top:20px}.auraic-shop .shop-header-actions .shop-header-bag{width:30px;height:40px}.auraic-shop .shop-header-bag svg{width:28px;height:28px}.auraic-shop .shop-header-bag b{min-width:20px;height:20px;right:-6px;font-size:11px}}
 
 .shop-announcement-message p{animation:none}.shop-loading-brand{position:relative;flex-direction:row;justify-content:space-between}.shop-loading-brand .shop-wordmark img{width:100%;height:100%;object-fit:cover}.shop-loading-brand .shop-loading-pulse{position:absolute;left:6%;bottom:8px}.shop-loading-announcement-control{width:34px;flex:none}@media(max-width:760px){.shop-loading-brand .shop-loading-pulse{left:5%}}
+
+.shop-coupon { margin: 18px 0; border-block: 1px solid var(--shop-border, #77718d); padding: 18px 0; }
+.shop-coupon label { display: block; font-size: 13px; margin-bottom: 8px; }
+.shop-coupon > div { display: flex; gap: 8px; }
+.shop-coupon input { min-width: 0; flex: 1; width: 100%; padding: 12px; border: 1px solid currentColor; color: inherit; background: transparent; }
+.shop-coupon button { padding: 10px 14px; border: 1px solid currentColor; color: inherit; background: transparent; cursor: pointer; }
+.shop-coupon button:disabled { opacity: .5; cursor: default; }
+.shop-coupon p { font-size: 13px; flex-wrap: wrap; }
+.shop-coupon p button { padding: 4px 8px; }
