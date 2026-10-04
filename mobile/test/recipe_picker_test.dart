@@ -20,7 +20,7 @@ void main() {
     await tester.ensureVisible(find.text('30 $unit'));
     await tester.tap(find.text('30 $unit'));
     await tester.pumpAndSettle();
-    for (final amount in [5, 10, 15, 20, 25, 30]) { expect(find.text('$amount $unit'), findsOneWidget); }
+    for (final amount in [5, 10, 15, 20, 25, 30]) { expect(find.widgetWithText(ChoiceChip, '$amount $unit'), findsOneWidget); }
     expect(find.text('2 $unit'), findsNothing);
     expect(lines, [{'materialId':'oil','quantity':30.0}]);
     await tester.ensureVisible(find.text('زجاجة 30 · piece'));
