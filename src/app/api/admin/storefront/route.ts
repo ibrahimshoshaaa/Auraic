@@ -34,6 +34,7 @@ export async function PUT(request: NextRequest) {
         storefrontPublished: data.published, storefrontDescription: data.description, storefrontCategory: data.category,
         storefrontImages: data.images, storefrontFeatured: data.featured,
         storefrontInspiredBy: data.inspiredBy, storefrontScentFamily: data.scentFamily,
+        ...(data.badge !== undefined ? { storefrontBadge: data.badge } : {}),
       } });
       if (!changed.count) return NextResponse.json({ error: "المنتج غير موجود" }, { status: 404 });
     } else return NextResponse.json({ error: "طلب غير صالح" }, { status: 422 });

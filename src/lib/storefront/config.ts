@@ -52,6 +52,7 @@ export const productPresentationSchema = z.object({
   description: z.string().trim().max(10000), category: z.string().trim().min(1).max(80),
   inspiredBy: z.string().trim().max(160).default(""),
   scentFamily: z.string().trim().max(80).default(""),
+  badge: z.string().trim().max(24).optional(),
   images: z.array(image).max(8),
 });
 export const governorates = ["القاهرة", "الجيزة", "الإسكندرية", "القليوبية", "المنوفية", "الغربية", "الدقهلية", "الشرقية", "البحيرة", "كفر الشيخ", "دمياط", "بورسعيد", "الإسماعيلية", "السويس", "الفيوم", "بني سويف", "المنيا", "أسيوط", "سوهاج", "قنا", "الأقصر", "أسوان", "مطروح", "البحر الأحمر", "الوادي الجديد", "شمال سيناء", "جنوب سيناء"] as const;

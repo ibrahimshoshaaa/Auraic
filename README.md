@@ -47,3 +47,7 @@ GitHub Actions يشغّل أيضًا ترحيلات PostgreSQL، واختبار�
 العميل يطبق كودًا واحدًا في ملخص الشيك أوت. الخصم على سعر البيع الحالي للمنتجات المؤهلة؛ حد الشحن المجاني العام يُحسب قبل الخصم. يُعاد التحقق من الصلاحية والسعر وعدد الاستخدامات داخل معاملة إنشاء الطلب. تأكيد الطلب يحسب استخدامًا واحدًا؛ إعادة المحاولة لا تستهلك استخدامًا إضافيًا، والمرتجعات لا تعيد استخدام الكوبون. كود الخصم وقيمته محفوظان في الطلب، وخصم الأصناف يدخل في حساب صافي المبيعات والربح.
 
 قبل نشر هذه الإضافة، طبّق migration `20261004003000_coupons` على قاعدة الإنتاج باستخدام workflow «Apply production database migrations» أو `npx prisma migrate deploy`. لا تستخدم `db push` أو إعادة ضبط قاعدة البيانات. تحديث تطبيق الإدارة مطلوب لظهور صفحة الكوبونات على الموبايل.
+
+### Product card badge
+
+The optional badge text (up to 24 characters, for example `20% OFF`) is managed in the web and mobile product editor or web storefront settings. Empty text hides the badge; pricing remains controlled by the variant prices. Before deploying, run migration `20261004124000_product_badge` using the production migration workflow from this feature branch. Mobile users need an updated app build.

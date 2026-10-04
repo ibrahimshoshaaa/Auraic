@@ -130,7 +130,7 @@ class ProductManagePage extends StatefulWidget {
 class _ProductManagePageState extends State<ProductManagePage> {
   final form = GlobalKey<FormState>();
   final requestId = const Uuid().v4();
-  Json product = {'title': '', 'description': '', 'category': 'Unisex', 'inspiredBy': '', 'scentFamily': '', 'images': <String>[], 'published': false, 'featured': false};
+  Json product = {'title': '', 'description': '', 'category': 'Unisex', 'inspiredBy': '', 'scentFamily': '', 'badge': '', 'images': <String>[], 'published': false, 'featured': false};
   List<Json> variants = [];
   late Future<List<Json>> materials = load();
   late bool sampleType = widget.sample;
@@ -146,7 +146,7 @@ class _ProductManagePageState extends State<ProductManagePage> {
     if (widget.productId != null) {
       final p = json((await widget.api.get('/api/products/${widget.productId}'))['data']);
       sampleType = isSampleCategory(str(p['storefrontCategory']));
-      product = {'title': p['title'], 'description': p['storefrontDescription'], 'category': audienceCategory(str(p['storefrontCategory'])), 'inspiredBy': str(p['storefrontInspiredBy']), 'scentFamily': str(p['storefrontScentFamily']), 'images': p['storefrontImages'], 'published': p['storefrontPublished'], 'featured': p['storefrontFeatured']};
+      product = {'title': p['title'], 'description': p['storefrontDescription'], 'category': audienceCategory(str(p['storefrontCategory'])), 'inspiredBy': str(p['storefrontInspiredBy']), 'scentFamily': str(p['storefrontScentFamily']), 'badge': str(p['storefrontBadge']), 'images': p['storefrontImages'], 'published': p['storefrontPublished'], 'featured': p['storefrontFeatured']};
       variants = (p['variants'] as List).map(json).where((v) => v['active'] == true).map((v) {
         final recipes = rows({'data': v['recipes']});
         final versions = recipes.isEmpty ? <Json>[] : rows({'data': recipes.first['versions']});
@@ -227,13 +227,13 @@ class _ProductManagePageState extends State<ProductManagePage> {
         const SizedBox(height: 16), OutlinedButton.icon(onPressed: busy || variants.length >= 20 ? null : () => setState(() => variants.add(blank())), icon: const Icon(Icons.add), label: const Text('إضافة حجم آخر')),
         ],
         if (step == 3) ...[
-        Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [field(product, 'description', 'وصف العطر', required: false, lines: 5), field(product, 'inspiredBy', 'مستوحى من (اختياري)', required: false), field(product, 'scentFamily', 'طابع العطر (اختياري)', required: false)]))),
+        Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [field(product, 'description', 'وصف العطر', required: false, lines: 5), field(product, 'inspiredBy', 'مستوحى من (اختياري)', required: false), field(product, 'scentFamily', 'طابع العطر (اختياري)', required: false), TextFormField(initialValue: str(product['badge']), maxLength: 24, decoration: const InputDecoration(labelText: 'نص البادج (اختياري)', hintText: '20% OFF', helperText: 'اتركه فارغًا لإخفائه. الأسعار تحدد الخصم الفعلي.'), onChanged: (value) => product['badge'] = value)]))),
         SwitchListTile(value: product['published'] == true, onChanged: busy ? null : (value) => setState(() => product['published'] = value), title: const Text('ظاهر للعملاء في المتجر')),
         SwitchListTile(value: product['featured'] == true, onChanged: busy ? null : (value) => setState(() => product['featured'] = value), title: const Text('يظهر في Best Sellers')),
         const Text('الوصفات والطلبات السابقة تظل محفوظة عند تعديل المنتج أو إزالة حجم.', style: TextStyle(color: appMuted)),
         ],
         if (step == 4) ...[
-          Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(str(product['title']), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)), Text(str(product['category'])), if ((product['images'] as List).isNotEmpty) Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Wrap(spacing: 12, runSpacing: 12, children: (product['images'] as List).map((url) => ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.network(str(url), width: 90, height: 110, fit: BoxFit.cover, errorBuilder: (context, failure, stack) => const SizedBox(width: 90, height: 110, child: Icon(Icons.broken_image_outlined))))).toList())), const SizedBox(height: 12), Text(str(product['description'])), if (str(product['inspiredBy']).isNotEmpty) Text('مستوحى من: ${product['inspiredBy']}'), if (str(product['scentFamily']).isNotEmpty) Text('طابع العطر: ${product['scentFamily']}'), Text(product['published'] == true ? 'سيظهر للعملاء' : 'مسودة غير منشورة')]))),
+          Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(str(product['title']), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)), Text(str(product['category'])), if (str(product['badge']).isNotEmpty) Chip(label: Text(str(product['badge']))), if ((product['images'] as List).isNotEmpty) Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Wrap(spacing: 12, runSpacing: 12, children: (product['images'] as List).map((url) => ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.network(str(url), width: 90, height: 110, fit: BoxFit.cover, errorBuilder: (context, failure, stack) => const SizedBox(width: 90, height: 110, child: Icon(Icons.broken_image_outlined))))).toList())), const SizedBox(height: 12), Text(str(product['description'])), if (str(product['inspiredBy']).isNotEmpty) Text('مستوحى من: ${product['inspiredBy']}'), if (str(product['scentFamily']).isNotEmpty) Text('طابع العطر: ${product['scentFamily']}'), Text(product['published'] == true ? 'سيظهر للعملاء' : 'مسودة غير منشورة')]))),
           for (final v in variants) Card(margin: const EdgeInsets.only(top: 16), child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('${v['title']} · ${v['price']} جنيه', style: const TextStyle(fontWeight: FontWeight.w800)), for (final m in (v['materials'] as List).map(json)) Text('${available.where((a) => a['id'] == m['materialId']).map((a) => a['name']).join()} · ${m['quantity']}'), costPreview(v, available)]))),
           const SizedBox(height: 16), const Text('لم يُحفظ المنتج بعد. راجع التفاصيل ثم أكد الحفظ.'),
         ],
