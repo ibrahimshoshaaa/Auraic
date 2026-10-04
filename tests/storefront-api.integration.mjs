@@ -306,7 +306,7 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         await page.getByRole('button', { name: 'معاينة المنتج', exact: true }).click();
         assert.equal(await db.product.count({ where: { storeId: shop.id, title: 'Button recipe test' } }), 0, 'review must not auto-save');
         await page.getByRole('button', { name: 'تأكيد حفظ المنتج', exact: true }).click();
-        await page.waitForURL(/dashboard\/products\/managed_/);
+        await page.waitForURL(/dashboard\/products\/managed_/, { waitUntil: 'domcontentloaded' });
         const buttonProduct = await db.product.findFirstOrThrow({ where: { storeId: shop.id, title: 'Button recipe test' }, include: { variants: { include: { recipes: { include: { versions: { include: { items: true } } } } } } } });
         assert.equal(Number(buttonProduct.variants[0].recipes[0].versions[0].items[0].quantity), 30);
         assert.deepEqual(errors, []);
