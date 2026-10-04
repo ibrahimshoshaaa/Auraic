@@ -26,7 +26,7 @@ export function ProductCard({ product, showNotes = false, enabled = false }: { p
 }
 export function Catalog({ products, initialSearch = "", initialAudience = "", initialCollection = "", initialSize = "", enabled }: { products: ShopProduct[]; enabled: boolean; initialSearch?: string; initialAudience?: string; initialCollection?: string; initialSize?: string }) {
   const [audience, setAudience] = useState(initialAudience); const [search, setSearch] = useState(initialSearch); const [sort, setSort] = useState("featured");
-  const [size, setSize] = useState(initialSize); const [collection, setCollection] = useState(initialCollection); const [filtersOpen, setFiltersOpen] = useState(true); const [showNotes, setShowNotes] = useState(false);
+  const [size, setSize] = useState(initialSize); const [collection, setCollection] = useState(initialCollection); const [filtersOpen, setFiltersOpen] = useState(false); const [showNotes, setShowNotes] = useState(false);
   useEffect(() => {
     const next = new URL(window.location.href);
     for (const [name, value] of [["audience", audience], ["collection", collection], ["size", size], ["q", search]]) {
