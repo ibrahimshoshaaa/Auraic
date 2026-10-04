@@ -196,12 +196,9 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         await page.route('https://example.com/samples-cover.png', route => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800" viewBox="0 0 600 800"><rect width="600" height="800" fill="#e7e1d4"/><g transform="translate(160 160) rotate(20)"><rect width="260" height="44" rx="12" fill="#f8f6ef"/><rect width="55" height="44" rx="8" fill="#bfc1bd"/><text x="80" y="28" font-size="18">AURAIC</text></g><g transform="translate(120 390) rotate(-20)"><rect width="260" height="44" rx="12" fill="#f8f6ef"/><rect width="55" height="44" rx="8" fill="#bfc1bd"/><text x="80" y="28" font-size="18">SAMPLES</text></g></svg>' }));
         await page.goto(`${url}/samples`);
         await page.waitForFunction(() => document.querySelector('.shop-announcement-message p')?.textContent === 'Second announcement');
-        await page.getByRole('button', { name: 'Pause announcement', exact: true }).click();
-        const pausedMessage = await page.locator('.shop-announcement-message p').innerText();
-        await page.waitForTimeout(2200);
-        assert.equal(await page.locator('.shop-announcement-message p').innerText(), pausedMessage);
-        await page.getByRole('button', { name: 'Resume announcement', exact: true }).click();
-        await page.waitForFunction(previous => document.querySelector('.shop-announcement-message p')?.textContent !== previous, pausedMessage);
+        assert.equal(await page.getByRole('button', { name: /Pause announcement|Resume announcement/ }).count(), 0);
+        const currentMessage = await page.locator('.shop-announcement-message p').innerText();
+        await page.waitForFunction(previous => document.querySelector('.shop-announcement-message p')?.textContent !== previous, currentMessage);
         // Wait for streamed page hydration before counting the cover image.
         await page.waitForFunction(() => document.querySelectorAll(".shop-samples-art img").length === 1);
         assert.equal(await page.locator('.shop-samples-art img').count(), 1);

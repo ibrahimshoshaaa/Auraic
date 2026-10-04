@@ -3,7 +3,7 @@ import { ShopIcon } from "./ShopIcon";
 import Image from "next/image";
 import Link from "next/link";
 import { useShopNavigation } from "./ShopNavigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ShopProduct } from "@/services/storefront/catalog";
 import { formatMoney } from "@/lib/storefront/pricing";
 import { productAudience } from "@/lib/storefront/collections";
@@ -13,18 +13,53 @@ export function ProductDetail({ product, enabled }: { product: ShopProduct; enab
   const [quantity, setQuantity] = useState(1);
   const [photo, setPhoto] = useState(0);
   const [added, setAdded] = useState(false);
+  const [galleryPaused, setGalleryPaused] = useState(false);
+  const swipeStart = useRef<{ x: number; y: number } | null>(null);
   const cart = useCart(); const navigate = useShopNavigation();
   const variant = product.variants.find(item => item.id === variantId)!;
   const images = product.images.length ? product.images : ["/auraic-bottle.svg"];
+  const imageCount = images.length;
+  useEffect(() => {
+    if (imageCount < 2 || galleryPaused) return;
+    const timer = window.setInterval(() => setPhoto(current => (current + 1) % imageCount), 2000);
+    return () => window.clearInterval(timer);
+  }, [imageCount, galleryPaused, photo]);
+  function changePhoto(direction: number) {
+    setPhoto(current => (current + direction + imageCount) % imageCount);
+  }
   const disabled = !enabled || !cart.ready || (cart.lines.length >= 20 && !cart.lines.some(item => item.variantId === variant.id));
   function add() { cart.add({ variantId: variant.id, productId: product.id, name: product.name, size: variant.title, image: images[0], quantity }); setAdded(true); }
   const label = !enabled ? "Orders paused" : added ? "✓ Added to bag" : "Add to bag";
   return <div className="shop-detail shop-fragrance-detail">
     <section className="shop-gallery" aria-label={`${product.name} photos`}>
-      <div className="shop-detail-image" tabIndex={images.length > 1 ? 0 : undefined} onKeyDown={e => { if (e.key === "ArrowRight" || e.key === "ArrowLeft") { e.preventDefault(); setPhoto((photo + (e.key === "ArrowRight" ? 1 : -1) + images.length) % images.length); } }}>
-        <Image src={images[photo]} alt={`${product.name} — photo ${photo + 1}`} fill unoptimized sizes="(max-width: 760px) 100vw, 50vw" priority />
-        {images.length > 1 && <><button type="button" className="shop-gallery-prev" aria-label="Previous photo" onClick={() => setPhoto((photo - 1 + images.length) % images.length)}>⟵</button><button type="button" className="shop-gallery-next" aria-label="Next photo" onClick={() => setPhoto((photo + 1) % images.length)}>⟶</button></>}
-        <span className="shop-gallery-count">{photo + 1} / {images.length}</span>
+      <div className="shop-detail-image shop-swipe-gallery" tabIndex={imageCount > 1 ? 0 : undefined}
+        aria-label="Product images. Swipe left or right, or use the arrow keys to change image."
+        onMouseEnter={() => setGalleryPaused(true)} onMouseLeave={() => setGalleryPaused(false)}
+        onFocus={e => setGalleryPaused(e.currentTarget.matches(":focus-visible"))} onBlur={() => setGalleryPaused(false)}
+        onKeyDown={e => { if (e.key === "ArrowRight" || e.key === "ArrowLeft") { e.preventDefault(); changePhoto(e.key === "ArrowRight" ? 1 : -1); } }}
+        onPointerDown={e => {
+          if (!e.isPrimary || e.button !== 0 || imageCount < 2) return;
+          swipeStart.current = { x: e.clientX, y: e.clientY };
+          setGalleryPaused(true);
+          e.currentTarget.setPointerCapture(e.pointerId);
+        }}
+        onPointerUp={e => {
+          const start = swipeStart.current;
+          swipeStart.current = null;
+          if (start) {
+            const dx = e.clientX - start.x;
+            const dy = e.clientY - start.y;
+            if (Math.abs(dx) >= 40 && Math.abs(dx) > Math.abs(dy)) changePhoto(dx < 0 ? 1 : -1);
+          }
+          setGalleryPaused(e.pointerType === "mouse" || e.currentTarget.matches(":focus-visible"));
+        }}
+        onPointerCancel={() => { swipeStart.current = null; setGalleryPaused(false); }}>
+        <div className="shop-gallery-track" style={{ transform: `translateX(-${photo * 100}%)` }}>
+          {images.map((image, index) => <div className="shop-gallery-slide" key={image + index} aria-hidden={photo !== index}>
+            <Image src={image} alt={`${product.name} — photo ${index + 1}`} fill unoptimized sizes="(max-width: 760px) 100vw, 50vw" priority={index === 0} draggable={false} />
+          </div>)}
+        </div>
+        <span className="shop-gallery-count">{photo + 1} / {imageCount}</span>
       </div>
       <div className="shop-thumbnails">{images.map((image, index) => <button type="button" key={image + index} onClick={() => setPhoto(index)} aria-label={`Show photo ${index + 1}`} aria-pressed={photo === index}><Image src={image} width={90} height={100} alt="" unoptimized /></button>)}</div>
     </section>

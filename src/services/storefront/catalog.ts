@@ -21,14 +21,14 @@ export async function getPublicProducts(storeId: string, collection: "fragrances
   const products = await db.product.findMany({
     where: { storeId, storefrontPublished: true, ...activeProductStatus },
     select: { id: true, title: true, storefrontDescription: true, storefrontCategory: true,
-      storefrontImages: true, storefrontFeatured: true, storefrontInspiredBy: true, storefrontScentFamily: true,
+      storefrontImages: true, storefrontFeatured: true, storefrontInspiredBy: true, storefrontScentFamily: true, storefrontBadge: true,
       variants: { where: { active: true, price: { gt: 0 }, recipes: { some: { active: true, versions: { some: { isCurrent: true, items: { some: {} } } } } } },
         select: { id: true, title: true, price: true, compareAtPrice: true }, orderBy: { price: "asc" } } },
     orderBy: [{ storefrontFeatured: "desc" }, { createdAt: "desc" }],
   });
   return products.filter(product => product.variants.length && (collection === "all" || isSample(product.storefrontCategory) === (collection === "samples"))).map(product => ({
     id: product.id, name: product.title, description: product.storefrontDescription,
-    inspiredBy: product.storefrontInspiredBy, scentFamily: product.storefrontScentFamily,
+    inspiredBy: product.storefrontInspiredBy, scentFamily: product.storefrontScentFamily, badge: product.storefrontBadge,
     category: product.storefrontCategory, images: product.storefrontImages, featured: product.storefrontFeatured,
     variants: product.variants.map(variant => ({ ...variant, price: Number(variant.price), compareAtPrice: variant.compareAtPrice ? Number(variant.compareAtPrice) : null })),
   }));

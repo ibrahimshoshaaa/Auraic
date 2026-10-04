@@ -58,3 +58,21 @@ test('announcement rotation validates messages and duration and supports old set
   for (const announcementInterval of [0, 1, 61, 2.5]) assert.equal(shopSettingsSchema.safeParse({ ...old, announcementInterval }).success, false);
   assert.deepEqual(shopSettingsSchema.parse({ ...old, announcements: [' Offer ', 'Delivery'], announcementInterval: 2 }).announcements, ['Offer', 'Delivery']);
 });
+
+test('custom badges can be cleared and omitted by older clients without losing saved text', async () => {
+  const { productPresentationSchema } = await import('../src/lib/storefront/config.ts');
+  const product = { id: 'product', published: true, featured: false, description: '', category: 'Unisex', images: [] };
+  assert.equal(productPresentationSchema.parse(product).badge, undefined);
+  assert.equal(productPresentationSchema.parse({ ...product, badge: ' 20% OFF ' }).badge, '20% OFF');
+  assert.equal(productPresentationSchema.parse({ ...product, badge: ' ' }).badge, '');
+  assert.equal(productPresentationSchema.safeParse({ ...product, badge: 'x'.repeat(25) }).success, false);
+});
+
+test('announcement colors support old settings and reject invalid CSS values', async () => {
+  const { shopSettingsSchema } = await import('../src/lib/storefront/config.ts');
+  const old = { ...defaultShopSettings }; delete old.announcementBackground; delete old.announcementTextColor;
+  assert.equal(shopSettingsSchema.parse(old).announcementBackground, '#3F3A60');
+  assert.equal(shopSettingsSchema.parse(old).announcementTextColor, '#FAEAB1');
+  assert.equal(shopSettingsSchema.parse({ ...old, announcementBackground: '#ff0000' }).announcementBackground, '#ff0000');
+  assert.equal(shopSettingsSchema.safeParse({ ...old, announcementTextColor: 'red;position:fixed' }).success, false);
+});

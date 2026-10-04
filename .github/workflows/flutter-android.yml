@@ -45,23 +45,23 @@ jobs:
       - name: Run Flutter tests
         run: flutter test
       - name: Build release APKs per architecture
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'workflow_dispatch' || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')
         run: flutter build apk --release --split-per-abi --dart-define=API_BASE_URL="$API_BASE_URL"
       - name: Verify release APK network permission
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'workflow_dispatch' || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')
         run: |
           aapt_path="$(find "${ANDROID_HOME}/build-tools" -type f -name aapt | sort -V | tail -n 1)"
           test -n "$aapt_path"
           "$aapt_path" dump permissions build/app/outputs/flutter-apk/app-arm64-v8a-release.apk | grep -F 'android.permission.INTERNET'
       - name: Upload Android 64-bit APK
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'workflow_dispatch' || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')
         uses: actions/upload-artifact@v4
         with:
           name: auraic-arm64-release
           path: mobile/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
           if-no-files-found: error
       - name: Upload Android 32-bit APK
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'workflow_dispatch' || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')
         uses: actions/upload-artifact@v4
         with:
           name: auraic-arm32-release

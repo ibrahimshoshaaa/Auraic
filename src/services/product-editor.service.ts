@@ -8,6 +8,7 @@ export const productEditorSchema = z.object({
   description: z.string().trim().max(10000), category: z.string().trim().min(1).max(80),
   images: z.array(z.string().url().max(2000).refine(url => url.startsWith("https://"))).max(8),
   inspiredBy: z.string().trim().max(160).optional(), scentFamily: z.string().trim().max(80).optional(),
+  badge: z.string().trim().max(24).optional(),
   published: z.boolean(), featured: z.boolean(),
   variants: z.array(z.object({
     id: z.string().optional(), clientId: z.string().uuid(), title: z.string().trim().min(1).max(100),
@@ -37,6 +38,7 @@ export async function saveManagedProduct(storeId: string, userId: string, input:
     const data = { title: input.title, storefrontDescription: input.description, storefrontCategory: input.category,
       ...(input.inspiredBy !== undefined ? { storefrontInspiredBy: input.inspiredBy } : {}),
       ...(input.scentFamily !== undefined ? { storefrontScentFamily: input.scentFamily } : {}),
+      ...(input.badge !== undefined ? { storefrontBadge: input.badge } : {}),
       storefrontImages: input.images, storefrontPublished: input.published, storefrontFeatured: input.featured };
     if (existing) await tx.product.update({ where: { id: productId }, data });
     else await tx.product.create({ data: { ...data, id: productId, storeId, status: "ACTIVE" } });
