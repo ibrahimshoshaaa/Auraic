@@ -44,7 +44,7 @@ class _RecipePickerState extends State<RecipePicker> {
       for (final line in chosen) Builder(builder: (context) {
         final matches = widget.materials.where((material) => material['id'] == line['materialId']);
         final material = matches.isEmpty ? <String, dynamic>{'name': 'خامة غير متاحة', 'unit': ''} : matches.first;
-        final unit = str(material['unit']); final liquid = unit.toLowerCase() == 'ml';
+        final unit = str(material['unit']); final liquid = ['ml', 'مل'].contains(unit.trim().toLowerCase());
         final quantity = double.tryParse(str(line['quantity'])) ?? 1; final increment = liquid ? 0.5 : 1.0;
         return Container(margin: const EdgeInsets.only(bottom: 14), padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: const Color(0xfff8f9fb), border: Border.all(color: const Color(0xffe5e7eb)), borderRadius: BorderRadius.circular(16)), child: Column(children: [
           Row(children: [Expanded(child: Text(str(material['name']), style: const TextStyle(fontWeight: FontWeight.w700))), IconButton(tooltip: 'حذف الخامة', onPressed: widget.disabled ? null : () => toggle(str(line['materialId'])), icon: const Icon(Icons.close, size: 20))]),
