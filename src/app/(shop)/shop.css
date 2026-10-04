@@ -148,3 +148,11 @@
 .shop-drawer nav a:nth-child(6){animation-delay:.34s}
 .shop-drawer footer{animation-delay:.38s}
 @media(prefers-reduced-motion:reduce){.shop-drawer,.shop-drawer-backdrop,.shop-drawer header,.shop-drawer nav a,.shop-drawer footer{animation:none}}
+
+/* Edge-to-edge product photography with touch and mouse swipe navigation. */
+.shop-fragrance-detail .shop-swipe-gallery{overflow:hidden;touch-action:pan-y;user-select:none;cursor:grab}
+.shop-swipe-gallery:active{cursor:grabbing}
+.shop-gallery-track{display:flex;width:100%;height:100%;position:absolute;inset:0;transition:transform .35s ease}
+.shop-gallery-slide{position:relative;flex:0 0 100%;height:100%}
+.shop-fragrance-detail .shop-gallery-slide img{object-fit:cover;pointer-events:none}
+@media(prefers-reduced-motion:reduce){.shop-gallery-track{transition:none}}
