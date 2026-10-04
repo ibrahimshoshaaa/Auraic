@@ -444,7 +444,7 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
         await page.screenshot({ path: 'artifacts/navigation-coupons-admin.png', fullPage: true });
         await page.goto(`${url}/checkout`);
-        await page.evaluate(({ variant, product }) => localStorage.setItem('auraic-cart', JSON.stringify([{ variantId: variant.id, productId: product.id, name: product.title, size: variant.title, image: '', quantity: 2 }])), { variant, product });
+        await page.evaluate(({ variant, product }) => localStorage.setItem('auraic-cart', JSON.stringify([{ variantId: variant.id, productId: product.id, name: product.title, size: variant.title, image: '', quantity: 2 }])), { variant: { id: variant.id, title: variant.title }, product: { id: product.id, title: product.title } });
         await page.reload(); await page.getByLabel('Governorate', { exact: true }).selectOption('المنوفية');
         await page.getByLabel('Discount code', { exact: true }).fill('BROWSER10');
         await page.getByRole('button', { name: 'Apply', exact: true }).click();
