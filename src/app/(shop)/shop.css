@@ -193,3 +193,14 @@
 .shop-fragrance-detail .shop-buy-now{min-height:54px;margin-top:12px;border-radius:12px;font-size:14px;gap:12px;border-color:#FAEAB1}
 .shop-fragrance-detail .shop-buy-now svg{width:19px;height:19px}
 @media(max-width:380px){.shop-fragrance-detail .shop-add-row{grid-template-columns:100px minmax(0,1fr);gap:9px}.shop-fragrance-detail .shop-add-row>.shop-button{font-size:12px;padding-inline:8px}}
+
+/* Consistent, compact controls on catalog cards. */
+.auraic-shop .shop-card-heading .shop-fragrance-tags{gap:6px}
+.auraic-shop .shop-card-heading .shop-fragrance-tags span{border-radius:7px;padding:6px 9px;letter-spacing:.025em;line-height:1.4}
+.auraic-shop .shop-card-heading .shop-fragrance-tags .shop-scent-tag{border-radius:8px}
+.auraic-shop .shop-fragrance-card .shop-card-sizes{gap:8px;margin-bottom:16px}
+.auraic-shop .shop-fragrance-card .shop-card-sizes button{display:inline-flex;align-items:center;justify-content:center;min-height:38px;min-width:58px;padding:8px 12px;border-radius:9px;font-size:12px;line-height:1.2;transition:background .18s,border-color .18s,color .18s}
+.auraic-shop .shop-fragrance-card .shop-card-sizes button:hover{border-color:#FAEAB1}
+.auraic-shop .shop-fragrance-card .shop-card-add{min-height:46px;padding:12px 16px;border:1px solid #FAEAB144;border-radius:10px;background:#19183B;clip-path:none;font-size:12px;font-weight:600;letter-spacing:.055em}
+.auraic-shop .shop-fragrance-card .shop-card-add:hover{background:#242140;border-color:#FAEAB188}
+.auraic-shop .shop-fragrance-card .shop-card-sizes button:focus-visible,.auraic-shop .shop-fragrance-card .shop-card-add:focus-visible{outline:2px solid #FAEAB1;outline-offset:3px}
