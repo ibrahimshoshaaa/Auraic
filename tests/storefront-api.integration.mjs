@@ -155,6 +155,8 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         assert.match(await page.locator('.shop-collection-heading h1:visible').innerText(), /FRAGRANCES\s+FOR MEN/);
         assert.equal(await page.locator('.shop-product-card:visible').count(), 1);
         await page.screenshot({ path: 'artifacts/navigation-men.png', fullPage: true });
+        assert.equal(await page.getByRole('button', { name: /FILTER/ }).getAttribute('aria-expanded'), 'false');
+        await page.getByRole('button', { name: /FILTER/ }).click();
         await page.getByRole('combobox', { name: 'Gender', exact: true }).selectOption('women');
         assert.match(await page.locator('.shop-collection-heading h1:visible').innerText(), /FOR WOMEN/);
         assert.equal(await page.locator('.shop-product-card:visible').count(), 1, 'unisex belongs in women too');
