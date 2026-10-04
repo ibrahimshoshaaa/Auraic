@@ -95,3 +95,17 @@
 .shop-coupon button:disabled { opacity: .5; cursor: default; }
 .shop-coupon p { font-size: 13px; flex-wrap: wrap; }
 .shop-coupon p button { padding: 4px 8px; }
+
+/* Consistent line icons and compact image controls. */
+.shop-benefits>div{align-content:start;justify-items:center}
+.shop-benefits>div>svg{width:32px;height:32px;color:#FAEAB1;stroke-width:1.5;margin-bottom:8px}
+.shop-fragrance-card .shop-favorite{width:36px;height:36px;top:12px;left:12px;background:#19183bdf;border:1px solid #faeab12b;box-shadow:0 3px 10px #08071820;transition:background .2s,transform .2s}
+.shop-fragrance-card .shop-favorite svg{width:19px;height:19px;stroke-width:1.7}
+.shop-fragrance-card .shop-favorite:hover{background:#383353;transform:translateY(-1px)}
+.shop-fragrance-card .shop-card-size{top:12px;right:12px;padding:5px 10px;border:1px solid #faeab12b;border-radius:6px;background:#19183bdf;color:#FAEAB1;font-size:11px;line-height:1.5;letter-spacing:.06em}
+.shop-favorite-detail{display:inline-flex;align-items:center;gap:8px}
+.shop-favorite-detail svg{width:18px;height:18px}
+.shop-sample-dialog header button{display:grid;place-items:center;width:40px;height:40px;border:0;border-radius:10px;background:#faeab10d}
+.shop-sample-dialog header button svg{width:20px;height:20px;stroke-width:1.7}
+.shop-sample-dialog header button:hover{background:#faeab11c}
+@media(max-width:760px){.shop-benefits>div>svg{width:28px;height:28px}.shop-fragrance-card .shop-favorite{width:34px;height:34px;top:10px;left:10px}.shop-fragrance-card .shop-card-size{top:10px;right:10px;font-size:10px;padding:5px 8px}}
