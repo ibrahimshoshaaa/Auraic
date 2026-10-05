@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'api.dart';
+import 'ui.dart';
 
 class AdminProductGrid extends StatelessWidget {
   const AdminProductGrid({required this.children, super.key});

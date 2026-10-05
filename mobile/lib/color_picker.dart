@@ -17,7 +17,7 @@ Future<String?> pickColor(BuildContext context, {required String label, required
       const SizedBox(height: 16),
       Wrap(spacing: 8, runSpacing: 8, children: [for (final swatch in palette) Semantics(label: 'لون ${colorHex(swatch)}', button: true,
         child: InkWell(key: ValueKey('swatch-${colorHex(swatch)}'), onTap: () => update(() => hsv = HSVColor.fromColor(swatch)), borderRadius: BorderRadius.circular(8),
-          child: Container(width: 40, height: 40, decoration: BoxDecoration(color: swatch, borderRadius: BorderRadius.circular(8), border: Border.all(color: colorHex(color) == colorHex(swatch) ? Theme.of(context).colorScheme.primary : Colors.grey, width: colorHex(color) == colorHex(swatch) ? 3 : 1))))]),
+          child: Container(width: 40, height: 40, decoration: BoxDecoration(color: swatch, borderRadius: BorderRadius.circular(8), border: Border.all(color: colorHex(color) == colorHex(swatch) ? Theme.of(context).colorScheme.primary : Colors.grey, width: colorHex(color) == colorHex(swatch) ? 3 : 1)))))]),
       const SizedBox(height: 16),
       Container(height: 12, decoration: BoxDecoration(borderRadius: BorderRadius.circular(6), gradient: const LinearGradient(colors: [Colors.red, Colors.yellow, Colors.green, Colors.cyan, Colors.blue, Colors.purple, Colors.red]))),
       control('درجة اللون', hsv.hue, 360, (value) => hsv = hsv.withHue(value).withSaturation(hsv.saturation == 0 ? .8 : hsv.saturation).withValue(hsv.value == 0 ? .8 : hsv.value)),
