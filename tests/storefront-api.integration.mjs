@@ -75,6 +75,10 @@ test('public orders validate server prices, tenant, publication and recipe; retr
     assert.equal(phoneSearch.count, 1);
     const exactOrder = await (await fetch(`${url}/api/mobile/orders?orderId=${encodeURIComponent(saved.id)}`, { headers: adminHeaders })).json();
     assert.equal(exactOrder.count, 1); assert.equal(exactOrder.data[0].id, saved.id);
+    for (const field of ["subtotal", "shipping", "tax", "discount", "total"]) {
+      assert.notEqual(exactOrder.data[0][field], undefined, `mobile order includes ${field}`);
+      assert.equal(Number(exactOrder.data[0][field]), Number(saved[field]));
+    }
     await db.user.update({ where: { id: owner.id }, data: { role: 'EMPLOYEE' } });
     assert.equal((await fetch(`${url}/api/customers`, { headers: adminHeaders })).status, 403);
     await db.user.update({ where: { id: owner.id }, data: { role: 'MANAGER' } });
