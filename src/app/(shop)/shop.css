@@ -224,3 +224,21 @@
 .auraic-shop .shop-filter-button,.auraic-shop .shop-sort-control{padding:11px 12px}
 .auraic-shop .shop-collection-filters input{font-size:16px}
 }
+
+/* Swipeable social proof, keeping screenshot text uncropped. */
+.shop-review-section{padding:64px max(20px,5vw);text-align:center;background:#19183B}
+.shop-blogger-reviews{background:#3F3A60}
+.shop-review-section h2{font-size:clamp(28px,4vw,48px);line-height:1.15;margin:12px 0 20px;color:#FAEAB1;overflow-wrap:anywhere}
+.shop-review-section>p{color:#c6c0d7;max-width:580px;margin:0 auto 28px;line-height:1.6}
+.shop-review-rail{position:relative;display:flex;gap:18px;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;padding:8px 0 14px;text-align:left;scrollbar-width:thin;scrollbar-color:#FAEAB166 transparent}
+.shop-review-video{flex:0 0 min(320px,78vw);aspect-ratio:9/16;border-radius:16px;overflow:hidden;background:#101024;scroll-snap-align:start}
+.shop-review-video video{width:100%;height:100%;object-fit:contain}
+.shop-screenshot-rail{max-width:740px;margin:auto;gap:16px}
+.shop-review-screenshot{flex:0 0 100%;min-width:0;height:540px;display:flex;align-items:center;justify-content:center;scroll-snap-align:start}
+.shop-review-screenshot img{width:100%;height:100%;object-fit:contain;border-radius:12px}
+.shop-review-dots{display:flex;justify-content:center;flex-wrap:wrap;gap:9px;margin-top:18px}
+.shop-review-dots button{width:24px;height:24px;display:grid;place-items:center}
+.shop-review-dots button:before{content:"";width:7px;height:7px;border-radius:50%;background:#FAEAB155}
+.shop-review-dots button[aria-pressed=true]:before{background:#FAEAB1;width:9px;height:9px}
+.shop-review-dots button:focus-visible{outline:2px solid #FAEAB1;border-radius:50%}
+@media(max-width:760px){.shop-review-section{padding:42px 20px}.shop-review-rail{gap:12px}.shop-review-screenshot{height:440px}}
