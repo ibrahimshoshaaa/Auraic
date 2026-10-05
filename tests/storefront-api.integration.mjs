@@ -167,7 +167,7 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         assert.equal(await page.getByRole('switch').count(), 0);
         assert.equal(await page.locator('.shop-fragrance-card .shop-card-description').count(), 0);
         assert.equal(await page.locator('.shop-fragrance-card .shop-fragrance-tags').count(), 0);
-        assert.equal(await page.locator('.shop-card-sizes button[aria-pressed="true"]').innerText(), '100 ml');
+        assert.equal(await page.locator('.shop-card-sizes button[aria-pressed="true"]:visible').innerText(), '100 ml');
         assert.match(await page.locator('.shop-card-price:visible').innerText(), /1,200 LE/);
         await page.getByRole('combobox', { name: 'Size', exact: true }).selectOption('100 ml');
         assert.equal(await page.locator('.shop-product-card:visible').count(), 1);
@@ -183,7 +183,7 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         await page.waitForURL(`${url}/products/${managedId}`);
         await page.locator('.shop-route-loading').waitFor({ state: 'hidden' });
         assert.equal(await page.locator('.shop-detail-copy h1:visible').innerText(), 'Oud');
-        assert.match(await page.locator('.shop-variant-buttons button[aria-pressed="true"]').innerText(), /100 ml\s+1,200 LE/);
+        assert.match(await page.locator('.shop-variant-buttons button[aria-pressed="true"]:visible').innerText(), /100 ml\s+1,200 LE/);
         assert.equal(await page.locator('.shop-description:visible').innerText(), 'Oud description');
         const selectedSize = await page.locator('.shop-sticky-bag select').inputValue();
         await page.locator('.shop-sticky-bag .shop-button').click();
