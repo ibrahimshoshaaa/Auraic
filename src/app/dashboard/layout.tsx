@@ -23,13 +23,13 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
 
   return (
     <div className="min-h-screen bg-[#f4f5fa] pb-20 lg:pb-0">
-      <aside className="fixed inset-y-0 right-0 z-20 hidden w-64 flex-col overflow-y-auto bg-[#191735] text-white lg:flex">
+      <aside className="fixed inset-y-0 right-0 z-20 hidden w-64 flex-col overflow-hidden bg-[#191735] text-white lg:flex">
         <div className="border-b border-white/10 px-6 py-7">
           <p className="flex items-center gap-3 text-lg font-bold tracking-tight"><Image src={auraicIcon} alt="" className="size-10 rounded-xl object-cover" />Auraic</p>
           <p className="mt-2 truncate text-xs text-slate-400">{storeName}</p>
         </div>
-        <div className="flex-1"><NavLinks canReadCustomers={can(session.role, "customers.read")} canManageCoupons={can(session.role, "products.write")} /></div>
-        <form action={logout} className="border-t border-white/10 p-3">
+        <div className="min-h-0 flex-1 overflow-y-auto"><NavLinks canReadCustomers={can(session.role, "customers.read")} canManageCoupons={can(session.role, "products.write")} /></div>
+        <form action={logout} className="shrink-0 border-t border-white/10 p-3">
           <button type="submit" className="w-full rounded-xl px-4 py-3 text-right text-sm text-slate-300 transition hover:bg-white/10 hover:text-white">تسجيل الخروج ←</button>
         </form>
       </aside>
@@ -41,9 +41,9 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
             <span className="rounded-lg border border-white/20 px-3 py-2 text-sm group-open:bg-white/10">☰ <span className="sr-only">القائمة</span></span>
           </summary>
           <MenuBackdrop />
-          <div className="absolute right-0 top-full z-10 max-h-[calc(100dvh-9rem)] w-[min(22rem,88vw)] overflow-y-auto rounded-bl-2xl border-t border-white/10 bg-[#191735] shadow-2xl">
-            <NavLinks canReadCustomers={can(session.role, "customers.read")} canManageCoupons={can(session.role, "products.write")} />
-            <form action={logout} className="border-t border-white/10 p-3">
+          <div className="absolute right-0 top-full z-10 flex max-h-[calc(100dvh-9rem)] w-[min(22rem,88vw)] flex-col overflow-hidden rounded-bl-2xl border-t border-white/10 bg-[#191735] shadow-2xl">
+            <div className="min-h-0 overflow-y-auto"><NavLinks canReadCustomers={can(session.role, "customers.read")} canManageCoupons={can(session.role, "products.write")} /></div>
+            <form action={logout} className="shrink-0 border-t border-white/10 p-3">
               <button type="submit" className="w-full rounded-xl px-4 py-3 text-right text-sm text-slate-300">تسجيل الخروج ←</button>
             </form>
           </div>
