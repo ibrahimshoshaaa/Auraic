@@ -114,7 +114,29 @@ class _OrdersPageState extends State<OrdersPage> {
             Text('· ${items.length} صنف', style: const TextStyle(
               fontSize: 13, color: Color(0xff718089))),
           ]),
-          if (widget.canWrite && ['NEW', 'PREPARED', 'SHIPPING'].contains(o['manualStatus'])) Padding(padding: const EdgeInsets.only(top: 12), child: SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: updatingOrder == str(o['id']) ? null : () => updateOrder(o, o['manualStatus'] == 'NEW' ? 'PREPARED' : o['manualStatus'] == 'PREPARED' ? 'SHIPPING' : 'DELIVERED', o['manualStatus'] == 'NEW' ? 'تم التجهيز وخصم الخامات' : o['manualStatus'] == 'PREPARED' ? 'جاري الشحن' : 'تم التسليم وتحصيل المبلغ'), icon: const Icon(Icons.check_circle_outline), label: Text(o['manualStatus'] == 'NEW' ? 'تم التجهيز' : o['manualStatus'] == 'PREPARED' ? 'جاري الشحن' : 'تم التسليم وتحصيل المبلغ')))),
+          if (widget.canWrite && ['NEW', 'PREPARED', 'SHIPPING'].contains(o['manualStatus']))
+            Padding(padding: const EdgeInsets.only(top: 12), child: Row(children: [
+              Expanded(child: FilledButton.icon(
+                onPressed: updatingOrder != null ? null : () => updateOrder(o,
+                  o['manualStatus'] == 'NEW' ? 'PREPARED' : o['manualStatus'] == 'PREPARED' ? 'SHIPPING' : 'DELIVERED',
+                  o['manualStatus'] == 'NEW' ? 'تم التجهيز وخصم الخامات' : o['manualStatus'] == 'PREPARED' ? 'جاري الشحن' : 'تم التسليم وتحصيل المبلغ'),
+                icon: const Icon(Icons.check_circle_outline, size: 18),
+                label: Text(o['manualStatus'] == 'NEW' ? 'تم التجهيز' : o['manualStatus'] == 'PREPARED' ? 'جاري الشحن' : 'تم التسليم وتحصيل المبلغ',
+                  textAlign: TextAlign.center, style: const TextStyle(fontSize: 12)),
+              )),
+              if (o['manualStatus'] == 'SHIPPING') ...[
+                const SizedBox(width: 8),
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(foregroundColor: const Color(0xffb42318),
+                    side: const BorderSide(color: Color(0xfff3b8b3)),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    minimumSize: const Size(0, 48)),
+                  onPressed: updatingOrder != null ? null : () => updateOrder(o,
+                    'RETURNED', 'تم الإرجاع وإعادة الخامات', destructive: true),
+                  child: const Text('تم الإرجاع', style: TextStyle(fontSize: 12)),
+                ),
+              ],
+            ])),
         ]),
         children: [
           const Divider(height: 24),
@@ -151,12 +173,7 @@ class _OrdersPageState extends State<OrdersPage> {
             body: ConsumptionPage(api: widget.api, orderId: str(o['id'])))),
             icon: const Icon(Icons.science_outlined),
             label: const Text('عرض حركة استهلاك الخامات'))),
-          if (widget.canWrite) const SizedBox(height: 10),
-          if (widget.canWrite && o['manualStatus'] != null) ...[
-            if (o['manualStatus'] == 'SHIPPING') ...[
-              action(o, 'RETURNED', 'تم الإرجاع وإعادة الخامات', destructive: true),
-            ],
-          ],
+
         ],
       )));
       }));

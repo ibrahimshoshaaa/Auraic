@@ -6,7 +6,13 @@ String? orderWhatsAppUrl(Map<String, dynamic> order) {
   double amount(dynamic value) => double.tryParse('$value') ?? 0;
   String money(dynamic value) { final n = amount(value); return '${n == n.roundToDouble() ? n.toInt() : n} ${order['currency'] ?? 'EGP'}'; }
   final total = amount(order['total']); final deposit = amount(order['depositAmount']);
+  final shipping = amount(order['shipping']);
+  final discount = amount(order['discount']);
+  final tax = amount(order['tax']);
+  final subtotal = order['subtotal'] == null
+    ? (total - shipping - tax + discount).clamp(0, double.infinity)
+    : amount(order['subtotal']);
   final customer = '${order['customerRef'] ?? ''}'.trim(); final address = '${order['customerAddress'] ?? ''}'.trim();
-  final message = ["أهلًا ${customer.isEmpty ? 'بحضرتك' : customer}، معاك Auraic 🌸", "تفاصيل طلبك #${'${order['orderNumber'] ?? order['id'] ?? ''}'.replaceFirst(RegExp(r'^#+'), '')}:", for (final item in (order['items'] as List? ?? [])) '• ${item['title']} × ${item['quantity']}', 'الشحن: ${money(order['shipping'])}', 'الإجمالي شامل الشحن: ${money(total)}', if (deposit > 0) ...['الديبوزت المدفوع: ${money(deposit)}', 'المتبقي: ${money((total - deposit).clamp(0, double.infinity))}'], if (address.isNotEmpty) 'عنوان التوصيل: $address', 'هل تحب تأكد الأوردر؟'].join('\n');
+  final message = ["أهلًا ${customer.isEmpty ? 'بحضرتك' : customer}، معاك Auraic 🌸", "تفاصيل طلبك #${'${order['orderNumber'] ?? order['id'] ?? ''}'.replaceFirst(RegExp(r'^#+'), '')}:", for (final item in (order['items'] as List? ?? [])) '• ${item['title']} × ${item['quantity']}', 'قيمة المنتجات: ${money(subtotal)}', if (discount > 0) 'الخصم: ${money(discount)}', 'الشحن: ${money(shipping)}', if (tax > 0) 'الضريبة: ${money(tax)}', 'الإجمالي شامل الشحن: ${money(total)}', if (deposit > 0) ...['الديبوزت المدفوع: ${money(deposit)}', 'المتبقي: ${money((total - deposit).clamp(0, double.infinity))}'], if (address.isNotEmpty) 'عنوان التوصيل: $address', 'هل تحب تأكد الأوردر؟'].join('\n');
   return Uri.https('wa.me', '/$phone', {'text': message}).toString();
 }
