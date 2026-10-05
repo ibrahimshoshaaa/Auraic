@@ -258,3 +258,12 @@
 .shop-reel-sound:focus-visible,.shop-reel-play:focus-visible,.shop-reel-progress:focus-visible{outline:2px solid #FAEAB1;outline-offset:-3px}
 .shop-reel-error{position:absolute;inset:40% 10% auto;text-align:center;background:#19183Bdd;color:#FAEAB1;padding:18px;border-radius:10px}
 @media(prefers-reduced-motion:reduce){.shop-reel-play-icon{transition:none}}
+
+/* A bold announcement with a gentle drift and a passing highlight. */
+.shop-announcement:not(.shop-loading-announcement) .shop-announcement-message{isolation:isolate}
+.shop-announcement:not(.shop-loading-announcement) .shop-announcement-message p{position:relative;z-index:1;font-weight:750;letter-spacing:.09em;animation:auraicAnnouncementDrift 4s ease-in-out infinite}
+.shop-announcement:not(.shop-loading-announcement) .shop-announcement-message::after{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background:linear-gradient(110deg,transparent 35%,#ffffff18 50%,transparent 65%);transform:translateX(-110%);animation:auraicAnnouncementHighlight 6s ease-in-out infinite}
+.shop-announcement:hover .shop-announcement-message p,.shop-announcement:hover .shop-announcement-message::after{animation-play-state:paused}
+@keyframes auraicAnnouncementDrift{0%,100%{transform:translateX(-2px)}50%{transform:translateX(2px)}}
+@keyframes auraicAnnouncementHighlight{0%,20%{transform:translateX(-110%)}65%,100%{transform:translateX(110%)}}
+@media(prefers-reduced-motion:reduce){.shop-announcement:not(.shop-loading-announcement) .shop-announcement-message p,.shop-announcement:not(.shop-loading-announcement) .shop-announcement-message::after{animation:none;transform:none}.shop-announcement:not(.shop-loading-announcement) .shop-announcement-message::after{display:none}}
