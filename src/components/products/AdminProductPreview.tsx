@@ -1,0 +1,10 @@
+import Image from "next/image";
+
+type PreviewProduct = { title: string; storefrontImages: string[]; storefrontInspiredBy: string; storefrontPublished: boolean; storefrontBadge: string; variants: { id: string; title: string; price: number; compareAtPrice?: number | null }[] };
+export function AdminProductPreview({ product }: { product: PreviewProduct }) {
+  const variants = [...product.variants].sort((a, b) => Number(/^100\s*(ml|مل)?$/i.test(b.title.trim())) - Number(/^100\s*(ml|مل)?$/i.test(a.title.trim())));
+  return <div className="overflow-hidden rounded-2xl bg-[#3F3A60] text-[#FAEAB1]">
+    <div className="relative aspect-[4/5] bg-[#19183B]"><Image src={product.storefrontImages[0] || "/auraic-bottle.svg"} alt={product.title} fill unoptimized sizes="(max-width: 640px) 50vw, 25vw" className="object-cover"/><div className="absolute inset-x-3 top-3 flex flex-wrap justify-between gap-2"><span className="rounded-lg bg-[#19183Be6] px-2 py-1 text-xs">{product.storefrontPublished ? "منشور" : "غير منشور"}</span>{product.storefrontBadge && <span className="rounded-lg bg-[#FAEAB1] px-2 py-1 text-xs font-bold text-[#19183B]">{product.storefrontBadge}</span>}</div></div>
+    <div className="space-y-3 p-3 sm:p-4"><h3 className="break-words text-lg font-bold">{product.title}</h3>{product.storefrontInspiredBy && <p className="text-xs leading-5"><span className="block text-[#d2cade]">Inspired by</span><strong>{product.storefrontInspiredBy}</strong></p>}<div className="flex flex-wrap gap-2">{variants.map((variant, index) => <span key={variant.id} className={`rounded-lg border border-[#FAEAB166] px-2 py-2 text-xs ${index === 0 ? "bg-[#FAEAB1] text-[#19183B]" : ""}`}><span className="block">{/^\d+$/.test(variant.title.trim()) ? `${variant.title} ml` : variant.title}</span><strong className="mt-1 block">{variant.price.toLocaleString("en-US")} EGP</strong>{variant.compareAtPrice != null && variant.compareAtPrice > variant.price && <del className="block opacity-60">{variant.compareAtPrice.toLocaleString("en-US")} EGP</del>}</span>)}</div>{!variants.length && <p className="text-xs">لم تُضف أحجام بعد</p>}</div>
+  </div>;
+}

@@ -1,3 +1,4 @@
+import 'admin_product_card.dart';
 import 'package:flutter/material.dart';
 
 import 'api.dart';
@@ -27,21 +28,11 @@ class _ProductsPageState extends State<ProductsPage> {
       const SizedBox(height: 12),
       SegmentedButton<bool>(segments: const [ButtonSegment(value: false, label: Text('العطور')), ButtonSegment(value: true, label: Text('السامبلز'))], selected: {samples}, onSelectionChanged: (value) => setState(() => samples = value.first)),
     ]),
-    item: (context, product, reload) => Card(margin: const EdgeInsets.only(bottom: 14),
-      child: ListTile(contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-      leading: Container(width: 44, height: 44, alignment: Alignment.center,
-        decoration: BoxDecoration(color: const Color(0xffe5eef3),
-          borderRadius: BorderRadius.circular(13)),
-        child: const Icon(Icons.inventory_2_outlined, color: appNavy)),
-      title: Text(str(product['title']), style: const TextStyle(
-        fontSize: 17, fontWeight: FontWeight.w800)),
-      subtitle: Padding(padding: const EdgeInsets.only(top: 6), child: Text(
-        '${(product['variants'] as List?)?.length ?? 0} أحجام · '
-        '${product['storefrontPublished'] == true ? 'منشور في المتجر' : 'غير منشور'}')),
-      trailing: const Icon(Icons.chevron_left, color: appNavy),
+    collectionBuilder: (children) => AdminProductGrid(children: children),
+    item: (context, product, reload) => AdminProductCard(product: product,
       onTap: () async { await openPage(context, ProductDetail(api: api,
         product: product, canWrite: canWrite)); reload(); },
-    )));
+    ));
 }
 
 class ProductDetail extends StatefulWidget {

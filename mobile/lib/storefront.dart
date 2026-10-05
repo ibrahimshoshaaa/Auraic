@@ -1,3 +1,5 @@
+import 'color_picker.dart';
+import 'admin_product_card.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -46,10 +48,12 @@ class _StorefrontPageState extends State<StorefrontPage> {
       FilledButton.icon(onPressed: () async { final saved = await openPage<bool>(context, ProductManagePage(api: widget.api)); if (saved == true) reload(); }, icon: const Icon(Icons.add), label: const Text('إضافة عطر وأحجامه')),
       const SizedBox(height: 16),
       const Text('منتجات المتجر', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-      for (final product in (data['products'] as List).map(json)) Card(margin: const EdgeInsets.only(top: 14), child: ListTile(
-        leading: const Icon(Icons.inventory_2_outlined), title: Text(str(product['title'])),
-        subtitle: Text('${product['storefrontPublished'] == true ? 'منشور' : 'غير منشور'} · ${(product['variants'] as List).length} أحجام'), trailing: const Icon(Icons.edit_outlined),
-        onTap: () async { final saved = await openPage<bool>(context, ProductManagePage(api: widget.api, productId: str(product['id']))); if (saved == true) reload(); })),
+      const SizedBox(height: 14),
+      AdminProductGrid(children: [for (final product in (data['products'] as List).map(json))
+        AdminProductCard(product: product, actionLabel: 'تعديل المنتج',
+          onTap: () async { final saved = await openPage<bool>(context,
+            ProductManagePage(api: widget.api, productId: str(product['id'])));
+            if (saved == true) reload(); })]),
     ]);
   });
 }
@@ -81,14 +85,26 @@ class _StorefrontSettingsState extends State<StorefrontSettings> {
   }
   Widget announcementColor(String key, String label, String fallback) {
     final value = str(settings[key]).isEmpty ? fallback : str(settings[key]);
-    final color = RegExp(r'^#[0-9a-fA-F]{6}$').hasMatch(value) ? Color(int.parse('ff${value.substring(1)}', radix: 16)) : Colors.grey;
-    return Padding(padding: const EdgeInsets.only(bottom: 16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      TextFormField(initialValue: value, enabled: !busy, maxLength: 7, textDirection: TextDirection.ltr,
-        decoration: InputDecoration(labelText: label, hintText: '#3F3A60', border: const OutlineInputBorder(), suffixIcon: Padding(padding: const EdgeInsets.all(10), child: Container(width: 24, height: 24, decoration: BoxDecoration(color: color, border: Border.all(color: Colors.grey), borderRadius: BorderRadius.circular(4))))),
-        validator: (value) => RegExp(r'^#[0-9a-fA-F]{6}$').hasMatch(value ?? '') ? null : 'استخدم لون HEX مثل #3F3A60',
-        onChanged: (value) => setState(() => settings[key] = value)),
-    ]));
+    final color = hexColor(value, fallback);
+    return Padding(padding: const EdgeInsets.only(bottom: 16), child: OutlinedButton(
+      onPressed: busy ? null : () async {
+        final selected = await pickColor(context, label: label, initial: color);
+        if (selected != null && mounted) setState(() => settings[key] = selected);
+      },
+      style: OutlinedButton.styleFrom(padding: const EdgeInsets.all(16)),
+      child: Row(children: [Container(width: 38, height: 38,
+        decoration: BoxDecoration(color: color, border: Border.all(color: Colors.grey), borderRadius: BorderRadius.circular(8))),
+        const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(label), Text(value, textDirection: TextDirection.ltr, style: const TextStyle(fontSize: 12)),
+        ])), const Icon(Icons.palette_outlined)]),
+    ));
   }
+  Widget announcementPreview() => Container(width: double.infinity,
+    padding: const EdgeInsets.all(14), margin: const EdgeInsets.only(bottom: 16),
+    decoration: BoxDecoration(color: hexColor(str(settings['announcementBackground']), '#3F3A60'), borderRadius: BorderRadius.circular(10)),
+    child: Text(str(settings['announcement']).isEmpty ? 'معاينة الشريط الإعلاني' : str(settings['announcement']),
+      textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w700,
+        color: hexColor(str(settings['announcementTextColor']), '#FAEAB1'))));
   Widget announcementMessages() => Padding(padding: const EdgeInsets.only(bottom: 16), child: TextFormField(
     initialValue: (settings['announcements'] is List ? settings['announcements'] as List : []).map(str).join('\n'),
     enabled: !busy, maxLines: 4, keyboardType: TextInputType.multiline,
@@ -122,7 +138,7 @@ class _StorefrontSettingsState extends State<StorefrontSettings> {
   Widget build(BuildContext context) => Form(key: form, child: Column(children: [
     Card(color: appNavy, child: SwitchListTile(title: const Text('استقبال طلبات العملاء', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)), subtitle: const Text('الحالة تتحفظ فورًا', style: TextStyle(color: Colors.white70)), value: settings['enabled'] == true, onChanged: busy ? null : (_) => save(toggle: true))),
     if (message.isNotEmpty) Padding(padding: const EdgeInsets.all(12), child: Text(message, style: TextStyle(color: failed ? Colors.red : Colors.green))),
-    section('التصميم والبانرات', [field('announcement', 'النص الأساسي للشريط العلوي'), announcementMessages(), announcementDuration(), announcementColor('announcementBackground', 'لون خلفية الشريط', '#3F3A60'), announcementColor('announcementTextColor', 'لون كتابة الشريط', '#FAEAB1'), field('heroTitle', 'عنوان الهيرو الظاهر للعميل', lines: 3), DropdownButtonFormField<String>(initialValue: str(settings['heroMode']).isEmpty ? 'images' : str(settings['heroMode']), decoration: const InputDecoration(labelText: 'نوع الهيرو'), items: const [DropdownMenuItem(value: 'images', child: Text('صور سلايدر')), DropdownMenuItem(value: 'video', child: Text('فيديو'))], onChanged: busy ? null : (value) => settings['heroMode'] = value), const SizedBox(height: 16), field('heroInterval', 'مدة الصورة بالثواني (2–60)', number: true), HeroVideo(api: widget.api, enabled: !busy, initial: str(settings['heroVideo']), onChanged: (value) => settings['heroVideo'] = value, onBusy: (value) { if (mounted) setState(() => busy = value); }), const Text('استخدم ملف MP4 أو WebM مباشر، وليس رابط مشاركة Facebook أو YouTube.'), const SizedBox(height: 16), ProductImages(api: widget.api, enabled: !busy, initial: (settings['heroImages'] as List).map(str).toList(), onChanged: (images) => settings['heroImages'] = images, onBusy: (value) { if (mounted) setState(() => busy = value); })]),
+    section('التصميم والبانرات', [field('announcement', 'النص الأساسي للشريط العلوي'), announcementMessages(), announcementDuration(), announcementColor('announcementBackground', 'لون خلفية الشريط', '#3F3A60'), announcementColor('announcementTextColor', 'لون كتابة الشريط', '#FAEAB1'), announcementPreview(), field('heroTitle', 'عنوان الهيرو الظاهر للعميل', lines: 3), DropdownButtonFormField<String>(initialValue: str(settings['heroMode']).isEmpty ? 'images' : str(settings['heroMode']), decoration: const InputDecoration(labelText: 'نوع الهيرو'), items: const [DropdownMenuItem(value: 'images', child: Text('صور سلايدر')), DropdownMenuItem(value: 'video', child: Text('فيديو'))], onChanged: busy ? null : (value) => settings['heroMode'] = value), const SizedBox(height: 16), field('heroInterval', 'مدة الصورة بالثواني (2–60)', number: true), HeroVideo(api: widget.api, enabled: !busy, initial: str(settings['heroVideo']), onChanged: (value) => settings['heroVideo'] = value, onBusy: (value) { if (mounted) setState(() => busy = value); }), const Text('استخدم ملف MP4 أو WebM مباشر، وليس رابط مشاركة Facebook أو YouTube.'), const SizedBox(height: 16), ProductImages(api: widget.api, enabled: !busy, initial: (settings['heroImages'] as List).map(str).toList(), onChanged: (images) => settings['heroImages'] = images, onBusy: (value) { if (mounted) setState(() => busy = value); })]),
     section('ريفيوهات البلوجرز', [SwitchListTile(title: const Text('إظهار القسم'), value: settings['bloggerReviewsEnabled'] == true, onChanged: busy ? null : (value) => setState(() => settings['bloggerReviewsEnabled'] = value)), field('bloggerReviewsTitle', 'عنوان القسم'), reviewVideos()]),
     section('تقييمات العملاء', [SwitchListTile(title: const Text('إظهار القسم'), value: settings['customerReviewsEnabled'] == true, onChanged: busy ? null : (value) => setState(() => settings['customerReviewsEnabled'] = value)), field('customerReviewsTitle', 'عنوان القسم'), ProductImages(api: widget.api, enabled: !busy, maxImages: 20, initial: (settings['customerReviewImages'] as List? ?? []).map(str).toList(), onChanged: (images) => settings['customerReviewImages'] = images, onBusy: (value) { if (mounted) setState(() => busy = value); })]),
     section('صورة قسم السامبلز', [const Text('صورة واحدة ثابتة تظهر أعلى صفحة Samples. لا تتغير مع اختيارات العميل.'), const SizedBox(height: 16), ProductImages(api: widget.api, enabled: !busy, maxImages: 1, initial: str(settings['samplesImage']).isEmpty ? [] : [str(settings['samplesImage'])], onChanged: (images) => settings['samplesImage'] = images.isEmpty ? '' : images.first, onBusy: (value) { if (mounted) setState(() => busy = value); })]),

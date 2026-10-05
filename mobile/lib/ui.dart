@@ -133,7 +133,7 @@ Widget field(String label, TextEditingController controller,
 
 class DataView extends StatefulWidget {
   const DataView({required this.api, required this.path, required this.item,
-    this.action, this.title, this.subtitle, this.icon, this.rowFilter, super.key});
+    this.action, this.title, this.subtitle, this.icon, this.rowFilter, this.collectionBuilder, super.key});
   final ErpApi api;
   final String path;
   final Widget Function(BuildContext, Json, VoidCallback) item;
@@ -142,6 +142,7 @@ class DataView extends StatefulWidget {
   final String? subtitle;
   final IconData? icon;
   final bool Function(Json)? rowFilter;
+  final Widget Function(List<Widget>)? collectionBuilder;
   @override
   State<DataView> createState() => _DataViewState();
 }
@@ -173,7 +174,8 @@ class _DataViewState extends State<DataView> {
           if (widget.action != null) const SizedBox(height: 14),
           if (entries.isEmpty) const Padding(padding: EdgeInsets.all(28),
             child: Center(child: Text('لا توجد بيانات بعد'))),
-          ...entries.map((entry) => widget.item(context, entry, reload)),
+          if (widget.collectionBuilder != null) widget.collectionBuilder!(entries.map((entry) => widget.item(context, entry, reload)).toList())
+          else ...entries.map((entry) => widget.item(context, entry, reload)),
         ]));
     });
 }
