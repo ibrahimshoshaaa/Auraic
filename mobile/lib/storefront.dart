@@ -113,7 +113,7 @@ class _StorefrontSettingsState extends State<StorefrontSettings> {
     onChanged: (value) => settings['announcements'] = value.split('\n').map((v) => v.trim()).where((v) => v.isNotEmpty).toList()));
   Widget announcementDuration() => Padding(padding: const EdgeInsets.only(bottom: 16), child: TextFormField(
     initialValue: str(settings['announcementInterval'] ?? 5), enabled: !busy, keyboardType: TextInputType.number,
-    decoration: const InputDecoration(labelText: 'مدة كل رسالة بالثواني (2–60)', border: OutlineInputBorder()),
+    decoration: const InputDecoration(labelText: 'سرعة حركة الشريط (2–60، الأعلى أبطأ)', border: OutlineInputBorder()),
     validator: (value) { final seconds = int.tryParse(value ?? ''); return seconds == null || seconds < 2 || seconds > 60 ? 'أدخل عددًا صحيحًا من 2 إلى 60' : null; },
     onChanged: (value) => settings['announcementInterval'] = int.tryParse(value) ?? -1));
   Future<void> save({bool toggle = false}) async {
