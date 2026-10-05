@@ -9,7 +9,7 @@ import { formatMoney } from "@/lib/storefront/pricing";
 import { productAudience } from "@/lib/storefront/collections";
 import { useCart } from "./CartProvider";
 export function ProductDetail({ product, enabled }: { product: ShopProduct; enabled: boolean }) {
-  const [variantId, setVariantId] = useState(product.variants[0].id);
+  const [variantId, setVariantId] = useState((product.variants.find(item => /^100\s*(ml|مل)?$/i.test(item.title.trim())) || product.variants[0]).id);
   const [quantity, setQuantity] = useState(1);
   const [photo, setPhoto] = useState(0);
   const [added, setAdded] = useState(false);
