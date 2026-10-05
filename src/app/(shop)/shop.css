@@ -242,3 +242,19 @@
 .shop-review-dots button[aria-pressed=true]:before{background:#FAEAB1;width:9px;height:9px}
 .shop-review-dots button:focus-visible{outline:2px solid #FAEAB1;border-radius:50%}
 @media(max-width:760px){.shop-review-section{padding:42px 20px}.shop-review-rail{gap:12px}.shop-review-screenshot{height:440px}}
+
+/* Minimal branded reel controls replace the browser player chrome. */
+.shop-review-reel{position:relative}
+.shop-review-reel video{object-fit:cover}
+.shop-reel-play{position:absolute;inset:0;display:grid;place-items:center;color:#19183B}
+.shop-reel-play-icon{display:grid;place-items:center;width:62px;height:62px;border-radius:50%;background:#FAEAB1ed;box-shadow:0 4px 24px #0003;transition:opacity .2s,transform .2s}
+.shop-review-reel.is-playing .shop-reel-play-icon{opacity:0;transform:scale(.9)}
+.shop-review-reel.is-playing .shop-reel-play:focus-visible .shop-reel-play-icon{opacity:1;transform:scale(1)}
+@media(hover:hover){.shop-review-reel.is-playing .shop-reel-play:hover .shop-reel-play-icon{opacity:1;transform:scale(1)}}
+.shop-reel-sound{position:absolute;top:14px;right:14px;display:grid;place-items:center;width:42px;height:42px;border-radius:50%;background:#19183B99;color:#FAEAB1;backdrop-filter:blur(8px)}
+.shop-reel-progress{position:absolute;bottom:12px;left:16px;width:calc(100% - 32px);height:4px;margin:0;border-radius:4px;appearance:none;cursor:pointer;accent-color:#FAEAB1}
+.shop-reel-progress::-webkit-slider-thumb{appearance:none;width:10px;height:10px;border-radius:50%;background:#FAEAB1}
+.shop-reel-progress::-moz-range-thumb{width:10px;height:10px;border:0;border-radius:50%;background:#FAEAB1}
+.shop-reel-sound:focus-visible,.shop-reel-play:focus-visible,.shop-reel-progress:focus-visible{outline:2px solid #FAEAB1;outline-offset:-3px}
+.shop-reel-error{position:absolute;inset:40% 10% auto;text-align:center;background:#19183Bdd;color:#FAEAB1;padding:18px;border-radius:10px}
+@media(prefers-reduced-motion:reduce){.shop-reel-play-icon{transition:none}}
