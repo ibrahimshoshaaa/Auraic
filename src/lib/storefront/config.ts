@@ -14,6 +14,12 @@ export const shopSettingsSchema = z.object({
   samplesImage: z.union([z.literal(""), image]).default(""),
   heroMode: z.enum(["images", "video"]).default("images"),
   heroInterval: z.number().int().min(2).max(60).default(6),
+  bloggerReviewsEnabled: z.boolean().default(false),
+  bloggerReviewsTitle: z.string().trim().min(1).max(120).default("See Auraic in real life"),
+  bloggerReviewVideos: z.array(image).max(20).default([]),
+  customerReviewsEnabled: z.boolean().default(false),
+  customerReviewsTitle: z.string().trim().min(1).max(120).default("Customer Reviews"),
+  customerReviewImages: z.array(image).max(20).default([]),
   heroVideo: z.union([z.literal(""), image]).default(""),
   menCollectionImage: z.union([z.literal(""), image]).default(""),
   womenCollectionImage: z.union([z.literal(""), image]).default(""),
@@ -39,6 +45,7 @@ export const shopSettingsSchema = z.object({
 });
 export type ShopSettings = z.infer<typeof shopSettingsSchema>;
 export const defaultShopSettings: ShopSettings = {
+  bloggerReviewsEnabled: false, bloggerReviewsTitle: "See Auraic in real life", bloggerReviewVideos: [], customerReviewsEnabled: false, customerReviewsTitle: "Customer Reviews", customerReviewImages: [],
   announcements: [], announcementInterval: 5, announcementBackground: "#3F3A60", announcementTextColor: "#FAEAB1",
   enabled: false, announcement: "DESIGNED TO BE FELT, NOT JUST SMELLED",
   heroTitle: "Discover Auraic.\nFind your\nfragrance.", heroSubtitle: "Find the fragrance that feels like you.",

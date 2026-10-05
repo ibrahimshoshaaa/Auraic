@@ -76,3 +76,18 @@ test('announcement colors support old settings and reject invalid CSS values', a
   assert.equal(shopSettingsSchema.parse({ ...old, announcementBackground: '#ff0000' }).announcementBackground, '#ff0000');
   assert.equal(shopSettingsSchema.safeParse({ ...old, announcementTextColor: 'red;position:fixed' }).success, false);
 });
+
+
+test('review sections default hidden, retain media while disabled and validate limits', () => {
+  const legacy = { ...defaultShopSettings };
+  for (const key of ['bloggerReviewsEnabled', 'bloggerReviewsTitle', 'bloggerReviewVideos', 'customerReviewsEnabled', 'customerReviewsTitle', 'customerReviewImages']) delete legacy[key];
+  const settings = resolveShopSettings(legacy);
+  assert.equal(settings.bloggerReviewsEnabled, false);
+  assert.equal(settings.customerReviewsEnabled, false);
+  assert.deepEqual(settings.bloggerReviewVideos, []);
+  const saved = resolveShopSettings({ ...legacy, bloggerReviewsEnabled: false, bloggerReviewVideos: ['https://example.com/review.mp4'], customerReviewsEnabled: true, customerReviewImages: ['https://example.com/review.png'] });
+  assert.equal(saved.bloggerReviewVideos.length, 1);
+  assert.equal(saved.customerReviewsEnabled, true);
+  assert.throws(() => resolveShopSettings({ ...saved, bloggerReviewVideos: ['http://example.com/review.mp4'] }));
+  assert.throws(() => resolveShopSettings({ ...saved, customerReviewImages: Array(21).fill('https://example.com/review.png') }));
+});

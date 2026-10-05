@@ -3,8 +3,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'api.dart';
 class HeroVideo extends StatefulWidget {
- const HeroVideo({required this.api, required this.initial, required this.onChanged, required this.onBusy, this.enabled = true, super.key});
- final bool enabled; final ErpApi api; final String initial; final ValueChanged<String> onChanged; final ValueChanged<bool> onBusy;
+ const HeroVideo({required this.api, required this.initial, required this.onChanged, required this.onBusy, this.enabled = true, this.label = 'فيديو الهيرو', super.key});
+ final String label; final bool enabled; final ErpApi api; final String initial; final ValueChanged<String> onChanged; final ValueChanged<bool> onBusy;
  @override
  State<HeroVideo> createState() => _HeroVideoState();
 }
@@ -28,7 +28,7 @@ class _HeroVideoState extends State<HeroVideo> {
  }
  @override
  Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-  TextFormField(controller: controller, enabled: !busy && widget.enabled, keyboardType: TextInputType.url, decoration: const InputDecoration(labelText: 'فيديو الهيرو', hintText: 'رابط HTTPS أو ارفع من الجهاز', border: OutlineInputBorder()), validator: (value) { if ((value ?? '').trim().isEmpty) return null; final uri = Uri.tryParse(value!.trim()); return uri?.scheme == 'https' && (uri?.host ?? '').isNotEmpty ? null : 'استخدم رابط HTTPS صحيحًا'; }, onChanged: (value) { widget.onChanged(value); setState(() {}); }),
+  TextFormField(controller: controller, enabled: !busy && widget.enabled, keyboardType: TextInputType.url, decoration: InputDecoration(labelText: widget.label, hintText: 'رابط HTTPS أو ارفع من الجهاز', border: OutlineInputBorder()), validator: (value) { if ((value ?? '').trim().isEmpty) return null; final uri = Uri.tryParse(value!.trim()); return uri?.scheme == 'https' && (uri?.host ?? '').isNotEmpty ? null : 'استخدم رابط HTTPS صحيحًا'; }, onChanged: (value) { widget.onChanged(value); setState(() {}); }),
   const SizedBox(height: 12),
   FilledButton.icon(onPressed: busy || !widget.enabled ? null : upload, icon: const Icon(Icons.video_library_outlined), label: Text(busy ? 'جارٍ رفع الفيديو…' : 'رفع فيديو من الجهاز')),
   if (controller.text.startsWith('https://')) Row(children: [Expanded(child: TextButton.icon(onPressed: busy || !widget.enabled ? null : () async { final opened = await launchUrl(Uri.parse(controller.text), mode: LaunchMode.externalApplication); if (!opened && context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر فتح معاينة الفيديو'))); }, icon: const Icon(Icons.play_circle_outline), label: const Text('معاينة الفيديو'))), TextButton(onPressed: busy || !widget.enabled ? null : () { setState(() => controller.clear()); widget.onChanged(''); }, child: const Text('حذف'))]),
