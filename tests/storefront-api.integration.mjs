@@ -160,8 +160,11 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         await page.getByRole('combobox', { name: 'Gender', exact: true }).selectOption('women');
         assert.match(await page.locator('.shop-collection-heading h1:visible').innerText(), /FOR WOMEN/);
         assert.equal(await page.locator('.shop-product-card:visible').count(), 1, 'unisex belongs in women too');
-        await page.getByRole('switch').click();
-        assert.equal(await page.locator('.shop-product-notes:visible').innerText(), 'Oud description');
+        assert.equal(await page.getByRole('switch').count(), 0);
+        assert.equal(await page.locator('.shop-fragrance-card .shop-card-description').count(), 0);
+        assert.equal(await page.locator('.shop-fragrance-card .shop-fragrance-tags').count(), 0);
+        assert.equal(await page.locator('.shop-card-sizes button[aria-pressed="true"]').innerText(), '100 ml');
+        assert.match(await page.locator('.shop-card-price:visible').innerText(), /1,200 LE/);
         await page.getByRole('combobox', { name: 'Size', exact: true }).selectOption('100 ml');
         assert.equal(await page.locator('.shop-product-card:visible').count(), 1);
         await page.getByRole('button', { name: 'CLEAR ALL', exact: true }).click();
@@ -176,7 +179,8 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         await page.waitForURL(`${url}/products/${managedId}`);
         await page.locator('.shop-route-loading').waitFor({ state: 'hidden' });
         assert.equal(await page.locator('.shop-detail-copy h1:visible').innerText(), 'Oud');
-        await page.locator('.shop-variant-buttons button').filter({ hasText: '100 ml' }).click();
+        assert.match(await page.locator('.shop-variant-buttons button[aria-pressed="true"]').innerText(), /100 ml\s+1,200 LE/);
+        assert.equal(await page.locator('.shop-description:visible').innerText(), 'Oud description');
         const selectedSize = await page.locator('.shop-sticky-bag select').inputValue();
         await page.locator('.shop-sticky-bag .shop-button').click();
         await page.waitForFunction(id => JSON.parse(localStorage.getItem('auraic-cart') || '[]').some(line => line.variantId === id), selectedSize);
