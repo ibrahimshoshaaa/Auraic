@@ -224,6 +224,7 @@ class ErpHome extends StatefulWidget {
 class _ErpHomeState extends State<ErpHome> {
   int selected = 0;
   int pageEpoch = 0;
+  int drawerEpoch = 0;
   final scaffoldKey = GlobalKey<ScaffoldState>();
   late Future<dynamic> account = widget.api.get('/api/mobile/me');
 
@@ -277,6 +278,7 @@ class _ErpHomeState extends State<ErpHome> {
       };
       return Scaffold(
         key: scaffoldKey,
+        onDrawerChanged: (open) { if (open) setState(() => drawerEpoch++); },
         appBar: AppBar(
           title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(selected == 0 ? 'Auraic' : titles[selected],
@@ -303,19 +305,13 @@ class _ErpHomeState extends State<ErpHome> {
                     style: const TextStyle(fontSize: 12, color: Color(0xff718079)))])),
             ])),
           const Divider(height: 1),
-          Expanded(child: ListView(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            children: [for (final i in visible) Padding(
-              padding: const EdgeInsets.only(bottom: 3),
-              child: ListTile(leading: Icon(icons[i], size: 22),
-                title: Text(titles[i]), selected: selected == i,
-                selectedTileColor: const Color(0xffe5f0ea),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                onTap: () { Navigator.pop(context); switchTo(i); }),
-            )])),
-          ListTile(leading: const Icon(Icons.manage_accounts_outlined),
-            title: const Text('الحساب والأمان'),
-            onTap: () { Navigator.pop(context); openPage(context,
-              AccountPage(api: widget.api, isOwner: owner, onPasswordChanged: widget.onLogout)); }),
+          Expanded(child: _GroupedDrawerMenu(
+            key: ValueKey(drawerEpoch), titles: titles, icons: icons,
+            visible: visible, selected: selected,
+            onSelect: (index) { Navigator.pop(context); switchTo(index); },
+            onAccount: () { Navigator.pop(context); openPage(context,
+              AccountPage(api: widget.api, isOwner: owner, onPasswordChanged: widget.onLogout)); },
+          )),
           const Divider(height: 1),
           Padding(padding: const EdgeInsets.all(12), child: ListTile(
             leading: const Icon(Icons.logout_rounded), title: const Text('تسجيل الخروج'),
@@ -568,4 +564,85 @@ class _DashboardState extends State<_Dashboard> {
           label: const Text('عرض التقارير التفصيلية')),
       ]));
     });
+}
+
+
+class _GroupedDrawerMenu extends StatefulWidget {
+  const _GroupedDrawerMenu({required this.titles, required this.icons,
+    required this.visible, required this.selected, required this.onSelect,
+    required this.onAccount, super.key});
+  final List<String> titles;
+  final List<IconData> icons;
+  final List<int> visible;
+  final int selected;
+  final ValueChanged<int> onSelect;
+  final VoidCallback onAccount;
+  @override
+  State<_GroupedDrawerMenu> createState() => _GroupedDrawerMenuState();
+}
+
+class _GroupedDrawerMenuState extends State<_GroupedDrawerMenu> {
+  static const groups = [
+    ('المنتجات والمخزون', Icons.inventory_2_outlined, [3, 2, 10, 6, 7]),
+    ('الطلبات والمرتجعات', Icons.receipt_long_outlined, [1, 5]),
+    ('العملاء والموردون', Icons.people_outline, [13, 11]),
+    ('المالية والتقارير', Icons.account_balance_wallet_outlined, [4, 8]),
+    ('الإدارة والإعدادات', Icons.settings_outlined, [12, 14, 9]),
+  ];
+  int? expanded;
+  @override
+  void initState() {
+    super.initState();
+    final current = groups.indexWhere((group) => group.$3.contains(widget.selected));
+    expanded = current < 0 ? null : current;
+  }
+  Widget destination(int index) => ListTile(
+    dense: true, visualDensity: VisualDensity.compact,
+    leading: Icon(widget.icons[index], size: 20),
+    title: Text(widget.titles[index], style: const TextStyle(fontSize: 14)),
+    selected: widget.selected == index,
+    selectedColor: const Color(0xff191735),
+    selectedTileColor: const Color(0xffe5f0ea),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    onTap: () => widget.onSelect(index),
+  );
+  @override
+  Widget build(BuildContext context) => ListView(
+    padding: const EdgeInsets.all(12), children: [
+      destination(0),
+      const SizedBox(height: 8),
+      for (var index = 0; index < groups.length; index++)
+        if (index == 4 || groups[index].$3.any(widget.visible.contains)) ...[
+          ListTile(
+            dense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+            leading: Icon(groups[index].$2, size: 22),
+            title: Text(groups[index].$1, style: TextStyle(fontSize: 14,
+              fontWeight: groups[index].$3.contains(widget.selected)
+                ? FontWeight.w700 : FontWeight.w600)),
+            trailing: AnimatedRotation(turns: expanded == index ? .5 : 0,
+              duration: const Duration(milliseconds: 200),
+              child: const Icon(Icons.keyboard_arrow_down_rounded, size: 22)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            onTap: () => setState(() => expanded = expanded == index ? null : index),
+          ),
+          AnimatedSize(duration: const Duration(milliseconds: 220),
+            curve: Curves.easeInOut, alignment: Alignment.topCenter,
+            child: expanded != index ? const SizedBox(width: double.infinity) : Padding(
+              padding: const EdgeInsetsDirectional.only(start: 20, bottom: 8),
+              child: Column(children: [
+                for (final item in groups[index].$3)
+                  if (widget.visible.contains(item)) destination(item),
+                if (index == 4) ListTile(
+                  dense: true, visualDensity: VisualDensity.compact,
+                  leading: const Icon(Icons.manage_accounts_outlined, size: 20),
+                  title: const Text('الحساب والأمان', style: TextStyle(fontSize: 14)),
+                  onTap: widget.onAccount,
+                ),
+              ]),
+            ),
+          ),
+          const SizedBox(height: 4),
+        ],
+    ],
+  );
 }
