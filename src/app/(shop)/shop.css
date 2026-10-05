@@ -267,3 +267,15 @@
 @keyframes auraicAnnouncementDrift{0%,100%{transform:translateX(-2px)}50%{transform:translateX(2px)}}
 @keyframes auraicAnnouncementHighlight{0%,20%{transform:translateX(-110%)}65%,100%{transform:translateX(110%)}}
 @media(prefers-reduced-motion:reduce){.shop-announcement:not(.shop-loading-announcement) .shop-announcement-message p,.shop-announcement:not(.shop-loading-announcement) .shop-announcement-message::after{animation:none;transform:none}.shop-announcement:not(.shop-loading-announcement) .shop-announcement-message::after{display:none}}
+
+
+/* Footer links stay side by side: Company left, Quick links right. */
+.shop-footer{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"brand brand" "company quick" "copyright copyright";column-gap:24px;row-gap:28px;direction:ltr}
+.shop-footer-brand{grid-area:brand;text-align:center}
+.shop-footer-brand .shop-footer-logo{margin-inline:auto}
+.shop-footer-quick{grid-area:quick;min-width:0}
+.shop-footer-company{grid-area:company;min-width:0}
+.shop-footer-quick,.shop-footer-company{text-align:left}
+.shop-footer h3{font-size:15px;font-weight:600;margin-bottom:16px}
+.shop-footer nav a{font-size:13px;line-height:1.5;margin-bottom:12px;overflow-wrap:anywhere}
+.shop-footer small{grid-area:copyright;text-align:center;font-size:12px;padding-top:20px}
