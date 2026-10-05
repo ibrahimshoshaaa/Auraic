@@ -1,3 +1,4 @@
+import 'admin_product_card.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -46,10 +47,12 @@ class _StorefrontPageState extends State<StorefrontPage> {
       FilledButton.icon(onPressed: () async { final saved = await openPage<bool>(context, ProductManagePage(api: widget.api)); if (saved == true) reload(); }, icon: const Icon(Icons.add), label: const Text('إضافة عطر وأحجامه')),
       const SizedBox(height: 16),
       const Text('منتجات المتجر', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-      for (final product in (data['products'] as List).map(json)) Card(margin: const EdgeInsets.only(top: 14), child: ListTile(
-        leading: const Icon(Icons.inventory_2_outlined), title: Text(str(product['title'])),
-        subtitle: Text('${product['storefrontPublished'] == true ? 'منشور' : 'غير منشور'} · ${(product['variants'] as List).length} أحجام'), trailing: const Icon(Icons.edit_outlined),
-        onTap: () async { final saved = await openPage<bool>(context, ProductManagePage(api: widget.api, productId: str(product['id']))); if (saved == true) reload(); })),
+      const SizedBox(height: 14),
+      AdminProductGrid(children: [for (final product in (data['products'] as List).map(json))
+        AdminProductCard(product: product, actionLabel: 'تعديل المنتج',
+          onTap: () async { final saved = await openPage<bool>(context,
+            ProductManagePage(api: widget.api, productId: str(product['id'])));
+            if (saved == true) reload(); })]),
     ]);
   });
 }
