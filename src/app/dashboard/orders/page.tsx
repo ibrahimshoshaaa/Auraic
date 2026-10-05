@@ -73,10 +73,10 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                 <div className="flex flex-wrap gap-2">{order.items.map(item => <span key={item.id} className="rounded-lg bg-slate-50 px-3 py-1.5 text-xs text-slate-700">{item.title} × {Number(item.quantity)} <span className="text-slate-400">· {item.consumptionStatus}</span></span>)}</div>
                 {can(session.role, "customers.read") && <Link href={`/dashboard/customers?q=${encodeURIComponent(normalizeCustomerPhone(order.customerPhone) || order.customerRef || "")}`} className="mr-3 inline-block text-sm font-medium text-[#514b8c] underline">ملف العميل</Link>}
                 <Link href={`/dashboard/consumption?orderId=${order.id}`} className="mt-4 inline-block text-sm font-medium text-[#514b8c] hover:underline">عرض الاستهلاك ←</Link>
-                {order.manualStatus && can(session.role, "orders.write") && <ManualOrderActions showNext={false} orderId={order.id} status={order.manualStatus as ManualOrderStatus} canReturn={["returns.write", "expenses.write", "inventory.write"].every(permission => can(session.role, permission))} />}
+                {order.manualStatus && can(session.role, "orders.write") && <ManualOrderActions showNext={false} orderId={order.id} status={order.manualStatus as ManualOrderStatus} canReturn={false} />}
               </div>
             </details>
-            {order.manualStatus && can(session.role, "orders.write") && !["DELIVERED", "RETURNED"].includes(order.manualStatus) && <div className="px-4 pb-4 sm:px-5"><ManualOrderActions quick orderId={order.id} status={order.manualStatus as ManualOrderStatus} canReturn={false} /></div>}
+            {order.manualStatus && can(session.role, "orders.write") && !["DELIVERED", "RETURNED"].includes(order.manualStatus) && <div className="px-4 pb-4 sm:px-5"><ManualOrderActions quick orderId={order.id} status={order.manualStatus as ManualOrderStatus} canReturn={["returns.write", "expenses.write", "inventory.write"].every(permission => can(session.role, permission))} /></div>}
             </article>
           ))}
         </div>
