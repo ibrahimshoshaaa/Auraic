@@ -72,13 +72,23 @@ jobs:
         run: |
           keytool -exportcert -keystore android/app/release.jks -storepass:env ANDROID_KEYSTORE_PASSWORD -alias "$ANDROID_KEY_ALIAS" -file android/app/release-cert.der
           expected="$(sha256sum android/app/release-cert.der | cut -d ' ' -f 1)"
-          signer="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
-          test -n "$signer"
+          signer="$(find -L "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
+          if [ -z "$signer" ]; then echo "::error::Android apksigner was not found"; exit 1; fi
           for apk in build/app/outputs/flutter-apk/*-release.apk; do
-            "$signer" verify --print-certs "$apk" > android/app/certificate-check.txt
+            echo "Verifying $apk"
+            if ! "$signer" verify --print-certs "$apk" > android/app/certificate-check.txt 2>&1; then
+              cat android/app/certificate-check.txt
+              echo "::error::APK signature verification failed for $apk"
+              exit 1
+            fi
             if grep -F 'CN=Android Debug' android/app/certificate-check.txt; then exit 1; fi
             actual="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' android/app/certificate-check.txt)"
-            test "$actual" = "$expected"
+            actual="$(printf '%s' "$actual" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
+            if [ "$actual" != "$expected" ]; then
+              echo "::error::APK certificate mismatch for $apk (expected $expected, actual $actual)"
+              cat android/app/certificate-check.txt
+              exit 1
+            fi
           done
       - name: Verify release APK network permission
         if: github.event_name == 'workflow_dispatch' || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')
