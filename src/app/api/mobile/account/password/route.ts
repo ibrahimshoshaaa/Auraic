@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     const passwordHash = await hash(input.data.newPassword, 12);
     await db.$transaction(async tx => {
       await tx.user.update({ where: { id: session.userId }, data: { passwordHash } });
-      await tx.mobileSession.updateMany({ where: { userId: session.userId, revokedAt: null }, data: { revokedAt: new Date() } });
+      await tx.mobileSession.updateMany({ where: { userId: session.userId, revokedAt: null }, data: { revokedAt: new Date(), pushToken: null } });
       await tx.auditLog.create({ data: { storeId: session.storeId, userId: session.userId,
         action: "CHANGE_PASSWORD", entity: "User", entityId: session.userId } });
     });

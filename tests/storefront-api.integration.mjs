@@ -27,6 +27,9 @@ test('public orders validate server prices, tenant, publication and recipe; retr
     for (let attempt = 0; attempt < 60; attempt++) { if (child.exitCode !== null) throw new Error(output); try { const r = await fetch(url); if (r.ok) { ready = true; break; } } catch {} await delay(300); }
     assert.ok(ready, output);
     const headers = { 'content-type': 'application/json', origin: url };
+    const pushUser = await db.user.create({ data: { storeId: shop.id, email: `push-${shop.id}@example.com`, role: 'OWNER', status: 'ACTIVE' } });
+    const pushSession = await db.mobileSession.create({ data: { storeId: shop.id, userId: pushUser.id,
+      tokenHash: `push-hash-${shop.id}`, pushToken: `push-device-${shop.id}`, expiresAt: new Date(Date.now() + 300000) } });
     const order = { requestId: randomUUID(), expectedTotalCents: 54500, name: 'Test Customer', phone: '01012345678', governorate: 'المنوفية', address: 'Test Street, building 10', items: [{ variantId: variant.id, quantity: 2 }] };
     const post = data => fetch(`${url}/api/storefront/checkout`, { method: 'POST', headers, body: JSON.stringify(data) });
     assert.equal((await post({ ...order, expectedTotalCents: 1 })).status, 409);
@@ -41,6 +44,9 @@ test('public orders validate server prices, tenant, publication and recipe; retr
     assert.equal(Number(saved.total), 545); assert.equal(Number(saved.shipping), 45); assert.equal(Number(saved.subtotal), 500); assert.equal(Number(saved.netSales), 500);
     assert.equal(saved.items.length, 1); assert.equal(Number(saved.items[0].originalPrice), 250); assert.equal(await db.order.count({ where: { id: saved.id } }), 1);
     assert.equal(await db.consumption.count({ where: { orderId: saved.id } }), 0);
+    assert.equal(await db.pushDelivery.count({ where: { orderId: saved.id, sessionId: pushSession.id } }), 1,
+      'Retried storefront checkout queues exactly one push per signed-in device');
+
     await db.product.update({ where: { id: product.id }, data: { storefrontPublished: false } });
     assert.equal((await post({ ...order, requestId: randomUUID() })).status, 409);
     await db.product.update({ where: { id: product.id }, data: { storefrontPublished: true } });

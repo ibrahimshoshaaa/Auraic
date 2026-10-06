@@ -1,3 +1,4 @@
+import 'notification_settings.dart';
 import 'package:flutter/material.dart';
 
 import 'api.dart';
@@ -19,6 +20,10 @@ class AccountPage extends StatelessWidget {
         title: const Text('تغيير كلمة المرور'), subtitle: const Text('سيتم تسجيل خروجك من كل أجهزة الموبايل'),
         trailing: const Icon(Icons.chevron_left),
         onTap: () => openPage(context, ChangePasswordPage(api: api, onChanged: onPasswordChanged)))),
+      const SizedBox(height: 12),
+      Card(child: ListTile(leading: const Icon(Icons.notifications_outlined),
+        title: const Text('إشعارات الطلبات'), trailing: const Icon(Icons.chevron_left),
+        onTap: () => openPage(context, NotificationSettingsPage(api: api)))),
       if (isOwner) ...[
         const SizedBox(height: 12),
         Card(child: ListTile(leading: const Icon(Icons.group_add_outlined),

@@ -87,6 +87,7 @@ class _OrdersPageState extends State<OrdersPage> {
         final items = (o['items'] as List).map(json).toList();
         return Padding(padding: const EdgeInsets.only(bottom: 14),
           child: Card(clipBehavior: Clip.antiAlias, child: ExpansionTile(
+        initiallyExpanded: widget.orderId == o['id'],
         tilePadding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
         childrenPadding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
