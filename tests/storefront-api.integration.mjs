@@ -205,10 +205,17 @@ test('public orders validate server prices, tenant, publication and recipe; retr
         await page.setViewportSize({ width: 390, height: 844 });
         await page.route('https://example.com/samples-cover.png', route => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800" viewBox="0 0 600 800"><rect width="600" height="800" fill="#e7e1d4"/><g transform="translate(160 160) rotate(20)"><rect width="260" height="44" rx="12" fill="#f8f6ef"/><rect width="55" height="44" rx="8" fill="#bfc1bd"/><text x="80" y="28" font-size="18">AURAIC</text></g><g transform="translate(120 390) rotate(-20)"><rect width="260" height="44" rx="12" fill="#f8f6ef"/><rect width="55" height="44" rx="8" fill="#bfc1bd"/><text x="80" y="28" font-size="18">SAMPLES</text></g></svg>' }));
         await page.goto(`${url}/samples`);
-        await page.waitForFunction(() => document.querySelector('.shop-announcement-message p')?.textContent === 'Second announcement');
+        await page.waitForFunction(() => document.querySelector('.shop-announcement-group')?.textContent.includes('Second announcement'));
         assert.equal(await page.getByRole('button', { name: /Pause announcement|Resume announcement/ }).count(), 0);
-        const currentMessage = await page.locator('.shop-announcement-message p').innerText();
-        await page.waitForFunction(previous => document.querySelector('.shop-announcement-message p')?.textContent !== previous, currentMessage);
+        const groups = page.locator('.shop-announcement-group');
+        assert.equal(await groups.count(), 2, 'Two identical groups make a seamless ribbon');
+        assert.equal(await groups.nth(0).innerText(), await groups.nth(1).innerText());
+        const ribbon = page.locator('.shop-announcement-track');
+        const initialTransform = await ribbon.evaluate(element => getComputedStyle(element).transform);
+        await page.waitForFunction(previous => {
+          const ribbon = document.querySelector('.shop-announcement-track');
+          return ribbon && getComputedStyle(ribbon).transform !== previous;
+        }, initialTransform);
         // Wait for streamed page hydration before counting the cover image.
         await page.waitForFunction(() => document.querySelectorAll(".shop-samples-art img").length === 1);
         assert.equal(await page.locator('.shop-samples-art img').count(), 1);
