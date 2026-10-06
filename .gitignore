@@ -12,3 +12,8 @@ coverage/
 
 # Firebase client configuration is supplied through the Android build secret.
 mobile/firebase/google-services.json
+
+# Private Android release signing material
+*.jks
+*.keystore
+**/key.properties

@@ -5,9 +5,12 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-helpers";
 
+import { validNewPassword } from "@/lib/session-security";
+import { allowPasswordConfirmation } from "@/lib/login-throttle";
+
 const schema = z.object({
   name: z.string().trim().min(2).max(80), email: z.string().trim().email().max(254),
-  password: z.string().min(12).max(128), currentPassword: z.string().min(1).max(1024),
+  password: z.string().min(12).max(72).refine(validNewPassword, "Password must be 12+ characters and at most 72 UTF-8 bytes"), currentPassword: z.string().min(1).max(1024),
 });
 
 export async function GET() {
@@ -24,8 +27,9 @@ export async function POST(request: NextRequest) {
   try {
     const session = await requireAuth();
     if (session.role !== "OWNER") return NextResponse.json({ error: "غير مسموح بإضافة أدمن" }, { status: 403 });
+    if (!await allowPasswordConfirmation(session.userId)) return NextResponse.json({ error: "محاولات كثيرة؛ حاول بعد ١٥ دقيقة" }, { status: 429 });
     const input = schema.safeParse(await request.json().catch(() => null));
-    if (!input.success) return NextResponse.json({ error: "راجع الاسم والبريد وكلمة المرور (١٢ حرفًا على الأقل)" }, { status: 422 });
+    if (!input.success) return NextResponse.json({ error: "راجع الاسم والبريد وكلمة المرور (١٢ حرفًا على الأقل وبحد أقصى ٧٢ بايت)" }, { status: 422 });
     const actor = await db.user.findUniqueOrThrow({ where: { id: session.userId }, select: { passwordHash: true } });
     if (!actor.passwordHash || !await compare(input.data.currentPassword, actor.passwordHash)) {
       return NextResponse.json({ error: "كلمة مرور حسابك الحالية غير صحيحة" }, { status: 403 });

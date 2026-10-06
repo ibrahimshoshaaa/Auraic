@@ -60,6 +60,8 @@ jobs:
         run: npm run build
       - name: Verify mobile authentication over HTTP
         run: node --test tests/mobile-api.integration.mjs
+      - name: Verify session revocation, CSRF and concurrent login limits
+        run: node --experimental-strip-types --test tests/security-api.integration.mjs
       - name: Install browser for storefront interaction checks
         run: |
           npm install --no-save --package-lock=false playwright@1.55.1

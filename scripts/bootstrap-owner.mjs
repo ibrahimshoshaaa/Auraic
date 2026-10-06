@@ -13,7 +13,7 @@ async function main() {
   const email = process.env.OWNER_EMAIL?.trim().toLowerCase();
   const password = process.env.OWNER_PASSWORD;
   let storeId = process.env.OWNER_STORE_ID;
-  if (!email || !isValidEmail(email) || !password || password.length < 12 || password.length > 1024) throw new Error('Set OWNER_EMAIL and OWNER_PASSWORD (12+ characters)');
+  if (!email || !isValidEmail(email) || !password || password.length < 12 || Buffer.byteLength(password, "utf8") > 72) throw new Error('Set OWNER_EMAIL and OWNER_PASSWORD (12+ characters, at most 72 UTF-8 bytes)');
   if (!storeId) {
     const stores = await db.store.findMany({ select: { id: true } });
     if (stores.length === 1) storeId = stores[0].id;

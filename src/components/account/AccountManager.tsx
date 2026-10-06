@@ -43,7 +43,7 @@ export function AccountManager({ owner }: { owner: boolean }) {
       if (path.endsWith("/users")) {
         setUsers(current => [...current, result.data]);
         setMessage("تمت إضافة الأدمن. يمكنه تسجيل الدخول بالبريد وكلمة المرور الجديدة.");
-      } else setMessage("تم تغيير كلمة المرور وإلغاء جلسات الموبايل السابقة. استخدم الجديدة عند تسجيل الدخول مرة أخرى.");
+      } else setMessage("تم تغيير كلمة المرور وإلغاء جميع جلسات الويب والموبايل السابقة. استخدم الجديدة عند تسجيل الدخول مرة أخرى.");
     } catch (err) { setError(err instanceof Error ? err.message : "تعذر الحفظ"); }
     finally { setBusy(false); }
   }
@@ -54,10 +54,10 @@ export function AccountManager({ owner }: { owner: boolean }) {
     {message && <p role="status" className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-800">{message}</p>}
     <section className="rounded-2xl border border-[#e5e4ec] bg-white p-5 shadow-sm sm:p-7">
       <h2 className="text-lg font-bold">تغيير كلمة المرور</h2>
-      <p className="mt-1 text-sm text-slate-500">تحتاج كلمة المرور الحالية. الجديدة ١٢ حرفًا على الأقل.</p>
+      <p className="mt-1 text-sm text-slate-500">تحتاج كلمة المرور الحالية. الجديدة ١٢ حرفًا على الأقل وبحد أقصى ٧٢ بايت (٣٦ حرفًا عربيًا).</p>
       <form onSubmit={event => submit(event, "/api/mobile/account/password")} className="mt-5 grid gap-4 sm:grid-cols-2">
         <label className="text-sm font-medium">كلمة المرور الحالية<input name="currentPassword" type="password" autoComplete="current-password" required className={field} /></label>
-        <label className="text-sm font-medium">كلمة المرور الجديدة<input name="newPassword" type="password" minLength={12} maxLength={128} autoComplete="new-password" required className={field} /></label>
+        <label className="text-sm font-medium">كلمة المرور الجديدة<input name="newPassword" type="password" minLength={12} maxLength={72} autoComplete="new-password" required className={field} /></label>
         <label className="text-sm font-medium">تأكيد كلمة المرور الجديدة<input name="confirmPassword" type="password" minLength={12} autoComplete="new-password" required className={field} /></label>
         <button disabled={busy} className="self-end rounded-xl bg-[#191735] px-5 py-3 text-sm font-bold text-white disabled:opacity-50">حفظ كلمة المرور</button>
       </form>
@@ -69,7 +69,7 @@ export function AccountManager({ owner }: { owner: boolean }) {
       <form onSubmit={event => submit(event, "/api/mobile/account/users")} className="mt-4 grid gap-4 sm:grid-cols-2">
         <label className="text-sm font-medium">الاسم<input name="name" required minLength={2} maxLength={80} className={field} /></label>
         <label className="text-sm font-medium">البريد الإلكتروني<input name="email" type="email" autoComplete="off" required className={field} /></label>
-        <label className="text-sm font-medium">كلمة مرور الأدمن الجديد<input name="password" type="password" minLength={12} maxLength={128} autoComplete="new-password" required className={field} /></label>
+        <label className="text-sm font-medium">كلمة مرور الأدمن الجديد<input name="password" type="password" minLength={12} maxLength={72} autoComplete="new-password" required className={field} /></label>
         <label className="text-sm font-medium">تأكيد كلمة المرور<input name="confirmPassword" type="password" minLength={12} autoComplete="new-password" required className={field} /></label>
         <label className="text-sm font-medium">كلمة مرورك الحالية لتأكيد العملية<input name="currentPassword" type="password" autoComplete="current-password" required className={field} /></label>
         <button disabled={busy} className="self-end rounded-xl bg-[#191735] px-5 py-3 text-sm font-bold text-white disabled:opacity-50">إضافة الأدمن</button>

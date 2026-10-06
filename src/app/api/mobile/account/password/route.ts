@@ -4,13 +4,17 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-helpers";
 
-const schema = z.object({ currentPassword: z.string().min(1).max(1024), newPassword: z.string().min(12).max(128) });
+import { validNewPassword } from "@/lib/session-security";
+import { allowPasswordConfirmation } from "@/lib/login-throttle";
+
+const schema = z.object({ currentPassword: z.string().min(1).max(1024), newPassword: z.string().min(12).max(72).refine(validNewPassword, "Password must be 12+ characters and at most 72 UTF-8 bytes") });
 
 export async function POST(request: NextRequest) {
   try {
     const session = await requireAuth();
+    if (!await allowPasswordConfirmation(session.userId)) return NextResponse.json({ error: "محاولات كثيرة؛ حاول بعد ١٥ دقيقة" }, { status: 429 });
     const input = schema.safeParse(await request.json().catch(() => null));
-    if (!input.success) return NextResponse.json({ error: "كلمة المرور الجديدة يجب أن تكون ١٢ حرفًا على الأقل" }, { status: 422 });
+    if (!input.success) return NextResponse.json({ error: "كلمة المرور الجديدة يجب أن تكون ١٢ حرفًا على الأقل وبحد أقصى ٧٢ بايت" }, { status: 422 });
     const user = await db.user.findUniqueOrThrow({ where: { id: session.userId }, select: { passwordHash: true } });
     if (!user.passwordHash || !await compare(input.data.currentPassword, user.passwordHash)) {
       return NextResponse.json({ error: "كلمة المرور الحالية غير صحيحة" }, { status: 403 });
