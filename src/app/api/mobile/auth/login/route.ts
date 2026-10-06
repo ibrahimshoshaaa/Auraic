@@ -3,7 +3,7 @@ import { compare, hashSync } from "bcryptjs";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { clearLoginFailures, isLoginBlocked, recordLoginFailure } from "@/lib/login-throttle";
+import { clearLoginFailures, allowLoginAttempt } from "@/lib/login-throttle";
 import { createMobileToken, hashMobileToken } from "@/lib/mobile-token";
 
 const schema = z.object({ email: z.string().email().max(254), password: z.string().min(1).max(1024) });
@@ -13,11 +13,10 @@ export async function POST(request: NextRequest) {
   const input = schema.safeParse(await request.json().catch(() => null));
   if (!input.success) return NextResponse.json({ error: "بيانات الدخول غير صحيحة" }, { status: 400 });
   const email = input.data.email.trim().toLowerCase();
-  if (await isLoginBlocked(email)) return NextResponse.json({ error: "حاول مرة أخرى لاحقًا" }, { status: 429 });
+  if (!await allowLoginAttempt(email, request.headers)) return NextResponse.json({ error: "حاول مرة أخرى لاحقًا" }, { status: 429 });
   const user = await db.user.findUnique({ where: { email }, include: { store: true } });
   const valid = await compare(input.data.password, user?.passwordHash ?? unknownUserHash);
   if (!user || !valid || user.status !== "ACTIVE" || user.store.status !== "ACTIVE") {
-    await recordLoginFailure(email);
     return NextResponse.json({ error: "بيانات الدخول غير صحيحة" }, { status: 401 });
   }
   await clearLoginFailures(email);
