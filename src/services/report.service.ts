@@ -36,12 +36,12 @@ export async function getBusinessReport(storeId: string, options: { period?: str
   }
   cash.received = cash.deposits + cash.deliveryBalances;
 
-  const sales = { total: 0, gross: 0, discounts: 0, refunded: 0, net: 0, units: 0, orders: orders.length, averageOrderValue: 0 };
+  const sales = { total: 0, shipping: 0, gross: 0, discounts: 0, refunded: 0, net: 0, units: 0, orders: orders.length, averageOrderValue: 0 };
   const salesByDay = new Map<string, { date: string; gross: number; net: number; orders: number }>();
   const products = new Map<string, { key: string; product: string; variant: string; units: number; gross: number; discounts: number; refunds: number; net: number; returnedUnits: number; estimatedCost: number }>();
   for (const order of orders) {
     const gross = n(order.total) + n(order.discount); const net = n(order.netSales); const date = localDate(order.occurredAt, store.timezone);
-    sales.total += n(order.total); sales.gross += gross; sales.discounts += n(order.discount); sales.refunded += n(order.refunded); sales.net += net;
+    sales.total += n(order.total) - n(order.shipping); sales.shipping += n(order.shipping); sales.gross += gross; sales.discounts += n(order.discount); sales.refunded += n(order.refunded); sales.net += net;
     const daily = salesByDay.get(date) ?? { date, gross: 0, net: 0, orders: 0 };
     daily.gross += gross; daily.net += net; daily.orders++; salesByDay.set(date, daily);
     for (const item of order.items) {
@@ -131,7 +131,7 @@ export async function getBusinessReport(storeId: string, options: { period?: str
   return {
     range: { period: range.period, from: range.from, to: range.to, timeZone: store.timezone }, currency: store.currency,
     notes: { excludedDifferentCurrencyOrders: unmatchedCurrencyOrders, salesRefundsAttributedToOriginalOrderDate: true, returnActivityAttributedToReturnDate: true, expenseTotalIncludesReturnCosts: true, costEstimateIncomplete: profit.incomplete },
-    sales: { ...sales, total: money(sales.total), gross: money(sales.gross), discounts: money(sales.discounts), refunded: money(sales.refunded), net: money(sales.net), averageOrderValue: money(sales.averageOrderValue) },
+    sales: { ...sales, total: money(sales.total), shipping: money(sales.shipping), gross: money(sales.gross), discounts: money(sales.discounts), refunded: money(sales.refunded), net: money(sales.net), averageOrderValue: money(sales.averageOrderValue) },
     cash: { deposits: money(cash.deposits), deliveryBalances: money(cash.deliveryBalances), received: money(cash.received) },
     salesByDay: [...salesByDay.values()].map(row => ({ ...row, gross: money(row.gross), net: money(row.net) })),
     returns: { ...returnTotals, value: money(returnTotals.value), costs: money(returnTotals.costs) }, returnsByDay: [...returnsByDay.values()].map(row => ({ ...row, value: money(row.value) })),

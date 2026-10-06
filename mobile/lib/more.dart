@@ -59,7 +59,7 @@ class _ReportsPageState extends State<ReportsPage> {
               style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: appInk))])));
       return Column(children: [
         const SizedBox(height: 12),
-        Row(children: [Expanded(child: kpi('إجمالي المبيعات', sales['total'] ?? (num.tryParse('${sales['gross']}') ?? 0) - (num.tryParse('${sales['discounts']}') ?? 0), Icons.trending_up)),
+        Row(children: [Expanded(child: kpi('إجمالي المبيعات', sales['total'] ?? (num.tryParse('${sales['gross']}') ?? 0) - (num.tryParse('${sales['discounts']}') ?? 0) - (num.tryParse('${sales['shipping']}') ?? 0), Icons.trending_up)),
           const SizedBox(width: 10), Expanded(child: kpi('صافي المبيعات', sales['net'], Icons.show_chart))]),
         const SizedBox(height: 10),
         Row(children: [Expanded(child: kpi('الدفعات المستلمة', cash['received'], Icons.account_balance_wallet_outlined)),
@@ -69,7 +69,7 @@ class _ReportsPageState extends State<ReportsPage> {
         section('المبيعات', [
           line('الوحدات المباعة', sales['units']),
           line('متوسط الطلب', sales['averageOrderValue']),
-          line('المبيعات قبل الخصم', sales['gross']), line('الخصومات', sales['discounts']), line('المسترد', sales['refunded']),
+          line('الشحن (منفصل)', sales['shipping']), line('المبيعات قبل الخصم وبدون الشحن', (num.tryParse('${sales['gross']}') ?? 0) - (num.tryParse('${sales['shipping']}') ?? 0)), line('الخصومات', sales['discounts']), line('المسترد', sales['refunded']),
           line('الديبوزت', cash['deposits']),
         ]),
         section('الربح وROAS', [

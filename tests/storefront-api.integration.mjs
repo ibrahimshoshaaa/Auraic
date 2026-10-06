@@ -405,14 +405,15 @@ test('public orders validate server prices, tenant, publication and recipe; retr
     assert.equal(emptyReport.data.roas.ratio, null); assert.equal(emptyReport.data.profit.margin, null);
     // A discount is never added back into the dashboard sales total or ROAS.
     const augustOrder = await db.order.findFirstOrThrow({ where: { storeId: shop.id, occurredAt: new Date('2026-08-10T12:00:00Z'), manualStatus: 'DELIVERED' } });
-    await db.order.update({ where: { id: augustOrder.id }, data: { total: 330, discount: 120, netSales: 330 } });
+    await db.order.update({ where: { id: augustOrder.id }, data: { total: 390, shipping: 60, discount: 120, netSales: 330 } });
     const discountedReport = await (await fetch(`${url}/api/mobile/home?period=custom&from=2026-08-01&to=2026-08-31`, { headers: adminHeaders })).json();
-    assert.equal(discountedReport.data.sales.gross, 450);
+    assert.equal(discountedReport.data.sales.gross, 510);
     assert.equal(discountedReport.data.sales.discounts, 120);
     assert.equal(discountedReport.data.sales.total, 330);
+    assert.equal(discountedReport.data.sales.shipping, 60);
     assert.equal(discountedReport.data.roas.sales, 330);
     assert.equal(discountedReport.data.roas.ratio, 0.033);
-    await db.order.update({ where: { id: augustOrder.id }, data: { total: augustOrder.total, discount: augustOrder.discount, netSales: augustOrder.netSales } });
+    await db.order.update({ where: { id: augustOrder.id }, data: { total: augustOrder.total, shipping: augustOrder.shipping, discount: augustOrder.discount, netSales: augustOrder.netSales } });
     // Coupons: tenant-safe management, authoritative pricing, limits, and retries.
     const couponApi = (method, body) => fetch(`${url}/api/admin/coupons`, { method, headers: adminHeaders, ...(body ? { body: JSON.stringify(body) } : {}) });
     assert.equal((await fetch(`${url}/api/admin/coupons`)).status, 401);
