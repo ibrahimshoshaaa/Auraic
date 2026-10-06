@@ -8,6 +8,7 @@ test('cookie-authenticated writes reject foreign, missing and opaque origins', (
     const headers = { cookie, ...(origin ? { origin } : {}) };
     assert.equal(allowedCookieMutation(new Request(url, { method: 'POST', headers })), false);
   }
+  assert.equal(allowedCookieMutation(new Request('https://internal.example/api/materials', { method: 'POST', headers: { cookie, host: 'auraic.vercel.app', origin: 'https://auraic.vercel.app' } })), true);
   assert.equal(allowedCookieMutation(new Request(url, { method: 'DELETE', headers: { cookie, origin: 'https://auraic.vercel.app' } })), true);
 });
 test('reads and explicit native bearer credentials remain usable', () => {

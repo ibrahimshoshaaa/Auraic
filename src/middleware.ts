@@ -4,7 +4,7 @@ import { allowedCookieMutation } from "@/lib/request-security";
 export function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   // Auth.js and public checkout enforce their own request-origin protections.
-  if (!path.startsWith("/api/auth/") && !path.startsWith("/api/storefront/") &&
+  if (path.startsWith("/api/") && !path.startsWith("/api/auth/") && !path.startsWith("/api/storefront/") &&
       !allowedCookieMutation(request)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

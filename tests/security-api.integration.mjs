@@ -52,6 +52,7 @@ test('real web sessions revoke on password change; concurrent logins and reauthe
       assert.ok(cookie, `No authenticated web session: ${webLogin.status}, ${webLogin.headers.get('location')}`);
       assert.equal((await fetch(`${url}/api/mobile/me`, { headers: { cookie } })).status, 200);
       assert.equal((await fetch(`${url}/api/materials`, { method: 'POST', headers: { cookie, origin: 'https://evil.example', ...jsonHeaders }, body: '{}' })).status, 403);
+      assert.equal((await fetch(`${url}/api/materials`, { method: 'POST', headers: { cookie, origin: url, ...jsonHeaders }, body: '{}' })).status, 422);
       const mobile = await login(email, password);
       assert.equal(mobile.status, 200);
       const token = (await mobile.json()).data.token;
