@@ -9,3 +9,6 @@ coverage/
 !.env.example
 *.log
 .DS_Store
+
+# Firebase client configuration is supplied through the Android build secret.
+mobile/firebase/google-services.json

@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'order_notifications.dart';
 import 'package:flutter/material.dart';
 
 import 'api.dart';
@@ -14,8 +16,9 @@ import 'storefront.dart';
 import 'coupons.dart';
 import 'customers.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await OrderNotifications.instance.initialize();
   runApp(const PerfumeErpApp());
 }
 
@@ -222,6 +225,25 @@ class ErpHome extends StatefulWidget {
 }
 
 class _ErpHomeState extends State<ErpHome> {
+  String? notificationOrderId;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(OrderNotifications.instance.attach(widget.api, _openNotifiedOrder, (message, id) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message),
+          duration: const Duration(seconds: 8), action: SnackBarAction(label: 'فتح الطلب',
+            onPressed: () => _openNotifiedOrder(id))));
+      }));
+    });
+  }
+  void _openNotifiedOrder(String id) {
+    if (mounted) setState(() { notificationOrderId = id; selected = 1; pageEpoch++; });
+  }
+  @override
+  void dispose() { unawaited(OrderNotifications.instance.detach()); super.dispose(); }
   int selected = 0;
   int pageEpoch = 0;
   int drawerEpoch = 0;
@@ -229,7 +251,7 @@ class _ErpHomeState extends State<ErpHome> {
   late Future<dynamic> account = widget.api.get('/api/mobile/me');
 
   void switchTo(int index) {
-    if (selected != index) setState(() => selected = index);
+    if (selected != index || notificationOrderId != null) setState(() { selected = index; notificationOrderId = null; });
   }
   void refreshAt(int index) => setState(() { selected = index; pageEpoch++; });
 
@@ -259,7 +281,7 @@ class _ErpHomeState extends State<ErpHome> {
       Widget body = switch (selected) {
         0 => _Dashboard(api: widget.api, user: user, onSelect: switchTo,
           manager: manager),
-        1 => OrdersPage(api: widget.api, canWrite: manager),
+        1 => OrdersPage(api: widget.api, canWrite: manager, orderId: notificationOrderId),
         2 => InventoryPage(api: widget.api, canWrite: manager),
         3 => ProductsPage(api: widget.api, canWrite: manager),
         4 => ExpensesPage(api: widget.api, canWrite: manager),

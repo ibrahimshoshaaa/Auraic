@@ -54,6 +54,32 @@ test('mobile login, tenant access, and revocable logout through real HTTP routes
       const me = await fetch(`${url}/api/mobile/me`, { headers });
       assert.equal(me.status, 200);
       assert.equal((await me.json()).data.store.name, store.name);
+      const deviceToken = 'ci-device-token-not-real-123456789';
+      const notificationUrl = `${url}/api/mobile/notifications`;
+      const registerPush = (authHeaders, token) => fetch(notificationUrl, { method: 'POST',
+        headers: { ...authHeaders, 'content-type': 'application/json' }, body: JSON.stringify({ token }) });
+      assert.equal((await registerPush({}, deviceToken)).status, 401);
+      assert.equal((await registerPush(headers, 'bad')).status, 422);
+      assert.equal((await registerPush(headers, deviceToken)).status, 200);
+      assert.deepEqual((await (await fetch(notificationUrl, { headers })).json()).data,
+        { enabled: true, serverConfigured: false });
+      const notificationVariant = await db.productVariant.create({ data: {
+        store: { connect: { id: store.id } }, title: '100 ml', price: 1200,
+        product: { create: { storeId: store.id, title: 'Notification test' } },
+      } });
+      const pushOrder = { requestId: 'a983558a-75b8-4afc-9b29-986657a799f0',
+        customerName: 'Push customer', customerPhone: '01012345678', customerAddress: 'Push test address',
+        hasDeposit: false, depositAmount: 0,
+        items: [{ variantId: notificationVariant.id, quantity: 1, unitPrice: 1200 }] };
+      for (let retry = 0; retry < 2; retry++) assert.equal((await fetch(`${url}/api/orders/manual`, {
+        method: 'POST', headers: { ...headers, 'content-type': 'application/json' },
+        body: JSON.stringify(pushOrder),
+      })).status, 200);
+      assert.equal(await db.pushDelivery.count({ where: { orderId: `manual_${pushOrder.requestId}` } }), 1,
+        'One delivery per device despite retried order creation');
+      await db.order.delete({ where: { id: `manual_${pushOrder.requestId}` } });
+      await db.productVariant.delete({ where: { id: notificationVariant.id } });
+      await db.product.deleteMany({ where: { storeId: store.id, title: 'Notification test' } });
       const catalogProduct = await db.product.create({ data: {
         storeId: store.id, title: 'Archived perfume', status: 'ACTIVE',
         variants: { create: { storeId: store.id, title: '30 ml', price: 450 } },
@@ -121,13 +147,21 @@ test('mobile login, tenant access, and revocable logout through real HTTP routes
         body: JSON.stringify({ email: ownerEmail, password: ownerPassword }),
       });
       assert.equal(secondLogin.status, 200);
-      assert.equal((await secondLogin.json()).data.user.role, 'OWNER');
+      const secondData = (await secondLogin.json()).data;
+      assert.equal(secondData.user.role, 'OWNER');
+      const secondHeaders = { authorization: `Bearer ${secondData.token}` };
+      assert.equal((await registerPush(secondHeaders, deviceToken)).status, 200);
+      assert.equal((await (await fetch(notificationUrl, { headers })).json()).data.enabled, false,
+        'A new login claims the device exclusively');
+      assert.equal((await registerPush(headers, deviceToken)).status, 200);
       const changePassword = async currentPassword => fetch(`${url}/api/mobile/account/password`, {
         method: 'POST', headers: { ...headers, 'content-type': 'application/json' },
         body: JSON.stringify({ currentPassword, newPassword: 'changed-mobile-owner-password' }),
       });
       assert.equal((await changePassword('incorrect-password')).status, 403);
       assert.equal((await changePassword(password)).status, 200);
+      assert.equal(await db.mobileSession.count({ where: { storeId: store.id, pushToken: deviceToken } }), 0,
+        'Changing password disables old notification sessions');
       assert.equal((await fetch(`${url}/api/mobile/me`, { headers })).status, 401);
       const newLogin = await fetch(`${url}/api/mobile/auth/login`, {
         method: 'POST', headers: { 'content-type': 'application/json' },
@@ -135,8 +169,12 @@ test('mobile login, tenant access, and revocable logout through real HTTP routes
       });
       assert.equal(newLogin.status, 200);
       const newHeaders = { authorization: `Bearer ${(await newLogin.json()).data.token}` };
+      assert.equal((await registerPush(newHeaders, deviceToken)).status, 200);
+      assert.equal((await fetch(notificationUrl, { method: 'DELETE', headers: newHeaders })).status, 200);
+      assert.equal((await registerPush(newHeaders, deviceToken)).status, 200);
       const logout = await fetch(`${url}/api/mobile/auth/logout`, { method: 'POST', headers: newHeaders });
       assert.equal(logout.status, 200);
+      assert.equal(await db.mobileSession.count({ where: { storeId: store.id, pushToken: deviceToken } }), 0);
       assert.equal((await fetch(`${url}/api/mobile/me`, { headers: newHeaders })).status, 401);
     } finally {
       child.kill('SIGTERM');

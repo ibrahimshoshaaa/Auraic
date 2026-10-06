@@ -33,6 +33,12 @@ jobs:
         run: flutter create --platforms android --project-name perfume_erp .
       - name: Enable Internet for release builds
         run: python3 tool/ensure_android_internet.py
+      - name: Verify Firebase Android setup
+        run: python3 tool/test_firebase_android.py
+      - name: Configure Firebase notifications
+        env:
+          FIREBASE_ANDROID_CONFIG: ${{ secrets.FIREBASE_ANDROID_CONFIG }}
+        run: python3 tool/configure_firebase_android.py
       - name: Fetch packages
         run: flutter pub get
       - name: Apply Auraic app icon and splash

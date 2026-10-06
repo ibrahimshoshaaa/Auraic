@@ -80,6 +80,9 @@ model MobileSession {
   storeId   String
   tokenHash String    @unique
   expiresAt DateTime
+  pushToken String? @unique
+  pushUpdatedAt DateTime?
+  deliveries PushDelivery[]
   revokedAt DateTime?
   createdAt DateTime  @default(now())
 
@@ -543,4 +546,19 @@ model Coupon {
 
   @@unique([storeId, code])
   @@index([storeId, createdAt])
+}
+
+model PushDelivery {
+  id String @id @default(cuid())
+  orderId String
+  sessionId String
+  token String
+  attempts Int @default(0)
+  nextAttemptAt DateTime @default(now())
+  claimedAt DateTime?
+  finishedAt DateTime?
+  createdAt DateTime @default(now())
+  session MobileSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  @@unique([orderId, sessionId])
+  @@index([finishedAt, nextAttemptAt])
 }

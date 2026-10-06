@@ -1,3 +1,5 @@
+import { after } from "next/server";
+import { queueOrderPush, deliverOrderPushes } from "@/services/notifications/orders";
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -19,6 +21,8 @@ const schema = z.object({
   })).min(1).max(30),
 });
 
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   try {
     const session = await requireAuth();
@@ -28,6 +32,7 @@ export async function POST(req: NextRequest) {
     let order = await db.order.findUnique({ where: { id: orderId }, select: { id: true, storeId: true } });
     if (order && order.storeId !== session.storeId) return NextResponse.json({ error: "تعذر تسجيل البيع" }, { status: 409 });
 
+    let createdNew = false;
     if (!order) {
       const ids = input.items.map((item) => item.variantId);
       if (new Set(ids).size !== ids.length) return NextResponse.json({ error: "اختر كل حجم مرة واحدة فقط" }, { status: 422 });
@@ -76,7 +81,9 @@ export async function POST(req: NextRequest) {
             occurredAt: new Date(),
             items: { create: lines },
           } });
+          await queueOrderPush(tx, session.storeId, created.id);
           await tx.auditLog.create({ data: { storeId: session.storeId, userId: session.userId, action: "CREATE", entity: "Order", entityId: created.id, metadata: { source: "MANUAL" } } });
+          createdNew = true;
           return { id: created.id, storeId: created.storeId };
         });
       } catch (error) {
@@ -86,6 +93,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    if (createdNew) after(() => deliverOrderPushes(orderId).catch(() => console.error("Order notification retry needed")));
     return NextResponse.json({ data: { orderId: order.id } });
   } catch (error) {
     if (error instanceof z.ZodError) return NextResponse.json({ error: "راجع بيانات البيع", issues: error.issues }, { status: 422 });

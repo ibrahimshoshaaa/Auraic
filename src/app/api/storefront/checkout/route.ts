@@ -1,3 +1,5 @@
+import { after } from "next/server";
+import { queueOrderPush, deliverOrderPushes } from "@/services/notifications/orders";
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac } from "node:crypto";
 import { Prisma } from "@prisma/client";
@@ -6,6 +8,8 @@ import { checkoutSchema } from "@/lib/storefront/config";
 import { quoteOrder, QuoteError } from "@/services/storefront/quote";
 import { CouponError } from "@/lib/storefront/coupons";
 import { getPublicShop } from "@/services/storefront/catalog";
+
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,6 +59,7 @@ export async function POST(request: NextRequest) {
               quantity: item.quantity, originalPrice: decimal(priceCents), finalLinePrice: decimal(priceCents * item.quantity - lineDiscounts[index]), discount: decimal(lineDiscounts[index]), refunded: 0 };
           }) },
         } });
+        await queueOrderPush(tx, shop.id, orderId);
         await tx.auditLog.create({ data: { storeId: shop.id, action: "CREATE", entity: "Order", entityId: orderId, metadata: { source: "STOREFRONT", payment: "COD", note: input.note } } });
       });
     } catch (error) {
@@ -63,6 +68,7 @@ export async function POST(request: NextRequest) {
       if (!duplicate) throw error;
       return NextResponse.json({ data: { orderNumber: duplicate.orderNumber, total: Number(duplicate.total) } });
     }
+    if (!reused) after(() => deliverOrderPushes(orderId).catch(() => console.error("Order notification retry needed")));
     return NextResponse.json({ data: { orderNumber: confirmedNumber, total: finalTotal / 100 } }, { status: reused ? 200 : 201 });
   } catch (error) {
     if (error instanceof QuoteError || error instanceof CouponError) return NextResponse.json({ error: error.message }, { status: 409 });
