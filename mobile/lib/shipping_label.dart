@@ -34,7 +34,7 @@ class _ShippingLabelPageState extends State<ShippingLabelPage> {
       final doc = pw.Document();
       doc.addPage(pw.Page(pageFormat: format, margin: pw.EdgeInsets.zero,
         build: (_) => pw.Image(pw.MemoryImage(bytes), fit: pw.BoxFit.contain)));
-      return doc.save();
+      return await doc.save();
     } finally { image.dispose(); }
   }
   Future<void> output(bool share) async {
