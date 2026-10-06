@@ -32,7 +32,7 @@ test('real web sessions revoke on password change; concurrent logins and reauthe
     const jsonHeaders = { 'content-type': 'application/json' };
     const login = (who, pass) => fetch(`${url}/api/mobile/auth/login`, { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ email: who, password: pass }) });
     try {
-      await db.user.create({ data: { storeId: store.id, email, passwordHash: await hash(password, 10), role: 'OWNER' } });
+      await db.user.create({ data: { storeId: store.id, email, passwordHash: await hash(password, 10), role: 'OWNER', status: 'ACTIVE' } });
       for (let attempt = 0; attempt < 70; attempt++) {
         if (child.exitCode !== null) throw new Error(`Next exited: ${output}`);
         try { if ((await fetch(`${url}/login`)).status === 200) break; } catch { /* not listening yet */ }
