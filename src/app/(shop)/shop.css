@@ -293,3 +293,4 @@
 .shop-footer-credit{display:block;margin-top:12px;line-height:1.7;color:#c4bfd4}
 .shop-footer-credit a{display:inline;color:#FAEAB1;font-size:inherit;margin:0;font-weight:600}
 .shop-footer-credit a:hover,.shop-footer-credit a:focus-visible{text-decoration:underline}
+.shop-collection-button,.shop-browse-collection,.shop-story .shop-button{border-radius:10px}
