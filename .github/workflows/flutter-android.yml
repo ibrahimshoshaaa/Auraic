@@ -82,8 +82,8 @@ jobs:
               exit 1
             fi
             if grep -F 'CN=Android Debug' android/app/certificate-check.txt; then exit 1; fi
-            actual="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' android/app/certificate-check.txt)"
-            actual="$(printf '%s' "$actual" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
+            actual="$(sed -n 's/^.* certificate SHA-256 digest: //p' android/app/certificate-check.txt)"
+            actual="$(printf '%s' "$actual" | tr -d '\\r' | tr '[:upper:]' '[:lower:]' | sort -u)"
             if [ "$actual" != "$expected" ]; then
               echo "::error::APK certificate mismatch for $apk (expected $expected, actual $actual)"
               cat android/app/certificate-check.txt
