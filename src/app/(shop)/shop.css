@@ -289,3 +289,7 @@
 @keyframes auraicAnnouncementMarquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 @media(max-width:650px){.shop-announcement-item{font-size:10px;gap:24px;padding-inline:12px}}
 @media(prefers-reduced-motion:reduce){.shop-announcement-marquee{height:auto;min-height:29px}.shop-announcement-track{animation:none;will-change:auto;width:100%}.shop-announcement-group{flex-wrap:wrap;min-width:0;width:100%;gap:8px;padding-block:6px}.shop-announcement-group+.shop-announcement-group{display:none}.shop-announcement-item{white-space:normal}}
+
+.shop-footer-credit{display:block;margin-top:12px;line-height:1.7;color:#c4bfd4}
+.shop-footer-credit a{display:inline;color:#FAEAB1;font-size:inherit;margin:0;font-weight:600}
+.shop-footer-credit a:hover,.shop-footer-credit a:focus-visible{text-decoration:underline}
