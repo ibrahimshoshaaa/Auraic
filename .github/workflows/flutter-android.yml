@@ -50,9 +50,36 @@ jobs:
         run: flutter analyze --no-fatal-infos
       - name: Run Flutter tests
         run: flutter test
+      - name: Test release signing configuration
+        run: python3 tool/test_release_signing.py
+      - name: Configure production signing
+        if: github.event_name == 'workflow_dispatch' || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: python3 tool/configure_release_signing.py
       - name: Build release APKs per architecture
         if: github.event_name == 'workflow_dispatch' || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: flutter build apk --release --split-per-abi --dart-define=API_BASE_URL="$API_BASE_URL"
+      - name: Verify APK signature matches production certificate
+        if: github.event_name == 'workflow_dispatch' || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          keytool -exportcert -keystore android/app/release.jks -storepass:env ANDROID_KEYSTORE_PASSWORD -alias "$ANDROID_KEY_ALIAS" -file android/app/release-cert.der
+          expected="$(sha256sum android/app/release-cert.der | cut -d ' ' -f 1)"
+          signer="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
+          test -n "$signer"
+          for apk in build/app/outputs/flutter-apk/*-release.apk; do
+            "$signer" verify --print-certs "$apk" > android/app/certificate-check.txt
+            if grep -F 'CN=Android Debug' android/app/certificate-check.txt; then exit 1; fi
+            actual="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' android/app/certificate-check.txt)"
+            test "$actual" = "$expected"
+          done
       - name: Verify release APK network permission
         if: github.event_name == 'workflow_dispatch' || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')
         run: |
@@ -73,3 +100,6 @@ jobs:
           name: auraic-arm32-release
           path: mobile/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
           if-no-files-found: error
+      - name: Remove signing material
+        if: always()
+        run: rm -f android/app/release.jks android/app/release-cert.der android/app/certificate-check.txt
