@@ -532,7 +532,7 @@ class _DashboardState extends State<_Dashboard> {
             const SizedBox(height: 18),
             Row(textDirection: TextDirection.ltr,
               crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Flexible(child: Text(statistic(sales['gross']), maxLines: 1,
+              Flexible(child: Text(statistic(sales['total'] ?? (num.tryParse('${sales['gross']}') ?? 0) - (num.tryParse('${sales['discounts']}') ?? 0) - (num.tryParse('${sales['shipping']}') ?? 0)), maxLines: 1,
                 overflow: TextOverflow.ellipsis, textDirection: TextDirection.ltr,
                 style: const TextStyle(color: Colors.white, fontSize: 36,
                   fontWeight: FontWeight.w800))),
