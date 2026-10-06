@@ -33,7 +33,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       {report.notes.excludedDifferentCurrencyOrders > 0 && <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">تم استبعاد {report.notes.excludedDifferentCurrencyOrders} طلب بعملة مختلفة عن {currency} من المبيعات.</p>}
       <section aria-label="إجمالي المبيعات" className="rounded-3xl bg-[#191735] p-5 text-white shadow-sm sm:p-7">
         <div className="flex items-center justify-between gap-3"><h2 className="text-sm text-[#e4e1f2] sm:text-base">↗ &nbsp; إجمالي المبيعات</h2><span className="rounded-full bg-white/10 px-3 py-1 text-xs text-[#ffe8a1]">{report.range.from} – {report.range.to}</span></div>
-        <strong className="mt-5 block text-3xl font-extrabold tabular-nums tracking-tight sm:text-4xl" dir="ltr">{money(report.sales.gross, currency)}</strong>
+        <strong className="mt-5 block text-3xl font-extrabold tabular-nums tracking-tight sm:text-4xl" dir="ltr">{money(report.sales.total, currency)}</strong>
+        <p className="mt-2 text-xs text-[#e4e1f2]">بعد الخصومات، شامل الشحن؛ قبل ردّ المبالغ</p>
       </section>
       <section className="grid grid-cols-2 gap-2.5 sm:gap-3 " aria-label="مؤشرات الأداء">
         {cards.map(card => (

@@ -15,7 +15,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   const r = await getBusinessReport(session.storeId, { period: query.period, from: query.from, to: query.to });
   const money = (n: number) => `${number(n)} ${r.currency}`;
   const sales = [
-    ["الإجمالي", money(r.sales.gross)], ["الخصومات", money(r.sales.discounts)],
+    ["إجمالي المبيعات بعد الخصم", money(r.sales.total)], ["قبل الخصم", money(r.sales.gross)], ["الخصومات", money(r.sales.discounts)],
     ["المبالغ المستردة", money(r.sales.refunded)], ["الصافي", money(r.sales.net)],
     ["الطلبات", number(r.sales.orders)], ["الوحدات", number(r.sales.units)],
     ["متوسط قيمة الطلب", money(r.sales.averageOrderValue)],
