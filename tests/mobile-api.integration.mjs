@@ -64,7 +64,7 @@ test('mobile login, tenant access, and revocable logout through real HTTP routes
       assert.deepEqual((await (await fetch(notificationUrl, { headers })).json()).data,
         { enabled: true, serverConfigured: false });
       const notificationVariant = await db.productVariant.create({ data: {
-        storeId: store.id, title: '100 ml', price: 1200,
+        store: { connect: { id: store.id } }, title: '100 ml', price: 1200,
         product: { create: { storeId: store.id, title: 'Notification test' } },
       } });
       const pushOrder = { requestId: 'a983558a-75b8-4afc-9b29-986657a799f0',

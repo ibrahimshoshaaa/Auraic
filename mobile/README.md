@@ -13,7 +13,7 @@ For a preview backend, pass `--dart-define=API_BASE_URL=https://your-preview-dom
 
 Keep the existing Android application ID `com.example.perfume_erp`. In Firebase project `auraicfragrance`, register that Android app and download its `google-services.json`. The config for `com.example.auraic` belongs to a different application and cannot be used to update this APK.
 
-Set GitHub Actions secret `FIREBASE_ANDROID_CONFIG` to the complete client config JSON, or place it at `mobile/firebase/google-services.json` (client config contains public app identifiers, not a service-account private key). After generating Android host files, run `python3 tool/configure_firebase_android.py` before building. It checks the package ID, adds the Google Services Gradle plugin, Android 13 notification permission and the notification icon. Without config, the ERP remains usable and notification settings show that setup is incomplete.
+Set GitHub Actions secret `FIREBASE_ANDROID_CONFIG` to the complete client config JSON, or place it at `mobile/firebase/google-services.json` (this local file is gitignored; client config is separate from the service-account private key). After generating Android host files, run `python3 tool/configure_firebase_android.py` before building. It checks the package ID, adds the Google Services Gradle plugin, Android 13 notification permission and the notification icon. Without config, the ERP remains usable and notification settings show that setup is incomplete.
 
 Server setup:
 1. Apply `npx prisma migrate deploy` against the production database before deploying this version.
