@@ -5,6 +5,8 @@ import { shippingCollection } from '../src/lib/shipping-label.ts';
 
 const checkout = readFileSync(new URL('../src/app/api/storefront/checkout/route.ts', import.meta.url), 'utf8');
 const review = readFileSync(new URL('../src/app/api/payments/review/route.ts', import.meta.url), 'utf8');
+const returns = readFileSync(new URL('../src/services/finance.service.ts', import.meta.url), 'utf8');
+const refundConfirm = readFileSync(new URL('../src/app/api/payments/refund-confirm/route.ts', import.meta.url), 'utf8');
 const report = readFileSync(new URL('../src/services/report.service.ts', import.meta.url), 'utf8');
 const mobileSettings = readFileSync(new URL('../src/app/api/mobile/settings/route.ts', import.meta.url), 'utf8');
 const prepare = readFileSync(new URL('../src/services/manual-order.service.ts', import.meta.url), 'utf8');
@@ -41,4 +43,13 @@ test('cash report recognizes verified transfers on review date', () => {
 test('mobile settings require transfer destination for enabled methods', () => {
   assert.match(mobileSettings, /input.paymentInstaPayEnabled && !input.paymentInstaPayAddress/);
   assert.match(mobileSettings, /input.paymentWalletEnabled && !input.paymentWalletNumber/);
+});
+
+test('return does not report refund as paid until payout confirmation', () => {
+  assert.match(returns, /financialStatus: needsRefund \? "REFUND_PENDING" : "VOIDED"/);
+  assert.match(returns, /refunded: 0, netSales: 0/);
+  assert.match(refundConfirm, /financialStatus !== "REFUND_PENDING"/);
+  assert.match(refundConfirm, /financialStatus: "REFUNDED"/);
+  assert.match(refundConfirm, /REFUND_CONFIRMED/);
+  assert.match(refundConfirm, /pg_advisory_xact_lock/);
 });
