@@ -31,9 +31,12 @@ export async function getBusinessReport(storeId: string, options: { period?: str
   const manualIds = manualPayments.map(order => order.id);
   const transferCreationLogs = await db.auditLog.findMany({ where: { storeId, entity: "Order", action: "CREATE", entityId: { in: manualIds } }, select: { entityId: true, metadata: true } });
   const transferOrderIds = new Set(transferCreationLogs.filter(log => { const m = log.metadata; return m && typeof m === "object" && !Array.isArray(m) && ["INSTAPAY", "WALLET"].includes(String(m.payment)); }).map(log => log.entityId));
+  const reviewedIds = approvedTransfers.map(review => review.entityId).filter((id): id is string => !!id);
+  const reviewedOrders = await db.order.findMany({ where: { storeId, currency: store.currency, id: { in: reviewedIds } }, select: { id: true } });
+  const eligibleReviewIds = new Set(reviewedOrders.map(order => order.id));
   for (const review of approvedTransfers) {
     const meta = review.metadata;
-    if (!review.entityId || !meta || typeof meta !== "object" || Array.isArray(meta) || meta.decision !== "APPROVED") continue;
+    if (!review.entityId || !eligibleReviewIds.has(review.entityId) || !meta || typeof meta !== "object" || Array.isArray(meta) || meta.decision !== "APPROVED") continue;
     const amount = Number(meta.requestedCents);
     if (Number.isSafeInteger(amount) && amount > 0) cash.deposits += amount / 100;
   }
