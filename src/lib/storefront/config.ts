@@ -67,6 +67,9 @@ export const productPresentationSchema = z.object({
 export const governorates = ["القاهرة", "الجيزة", "الإسكندرية", "القليوبية", "المنوفية", "الغربية", "الدقهلية", "الشرقية", "البحيرة", "كفر الشيخ", "دمياط", "بورسعيد", "الإسماعيلية", "السويس", "الفيوم", "بني سويف", "المنيا", "أسيوط", "سوهاج", "قنا", "الأقصر", "أسوان", "مطروح", "البحر الأحمر", "الوادي الجديد", "شمال سيناء", "جنوب سيناء"] as const;
 export const checkoutSchema = z.object({
   note: z.string().trim().max(500).default(""),
+  paymentMethod: z.enum(["COD", "INSTAPAY", "WALLET"]).default("COD"),
+  paymentPlan: z.enum(["FULL", "DEPOSIT"]).default("FULL"),
+  transferReference: z.string().trim().max(120).default(""),
   requestId: z.uuid(), name: z.string().trim().min(2).max(100),
   couponCode: z.string().trim().toUpperCase().max(40).default(""),
   expectedTotalCents: z.number().int().nonnegative().max(1000000000),
