@@ -32,6 +32,8 @@ export async function PUT(request: NextRequest) {
     const session = await requireAuth();
     if (session.role !== "OWNER") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     const input = schema.parse(await request.json());
+    if ((input.paymentInstaPayEnabled && !input.paymentInstaPayAddress) || (input.paymentWalletEnabled && !input.paymentWalletNumber))
+      return NextResponse.json({ error: "بيانات طريقة الدفع المفعلة مطلوبة" }, { status: 422 });
     await db.$transaction(async tx => {
       const store = await tx.store.findUniqueOrThrow({ where: { id: session.storeId }, select: { name: true } });
       await tx.store.update({ where: { id: session.storeId }, data: { name: input.name } });
