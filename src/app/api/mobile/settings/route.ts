@@ -7,7 +7,7 @@ import { requireAuth } from "@/lib/auth-helpers";
 const schema = z.object({ name: z.string().trim().min(2).max(80),
   defaultReturnCost: z.number().finite().min(0).max(1000000), costingEnabled: z.boolean(),
   paymentInstaPayEnabled: z.boolean(), paymentWalletEnabled: z.boolean(),
-  paymentInstaPayAddress: z.string().trim().max(120), paymentWalletNumber: z.string().trim().regex(/^$|^01[0125]\\d{8}$/),
+  paymentInstaPayAddress: z.string().trim().max(120), paymentWalletNumber: z.string().trim().regex(/^$|^01[0125]\d{8}$/),
   paymentDepositPercent: z.number().int().min(1).max(99) });
 
 export async function GET() {
