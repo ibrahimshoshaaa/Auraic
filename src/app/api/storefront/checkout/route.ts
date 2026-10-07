@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     if (method !== "COD" && input.transferReference.length < 5)
       return NextResponse.json({ error: "أدخل رقم مرجع التحويل للمراجعة" }, { status: 422 });
     const depositPercent = Number(await getSetting(shop.id, "paymentDepositPercent"));
-    if (!Number.isInteger(depositPercent) || depositPercent < 1 || depositPercent > 99)
+    if (method !== "COD" && (!Number.isInteger(depositPercent) || depositPercent < 1 || depositPercent > 99))
       return NextResponse.json({ error: "إعداد نسبة العربون غير صالح" }, { status: 503 });
     const secret = process.env.AUTH_SECRET;
     if (!secret) throw new Error("AUTH_SECRET missing");
