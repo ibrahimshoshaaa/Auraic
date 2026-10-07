@@ -11,14 +11,20 @@ const settingsSchema = z.object({
   name: z.string().trim().min(2).max(80),
   defaultReturnCost: z.coerce.number().finite().min(0).max(1000000),
   costingEnabled: z.boolean(),
+  paymentInstaPayEnabled: z.boolean(),
+  paymentWalletEnabled: z.boolean(),
+  paymentInstaPayAddress: z.string().trim().max(120),
+  paymentWalletNumber: z.string().trim().regex(/^$|^01[0125]\d{8}$/),
+  paymentDepositPercent: z.coerce.number().int().min(1).max(99),
 });
 
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ saved?: string; error?: string }> }) {
   const session = await requireAuth();
-  const [store, returnCost, costingEnabled, materialTypes] = await Promise.all([
+  const [store, returnCost, costingEnabled, paymentValues, materialTypes] = await Promise.all([
     db.store.findUniqueOrThrow({ where: { id: session.storeId }, select: { name: true, currency: true, timezone: true, createdAt: true } }),
     getSetting(session.storeId, "defaultReturnCost"),
     getSetting(session.storeId, "costingEnabled"),
+    Promise.all(["paymentInstaPayEnabled", "paymentWalletEnabled", "paymentInstaPayAddress", "paymentWalletNumber", "paymentDepositPercent"].map(key => getSetting(session.storeId, key as "paymentInstaPayEnabled"))),
     db.materialType.findMany({ where: { storeId: session.storeId, active: true }, select: { id: true, name: true, code: true }, orderBy: { name: "asc" } }),
   ]);
   const params = await searchParams;
@@ -31,13 +37,18 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       name: form.get("name"),
       defaultReturnCost: form.get("defaultReturnCost"),
       costingEnabled: form.get("costingEnabled") === "on",
+      paymentInstaPayEnabled: form.get("paymentInstaPayEnabled") === "on",
+      paymentWalletEnabled: form.get("paymentWalletEnabled") === "on",
+      paymentInstaPayAddress: form.get("paymentInstaPayAddress"),
+      paymentWalletNumber: form.get("paymentWalletNumber"),
+      paymentDepositPercent: form.get("paymentDepositPercent"),
     });
     if (!parsed.success) redirect("/dashboard/settings?error=invalid");
     const value = parsed.data;
     await db.$transaction(async tx => {
       const before = await tx.store.findUniqueOrThrow({ where: { id: actor.storeId }, select: { name: true } });
       await tx.store.update({ where: { id: actor.storeId }, data: { name: value.name } });
-      for (const [key, next] of [["defaultReturnCost", String(value.defaultReturnCost)], ["costingEnabled", String(value.costingEnabled)]] as const) {
+      for (const [key, next] of [["defaultReturnCost", String(value.defaultReturnCost)], ["costingEnabled", String(value.costingEnabled)], ["paymentInstaPayEnabled", String(value.paymentInstaPayEnabled)], ["paymentWalletEnabled", String(value.paymentWalletEnabled)], ["paymentInstaPayAddress", value.paymentInstaPayAddress], ["paymentWalletNumber", value.paymentWalletNumber], ["paymentDepositPercent", String(value.paymentDepositPercent)]] as const) {
         const previous = await tx.setting.findUnique({ where: { storeId_key: { storeId: actor.storeId, key } } });
         await tx.setting.upsert({ where: { storeId_key: { storeId: actor.storeId, key } }, update: { value: next }, create: { storeId: actor.storeId, key, value: next } });
         if (previous?.value !== next) await tx.auditLog.create({ data: { storeId: actor.storeId, userId: actor.userId, action: "UPDATE", entity: "Setting", entityId: key, before: { value: previous?.value ?? null }, after: { value: next } } });
@@ -66,6 +77,17 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <div className="mt-6 grid gap-6 sm:grid-cols-2">
             <label className="block text-sm font-medium">تكلفة المرتجع الافتراضية ({store.currency})<input name="defaultReturnCost" required type="number" min="0" max="1000000" step="0.01" defaultValue={returnCost} disabled={session.role !== "OWNER"} className="mt-2 block w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#96723c] disabled:bg-slate-50" /><span className="mt-2 block text-xs font-normal text-slate-500">تُسجّل هذه التكلفة ضمن مصروفات المرتجع عند المعالجة.</span></label>
             <label aria-label="إظهار التكلفة التقديرية" className="flex items-start gap-3 rounded-xl bg-slate-50 p-4 text-sm"><input name="costingEnabled" type="checkbox" defaultChecked={costingEnabled === "true"} disabled={session.role !== "OWNER"} className="mt-1 size-4 accent-[#191735]" /><span><strong className="block">إظهار التكلفة التقديرية</strong><span className="mt-1 block leading-6 text-slate-500">تعرض تقدير تكلفة الوصفات وهوامش الربح عند توفر أسعار المواد.</span></span></label>
+          </div>
+        </section>
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+          <h2 className="text-lg font-semibold">طرق الدفع الإلكتروني</h2>
+          <p className="mt-1 text-sm text-slate-500">التحويلات تتطلب مراجعة يدوية قبل اعتبارها مدفوعة.</p>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <label className="flex gap-2"><input type="checkbox" name="paymentInstaPayEnabled" defaultChecked={paymentValues[0] === "true"} disabled={session.role !== "OWNER"}/> تفعيل InstaPay</label>
+            <label className="flex gap-2"><input type="checkbox" name="paymentWalletEnabled" defaultChecked={paymentValues[1] === "true"} disabled={session.role !== "OWNER"}/> تفعيل المحفظة الإلكترونية</label>
+            <label>عنوان InstaPay<input name="paymentInstaPayAddress" defaultValue={paymentValues[2]} maxLength={120} disabled={session.role !== "OWNER"} className="mt-2 block w-full rounded-xl border p-3"/></label>
+            <label>رقم المحفظة<input name="paymentWalletNumber" defaultValue={paymentValues[3]} pattern="01[0125][0-9]{8}" disabled={session.role !== "OWNER"} className="mt-2 block w-full rounded-xl border p-3"/></label>
+            <label>نسبة العربون (%)<input name="paymentDepositPercent" type="number" min="1" max="99" required defaultValue={paymentValues[4]} disabled={session.role !== "OWNER"} className="mt-2 block w-full rounded-xl border p-3"/></label>
           </div>
         </section>
         {session.role === "OWNER" ? <button type="submit" className="rounded-xl bg-[#191735] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#302d58]">حفظ التغييرات</button> : <p className="text-sm text-slate-500">تعديل هذه الإعدادات متاح لمالك المتجر فقط.</p>}
