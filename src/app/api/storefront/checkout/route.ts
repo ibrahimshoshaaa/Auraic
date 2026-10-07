@@ -30,6 +30,8 @@ export async function POST(request: NextRequest) {
     const enabledKey = method === "INSTAPAY" ? "paymentInstaPayEnabled" : "paymentWalletEnabled";
     if (method !== "COD" && (await getSetting(shop.id, enabledKey)) !== "true")
       return NextResponse.json({ error: "طريقة الدفع غير متاحة حاليًا" }, { status: 422 });
+    if (method !== "COD" && !(await getSetting(shop.id, method === "INSTAPAY" ? "paymentInstaPayAddress" : "paymentWalletNumber")))
+      return NextResponse.json({ error: "بيانات التحويل غير مكتملة" }, { status: 422 });
     if (method !== "COD" && input.transferReference.length < 5)
       return NextResponse.json({ error: "أدخل رقم مرجع التحويل للمراجعة" }, { status: 422 });
     const depositPercent = Number(await getSetting(shop.id, "paymentDepositPercent"));
