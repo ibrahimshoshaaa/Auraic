@@ -42,6 +42,16 @@ export async function updateManualOrderStatus(input: { storeId: string; orderId:
     PREPARED: "NEW", SHIPPING: "PREPARED", DELIVERED: "SHIPPING",
   };
   if (input.status === "NEW" || order.manualStatus !== expected[input.status]) throw new Error("انتقال حالة الطلب غير صحيح");
+  if (input.status === "PREPARED" && order.id.startsWith("web_")) {
+    const original = await db.auditLog.findFirst({ where: { storeId: input.storeId, entity: "Order", entityId: order.id, action: "CREATE" }, select: { metadata: true } });
+    const meta = original?.metadata;
+    if (meta && typeof meta === "object" && !Array.isArray(meta) && ["INSTAPAY", "WALLET"].includes(String(meta.payment))) {
+      const review = await db.auditLog.findFirst({ where: { storeId: input.storeId, entity: "PaymentReview", entityId: order.id }, orderBy: { createdAt: "desc" }, select: { metadata: true } });
+      const decision = review?.metadata;
+      if (!decision || typeof decision !== "object" || Array.isArray(decision) || decision.decision !== "APPROVED")
+        throw new Error("لا يمكن تجهيز طلب التحويل قبل تأكيد استلام المبلغ من مراجعة التحويلات");
+    }
+  }
   if (input.status === "PREPARED") {
     const result = await processOrderConsumption(input.storeId, order.id, { forceForManualPreparation: true });
     if (result.failed || result.skipped) throw new Error("تعذر خصم كل خامات الوصفة. راجع صفحة الاستهلاك والمخزون ثم حاول ثانية");

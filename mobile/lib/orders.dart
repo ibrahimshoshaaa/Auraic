@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'order_whatsapp.dart';
+import 'payment_reviews.dart';
 import 'shipping_label.dart';
 import 'whatsapp_icon.dart';
 
@@ -46,6 +47,7 @@ class _OrdersPageState extends State<OrdersPage> {
       const PageIntro(title: 'الطلبات',
         subtitle: 'تابع التجهيز والشحن والتحصيل', icon: Icons.receipt_long_outlined),
       const SizedBox(height: 20),
+      if (widget.canWrite) Padding(padding: const EdgeInsets.only(bottom: 14), child: OutlinedButton.icon(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PaymentReviewsPage(api: widget.api))), icon: const Icon(Icons.payments_outlined), label: const Text('مراجعة تحويلات InstaPay والمحافظ'))),
       if (widget.canWrite) ...[
         SizedBox(width: double.infinity, height: 52,
           child: FilledButton.icon(onPressed: newOrder,
