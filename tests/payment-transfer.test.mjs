@@ -34,6 +34,8 @@ test('cash report recognizes verified transfers on review date', () => {
   assert.match(report, /entity: "PaymentReview", action: "REVIEW", createdAt: between/);
   assert.match(report, /meta.decision !== "APPROVED"/);
   assert.match(report, /transferOrderIds.has\(order.id\)/);
+  assert.match(report, /currency: store.currency, id: \{ in: reviewedIds \}/);
+  assert.match(report, /eligibleReviewIds.has\(review.entityId\)/);
 });
 
 test('mobile settings require transfer destination for enabled methods', () => {
