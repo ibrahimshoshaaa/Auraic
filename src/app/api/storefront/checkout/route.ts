@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { checkoutSchema } from "@/lib/storefront/config";
 import { quoteOrder, QuoteError } from "@/services/storefront/quote";
 import { CouponError } from "@/lib/storefront/coupons";
+import { getSetting } from "@/lib/settings";
 import { getPublicShop } from "@/services/storefront/catalog";
 
 export const maxDuration = 60;
@@ -24,6 +25,16 @@ export async function POST(request: NextRequest) {
     const input = parsed.data;
     const shop = await getPublicShop();
     if (!shop?.settings.enabled) return NextResponse.json({ error: "المتجر غير متاح للطلبات حاليًا" }, { status: 503 });
+    const method = input.paymentMethod;
+    const plan = method === "COD" ? "FULL" : input.paymentPlan;
+    const enabledKey = method === "INSTAPAY" ? "paymentInstaPayEnabled" : "paymentWalletEnabled";
+    if (method !== "COD" && (await getSetting(shop.id, enabledKey)) !== "true")
+      return NextResponse.json({ error: "طريقة الدفع غير متاحة حاليًا" }, { status: 422 });
+    if (method !== "COD" && input.transferReference.length < 5)
+      return NextResponse.json({ error: "أدخل رقم مرجع التحويل للمراجعة" }, { status: 422 });
+    const depositPercent = Number(await getSetting(shop.id, "paymentDepositPercent"));
+    if (!Number.isInteger(depositPercent) || depositPercent < 1 || depositPercent > 99)
+      return NextResponse.json({ error: "إعداد نسبة العربون غير صالح" }, { status: 503 });
     const secret = process.env.AUTH_SECRET;
     if (!secret) throw new Error("AUTH_SECRET missing");
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
@@ -46,6 +57,7 @@ export async function POST(request: NextRequest) {
         const { byId, totals, coupon, lineDiscounts } = await quoteOrder(tx, shop.id, shop.settings, input.items, input.governorate, input.couponCode, true);
         if (totals.totalCents !== input.expectedTotalCents) throw new QuoteError("Prices or shipping have changed. Review your bag and reapply your coupon.");
         finalTotal = totals.totalCents;
+        const requestedCents = method === "COD" ? 0 : plan === "FULL" ? finalTotal : Math.round(finalTotal * depositPercent / 100);
         if (coupon) await tx.coupon.update({ where: { id: coupon.id }, data: { usedCount: { increment: 1 } } });
         await tx.order.create({ data: {
           id: orderId, storeId: shop.id, orderNumber, financialStatus: "PENDING", fulfillmentStatus: "UNFULFILLED", manualStatus: "NEW",
@@ -60,7 +72,7 @@ export async function POST(request: NextRequest) {
           }) },
         } });
         await queueOrderPush(tx, shop.id, orderId);
-        await tx.auditLog.create({ data: { storeId: shop.id, action: "CREATE", entity: "Order", entityId: orderId, metadata: { source: "STOREFRONT", payment: "COD", note: input.note } } });
+        await tx.auditLog.create({ data: { storeId: shop.id, action: "CREATE", entity: "Order", entityId: orderId, metadata: { source: "STOREFRONT", payment: method, paymentPlan: plan, requestedCents, transferReference: method === "COD" ? null : input.transferReference, paymentReview: method === "COD" ? "NOT_REQUIRED" : "PENDING", note: input.note } } });
       });
     } catch (error) {
       if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002")) throw error;
