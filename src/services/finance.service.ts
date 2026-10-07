@@ -80,9 +80,14 @@ export async function processReturn(input: { storeId: string; returnId: string; 
     if (ret.order.manualStatus) {
       if (ret.items.length !== ret.order.items.length || ret.items.some(item => Number(item.quantity) !== Number(item.orderItem.quantity))) throw new Error("Manual return must include all items");
       const paidAmount = ret.order.financialStatus === "PAID" ? ret.order.total : ret.order.depositAmount;
+      const needsRefund = Number(paidAmount) > 0;
       const updated = await tx.order.updateMany({ where: { id: ret.orderId, manualStatus: "SHIPPING" }, data: {
-        manualStatus: "RETURNED", financialStatus: Number(ret.order.depositAmount) > 0 || ret.order.financialStatus === "PAID" ? "REFUNDED" : "VOIDED",
-        fulfillmentStatus: "UNFULFILLED", refunded: paidAmount, netSales: 0,
+        manualStatus: "RETURNED", financialStatus: needsRefund ? "REFUND_PENDING" : "VOIDED",
+        fulfillmentStatus: "UNFULFILLED", refunded: 0, netSales: 0,
+      } });
+      if (needsRefund) await tx.auditLog.create({ data: {
+        storeId: input.storeId, userId: input.userId, action: "REFUND_PENDING", entity: "OrderRefund", entityId: ret.orderId,
+        metadata: { amount: Number(paidAmount), returnId: ret.id, note: "Refund requires separate confirmation after money is sent" },
       } });
       if (!updated.count) throw new Error("تغيرت حالة الطلب؛ حدّث الصفحة وحاول ثانية");
       for (const item of ret.order.items) await tx.orderItem.update({ where: { id: item.id }, data: { refunded: item.finalLinePrice } });
