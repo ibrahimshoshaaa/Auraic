@@ -11,7 +11,7 @@ function metadata(value: unknown): Record<string, unknown> {
 export async function GET() {
   const session = await requireAuth();
   if (!["OWNER", "MANAGER"].includes(session.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  const logs = await db.auditLog.findMany({ where: { storeId: session.storeId, entity: "Order", action: "CREATE", entityId: { not: null } }, orderBy: { createdAt: "desc" }, take: 500 });
+  const logs = await db.auditLog.findMany({ where: { storeId: session.storeId, entity: "Order", action: "CREATE", entityId: { not: null } }, orderBy: { createdAt: "desc" }, take: 2000 });
   const transferLogs = logs.filter(log => ["INSTAPAY", "WALLET"].includes(String(metadata(log.metadata).payment)));
   const ids = transferLogs.map(log => log.entityId).filter((id): id is string => !!id);
   const [orders, reviews] = await Promise.all([
@@ -43,10 +43,12 @@ export async function POST(request: NextRequest) {
       if (!["INSTAPAY", "WALLET"].includes(String(meta.payment))) return "NOT_TRANSFER";
       const prior = await tx.auditLog.findFirst({ where: { storeId: session.storeId, entity: "PaymentReview", entityId: orderId } });
       if (prior) return "ALREADY_REVIEWED";
+      if (Number(order.depositAmount) > 0 || order.financialStatus !== "PENDING") return "PAYMENT_ALREADY_RECORDED";
       if (["RETURNED", "DELIVERED"].includes(order.manualStatus || "") || order.financialStatus !== "PENDING" || Number(order.depositAmount) > 0) return "CLOSED";
       const requested = Number(meta.requestedCents);
       const totalCents = Math.round(Number(order.total || 0) * 100);
       if (!Number.isSafeInteger(requested) || requested <= 0 || requested > totalCents) return "INVALID_AMOUNT";
+      if (meta.paymentPlan === "FULL" && requested !== totalCents) return "INVALID_AMOUNT";
       if (decision === "APPROVED") {
         const amount = new Prisma.Decimal(requested).div(100);
         await tx.order.update({ where: { id: orderId }, data: { depositAmount: amount, financialStatus: requested === totalCents ? "PAID" : "PARTIALLY_PAID" } });
