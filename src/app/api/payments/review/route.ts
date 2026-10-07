@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       if (!["INSTAPAY", "WALLET"].includes(String(meta.payment))) return "NOT_TRANSFER";
       const prior = await tx.auditLog.findFirst({ where: { storeId: session.storeId, entity: "PaymentReview", entityId: orderId } });
       if (prior) return "ALREADY_REVIEWED";
-      if (["RETURNED", "DELIVERED"].includes(order.manualStatus || "")) return "CLOSED";
+      if (["RETURNED", "DELIVERED"].includes(order.manualStatus || "") || order.financialStatus !== "PENDING" || Number(order.depositAmount) > 0) return "CLOSED";
       const requested = Number(meta.requestedCents);
       const totalCents = Math.round(Number(order.total || 0) * 100);
       if (!Number.isSafeInteger(requested) || requested <= 0 || requested > totalCents) return "INVALID_AMOUNT";
