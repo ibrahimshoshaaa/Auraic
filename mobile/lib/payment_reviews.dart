@@ -45,7 +45,7 @@ class _PaymentReviewsPageState extends State<PaymentReviewsPage> {
               const SizedBox(width: 8),
               OutlinedButton(onPressed: () => decide(p['id'].toString(), 'REJECTED'), child: const Text('رفض')),
             ]),
-          ]))));
+          ])));
       });
     }));
 }
