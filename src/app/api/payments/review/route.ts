@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
         const amount = new Prisma.Decimal(requested).div(100);
         await tx.order.update({ where: { id: orderId }, data: { depositAmount: amount, financialStatus: requested === totalCents ? "PAID" : "PARTIALLY_PAID" } });
       }
-      await tx.auditLog.create({ data: { storeId: session.storeId, userId: session.userId, action: "REVIEW", entity: "PaymentReview", entityId: orderId, metadata: { decision, requestedCents: requested, method: meta.payment } } });
+      await tx.auditLog.create({ data: { storeId: session.storeId, userId: session.userId, action: "REVIEW", entity: "PaymentReview", entityId: orderId, metadata: { decision, requestedCents: requested, method: String(meta.payment) } } });
       return "OK";
     });
     return NextResponse.json({ status: result }, { status: result === "OK" ? 200 : 409 });
