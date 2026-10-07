@@ -178,7 +178,7 @@ class _SettingsPageState extends State<SettingsPage> {
         if (widget.isOwner) FilledButton(onPressed: () async {
           final value = double.tryParse(amount.text);
           final percent = int.tryParse(depositPercent.text);
-          if (percent == null || percent < 1 || percent > 99 || (walletNumber.text.isNotEmpty && !RegExp(r'^01[0125][0-9]{8}
+          if (percent == null || percent < 1 || percent > 99 || (walletNumber.text.isNotEmpty && !RegExp(r'^01[0125][0-9]{8}' + r'\$').hasMatch(walletNumber.text)) || (instaPayEnabled && instaPayAddress.text.trim().isEmpty) || (walletEnabled && walletNumber.text.trim().isEmpty) || value == null || value < 0 || name.text.trim().length < 2) {
             showMessage(context, 'راجع اسم المتجر وتكلفة المرتجع'); return;
           }
           try { await perform(context, () => widget.api.put('/api/mobile/settings',
@@ -186,17 +186,6 @@ class _SettingsPageState extends State<SettingsPage> {
               'paymentInstaPayEnabled': instaPayEnabled, 'paymentWalletEnabled': walletEnabled,
               'paymentInstaPayAddress': instaPayAddress.text.trim(), 'paymentWalletNumber': walletNumber.text.trim(),
               'paymentDepositPercent': percent})); }
-          catch (_) { /* Error shown by helper. */ }
-        }, child: const Text('حفظ الإعدادات')),
-      ])));
-    }),
-  ]);
-}
-).hasMatch(walletNumber.text)) || (instaPayEnabled && instaPayAddress.text.trim().isEmpty) || (walletEnabled && walletNumber.text.trim().isEmpty) || value == null || value < 0 || name.text.trim().length < 2) {
-            showMessage(context, 'راجع اسم المتجر وتكلفة المرتجع'); return;
-          }
-          try { await perform(context, () => widget.api.put('/api/mobile/settings',
-            {'name': name.text.trim(), 'defaultReturnCost': value, 'costingEnabled': costing})); }
           catch (_) { /* Error shown by helper. */ }
         }, child: const Text('حفظ الإعدادات')),
       ])));
