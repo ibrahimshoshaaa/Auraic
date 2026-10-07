@@ -11,7 +11,7 @@ export async function getBusinessReport(storeId: string, options: { period?: str
   const store = await db.store.findUniqueOrThrow({ where: { id: storeId } });
   const range = getReportRange(store.timezone, options.period, options.from, options.to);
   const between = { gte: range.start, lt: range.endExclusive };
-  const [orders, returns, expenses, consumptions, balances, transactions, costingEnabled, unmatchedCurrencyOrders, orderConsumptions, manualPayments] = await Promise.all([
+  const [orders, returns, expenses, consumptions, balances, transactions, costingEnabled, unmatchedCurrencyOrders, orderConsumptions, manualPayments, approvedTransfers] = await Promise.all([
     db.order.findMany({ where: { storeId, currency: store.currency, occurredAt: between, OR: [{ manualStatus: null }, { manualStatus: "DELIVERED" }] }, include: { items: { include: { variant: { include: { product: true } }, returnItems: { where: { return: { processedAt: { not: null } } } } } } }, orderBy: { occurredAt: "asc" } }),
     db.return.findMany({ where: { storeId, createdAt: between, order: { currency: store.currency } }, include: { items: { include: { orderItem: { include: { variant: { include: { product: true } } } } } } } }),
     db.expense.findMany({ where: { storeId, currency: store.currency, date: between }, include: { category: true }, orderBy: { date: "desc" } }),
@@ -21,15 +21,25 @@ export async function getBusinessReport(storeId: string, options: { period?: str
     isCostingEnabled(storeId),
     db.order.count({ where: { storeId, currency: { not: store.currency }, occurredAt: between, OR: [{ manualStatus: null }, { manualStatus: "DELIVERED" }] } }),
     db.consumption.findMany({ where: { storeId, order: { currency: store.currency, occurredAt: between, OR: [{ manualStatus: null }, { manualStatus: "DELIVERED" }] } }, include: { items: { include: { material: true } }, recipeVersion: { include: { items: { include: { material: true } } } } } }),
-    db.order.findMany({ where: { storeId, currency: store.currency, manualStatus: { not: null }, OR: [{ occurredAt: between }, { manualStatus: "DELIVERED", updatedAt: between }] }, select: { occurredAt: true, updatedAt: true, manualStatus: true, depositAmount: true, total: true } }),
+    db.order.findMany({ where: { storeId, currency: store.currency, manualStatus: { not: null }, OR: [{ occurredAt: between }, { manualStatus: "DELIVERED", updatedAt: between }] }, select: { id: true, occurredAt: true, updatedAt: true, manualStatus: true, depositAmount: true, total: true } }),
+    db.auditLog.findMany({ where: { storeId, entity: "PaymentReview", action: "REVIEW", createdAt: between }, select: { entityId: true, metadata: true } }),
   ]);
 
-  // Deposits are cash received when the order is placed, even before delivery.
+  // Manual-order deposits are received at creation; verified transfers are received at approval.
   // The remaining balance is received on delivery; neither event changes sales recognition.
   const cash = { deposits: 0, deliveryBalances: 0, received: 0 };
+  const manualIds = manualPayments.map(order => order.id);
+  const transferCreationLogs = await db.auditLog.findMany({ where: { storeId, entity: "Order", action: "CREATE", entityId: { in: manualIds } }, select: { entityId: true, metadata: true } });
+  const transferOrderIds = new Set(transferCreationLogs.filter(log => { const m = log.metadata; return m && typeof m === "object" && !Array.isArray(m) && ["INSTAPAY", "WALLET"].includes(String(m.payment)); }).map(log => log.entityId));
+  for (const review of approvedTransfers) {
+    const meta = review.metadata;
+    if (!review.entityId || !meta || typeof meta !== "object" || Array.isArray(meta) || meta.decision !== "APPROVED") continue;
+    const amount = Number(meta.requestedCents);
+    if (Number.isSafeInteger(amount) && amount > 0) cash.deposits += amount / 100;
+  }
   for (const order of manualPayments) {
     const deposit = n(order.depositAmount);
-    if (order.occurredAt >= range.start && order.occurredAt < range.endExclusive) cash.deposits += deposit;
+    if (!transferOrderIds.has(order.id) && order.occurredAt >= range.start && order.occurredAt < range.endExclusive) cash.deposits += deposit;
     if (order.manualStatus === "DELIVERED" && order.updatedAt >= range.start && order.updatedAt < range.endExclusive) {
       cash.deliveryBalances += Math.max(0, n(order.total) - deposit);
     }
