@@ -25,8 +25,18 @@ export default function PaymentsPage() {
     finally { setBusy(null); }
   }
   async function openReceipt(id: string) {
-    try { const response = await fetch(`/api/payments/receipt?orderId=${encodeURIComponent(id)}`, { cache: "no-store" }); const body = await response.json(); if (!response.ok) throw new Error(body.error || "تعذر فتح الإيصال"); window.open(body.data.url, "_blank", "noopener,noreferrer"); }
-    catch (err) { setError(err instanceof Error ? err.message : "تعذر فتح الإيصال"); }
+    const preview = window.open("about:blank", "_blank");
+    if (preview) preview.opener = null;
+    try {
+      const response = await fetch(`/api/payments/receipt?orderId=${encodeURIComponent(id)}`, { cache: "no-store" });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "تعذر فتح الإيصال");
+      if (preview && !preview.closed) preview.location.replace(body.data.url);
+      else window.location.assign(body.data.url);
+    } catch (err) {
+      preview?.close();
+      setError(err instanceof Error ? err.message : "تعذر فتح الإيصال");
+    }
   }
   async function confirmRefund(id: string) {
     const reference = (refundRefs[id] || "").trim();
