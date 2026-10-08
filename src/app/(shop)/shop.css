@@ -400,3 +400,41 @@
 .shop-payment-copy:hover span{background:#FAEAB122}
 .shop-payment-copy:focus-visible{outline:2px solid #FAEAB1;outline-offset:4px;border-radius:4px}
 .shop-payment-recipient{display:block;margin-top:2px;font-size:12px;line-height:1.5;color:#cbc6d9}
+
+
+/* Soft corners on fragrance cards, without clipping or moving overlay controls. */
+.auraic-shop .shop-fragrance-card{
+  position:relative;
+  border-radius:14px;
+  overflow:hidden;
+  isolation:isolate;
+}
+.auraic-shop .shop-fragrance-card .shop-product-image{
+  border-radius:14px 14px 0 0;
+  overflow:hidden;
+}
+.auraic-shop .shop-fragrance-card .shop-card-photo-controls{
+  z-index:5;
+  pointer-events:none;
+}
+.auraic-shop .shop-fragrance-card .shop-card-photo-controls .shop-favorite,
+.auraic-shop .shop-fragrance-card .shop-card-photo-controls .shop-card-badges{
+  pointer-events:auto;
+}
+.auraic-shop .shop-fragrance-card .shop-card-badges{
+  min-width:0;
+  max-width:calc(100% - 49px);
+}
+.auraic-shop .shop-fragrance-card .shop-card-size,
+.auraic-shop .shop-fragrance-card .shop-card-custom-badge{
+  border-radius:8px;
+}
+.auraic-shop .shop-fragrance-card .shop-card-add{
+  border-radius:10px;
+}
+@media(max-width:760px){
+  .auraic-shop .shop-fragrance-card{border-radius:12px}
+  .auraic-shop .shop-fragrance-card .shop-product-image{border-radius:12px 12px 0 0}
+  .auraic-shop .shop-fragrance-card .shop-card-photo-controls{inset:14px 12px auto;height:30px}
+  .auraic-shop .shop-fragrance-card .shop-card-badges{max-width:calc(100% - 47px);gap:6px}
+}
