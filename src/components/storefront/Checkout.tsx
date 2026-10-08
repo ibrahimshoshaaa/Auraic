@@ -85,15 +85,15 @@ export function Checkout({ products, settings, checkout = false }: { products: S
       <div className="shop-payment-heading"><span className="shop-payment-step">03</span><div><h3 id="shop-payment-title">Payment method</h3><p>Choose how you would like to pay</p></div></div>
       <div className="shop-payment-choices" role="radiogroup" aria-label="Payment method">
         <label className={`shop-payment-choice ${paymentMethod === "COD" ? "is-selected" : ""}`}>
-          <input type="radio" name="paymentMethod" checked={paymentMethod === "COD"} onChange={() => setPaymentMethod("COD"); setCopiedDestination(false)}/>
+          <input type="radio" name="paymentMethod" checked={paymentMethod === "COD"} onChange={() => { setPaymentMethod("COD"); setCopiedDestination(false); }}/>
           <span className="shop-payment-choice-copy"><strong>Cash on delivery</strong><small>Pay when your order arrives</small></span><span className="shop-payment-radio" aria-hidden="true"/>
         </label>
         {paymentOptions?.instapay && <label className={`shop-payment-choice ${paymentMethod === "INSTAPAY" ? "is-selected" : ""}`}>
-          <input type="radio" name="paymentMethod" checked={paymentMethod === "INSTAPAY"} onChange={() => setPaymentMethod("INSTAPAY"); setCopiedDestination(false)}/>
+          <input type="radio" name="paymentMethod" checked={paymentMethod === "INSTAPAY"} onChange={() => { setPaymentMethod("INSTAPAY"); setCopiedDestination(false); }}/>
           <span className="shop-payment-choice-copy"><strong>InstaPay</strong><small>Bank transfer via InstaPay</small></span><span className="shop-payment-radio" aria-hidden="true"/>
         </label>}
         {paymentOptions?.wallet && <label className={`shop-payment-choice ${paymentMethod === "WALLET" ? "is-selected" : ""}`}>
-          <input type="radio" name="paymentMethod" checked={paymentMethod === "WALLET"} onChange={() => setPaymentMethod("WALLET"); setCopiedDestination(false)}/>
+          <input type="radio" name="paymentMethod" checked={paymentMethod === "WALLET"} onChange={() => { setPaymentMethod("WALLET"); setCopiedDestination(false); }}/>
           <span className="shop-payment-choice-copy"><strong>Mobile wallet</strong><small>Transfer from your mobile wallet</small></span><span className="shop-payment-radio" aria-hidden="true"/>
         </label>}
       </div>
