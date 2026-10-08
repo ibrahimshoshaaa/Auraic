@@ -1,4 +1,5 @@
 import { after } from "next/server";
+import { v2 as cloudinary } from "cloudinary";
 import { queueOrderPush, deliverOrderPushes } from "@/services/notifications/orders";
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac } from "node:crypto";
@@ -37,6 +38,15 @@ export async function POST(request: NextRequest) {
     const depositAmount = Number(await getSetting(shop.id, "paymentDepositAmount"));
     if (method !== "COD" && (!Number.isInteger(depositAmount) || depositAmount < 1 || depositAmount > 1000000))
       return NextResponse.json({ error: "إعداد مبلغ المقدم غير صالح" }, { status: 503 });
+    if (method !== "COD") {
+      const expected = `auraic/payment-receipts/${shop.id}/${input.requestId}`;
+      if (input.receiptId !== expected) return NextResponse.json({ error: "ارفع صورة إيصال التحويل" }, { status: 422 });
+      const cloud_name = process.env.CLOUDINARY_CLOUD_NAME, api_key = process.env.CLOUDINARY_API_KEY, api_secret = process.env.CLOUDINARY_API_SECRET;
+      if (!cloud_name || !api_key || !api_secret) return NextResponse.json({ error: "خدمة الإيصالات غير متاحة" }, { status: 503 });
+      cloudinary.config({ cloud_name, api_key, api_secret, secure: true });
+      try { await cloudinary.api.resource(expected, { type: "authenticated", resource_type: "image" }); }
+      catch { return NextResponse.json({ error: "تعذر التحقق من صورة الإيصال. ارفعها مرة أخرى" }, { status: 422 }); }
+    }
     const secret = process.env.AUTH_SECRET;
     if (!secret) throw new Error("AUTH_SECRET missing");
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
@@ -75,7 +85,7 @@ export async function POST(request: NextRequest) {
           }) },
         } });
         await queueOrderPush(tx, shop.id, orderId);
-        await tx.auditLog.create({ data: { storeId: shop.id, action: "CREATE", entity: "Order", entityId: orderId, metadata: { source: "STOREFRONT", payment: method, paymentPlan: plan, requestedCents, transferReference: method === "COD" ? null : input.transferReference, paymentReview: method === "COD" ? "NOT_REQUIRED" : "PENDING", note: input.note } } });
+        await tx.auditLog.create({ data: { storeId: shop.id, action: "CREATE", entity: "Order", entityId: orderId, metadata: { source: "STOREFRONT", payment: method, paymentPlan: plan, requestedCents, transferReference: method === "COD" ? null : input.transferReference, receiptId: method === "COD" ? null : input.receiptId, paymentReview: method === "COD" ? "NOT_REQUIRED" : "PENDING", note: input.note } } });
       });
     } catch (error) {
       if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002")) throw error;
