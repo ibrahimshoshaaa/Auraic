@@ -148,8 +148,20 @@ class _OrdersPageState extends State<OrdersPage> {
             str(o['id']).startsWith('web_') ? 'متجر Auraic' : 'طلب محلي'),
           _detailRow(Icons.payments_outlined, 'الدفع',
             paymentStages[str(o['financialStatus'])] ?? str(o['financialStatus'])),
+          if (o['paymentTransfer'] is Map && str(o['financialStatus']) == 'PENDING')
+            _detailRow(Icons.hourglass_top_rounded, 'عربون بانتظار المراجعة',
+              '${statistic((o['paymentTransfer'] as Map)['requestedAmount'])} $currency'),
+          if (o['paymentTransfer'] is Map && str(o['financialStatus']) == 'PENDING')
+            Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: OutlinedButton.icon(
+              onPressed: () async {
+                await Navigator.of(context).push(MaterialPageRoute(builder: (_) => PaymentReviewsPage(api: widget.api)));
+                reload();
+              },
+              icon: const Icon(Icons.fact_check_outlined),
+              label: const Text('فتح مراجعة التحويل'),
+            )),
           if (str(o['depositAmount']).isNotEmpty)
-            _detailRow(Icons.account_balance_wallet_outlined, 'الديبوزت',
+            _detailRow(Icons.account_balance_wallet_outlined, 'العربون المستلم',
               '${str(o['depositAmount'])} $currency'),
           if (str(o['couponCode']).isNotEmpty) _detailRow(Icons.local_offer_outlined, 'الكوبون', '${o['couponCode']} · خصم ${statistic(o['discount'])} $currency'),
           const SizedBox(height: 14),
