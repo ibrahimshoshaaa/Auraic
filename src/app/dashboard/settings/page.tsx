@@ -16,7 +16,7 @@ const settingsSchema = z.object({
   paymentInstaPayAddress: z.string().trim().regex(/^$|^01[0125]\d{8}$/),
   paymentInstaPayAccountName: z.string().trim().max(100),
   paymentWalletNumber: z.string().trim().regex(/^$|^01[0125]\d{8}$/),
-  paymentDepositPercent: z.coerce.number().int().min(1).max(99),
+  paymentDepositAmount: z.coerce.number().int().min(1).max(1000000),
 });
 
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ saved?: string; error?: string }> }) {
@@ -25,7 +25,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     db.store.findUniqueOrThrow({ where: { id: session.storeId }, select: { name: true, currency: true, timezone: true, createdAt: true } }),
     getSetting(session.storeId, "defaultReturnCost"),
     getSetting(session.storeId, "costingEnabled"),
-    Promise.all(["paymentInstaPayEnabled", "paymentWalletEnabled", "paymentInstaPayAddress", "paymentWalletNumber", "paymentDepositPercent", "paymentInstaPayAccountName"].map(key => getSetting(session.storeId, key as "paymentInstaPayEnabled"))),
+    Promise.all(["paymentInstaPayEnabled", "paymentWalletEnabled", "paymentInstaPayAddress", "paymentWalletNumber", "paymentDepositAmount", "paymentInstaPayAccountName"].map(key => getSetting(session.storeId, key as "paymentInstaPayEnabled"))),
     db.materialType.findMany({ where: { storeId: session.storeId, active: true }, select: { id: true, name: true, code: true }, orderBy: { name: "asc" } }),
   ]);
   const params = await searchParams;
@@ -43,14 +43,14 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       paymentInstaPayAddress: form.get("paymentInstaPayAddress"),
       paymentInstaPayAccountName: form.get("paymentInstaPayAccountName"),
       paymentWalletNumber: form.get("paymentWalletNumber"),
-      paymentDepositPercent: form.get("paymentDepositPercent"),
+      paymentDepositAmount: form.get("paymentDepositAmount"),
     });
     if (!parsed.success) redirect("/dashboard/settings?error=invalid");
     const value = parsed.data;
     await db.$transaction(async tx => {
       const before = await tx.store.findUniqueOrThrow({ where: { id: actor.storeId }, select: { name: true } });
       await tx.store.update({ where: { id: actor.storeId }, data: { name: value.name } });
-      for (const [key, next] of [["defaultReturnCost", String(value.defaultReturnCost)], ["costingEnabled", String(value.costingEnabled)], ["paymentInstaPayEnabled", String(value.paymentInstaPayEnabled)], ["paymentWalletEnabled", String(value.paymentWalletEnabled)], ["paymentInstaPayAddress", value.paymentInstaPayAddress], ["paymentInstaPayAccountName", value.paymentInstaPayAccountName], ["paymentWalletNumber", value.paymentWalletNumber], ["paymentDepositPercent", String(value.paymentDepositPercent)]] as const) {
+      for (const [key, next] of [["defaultReturnCost", String(value.defaultReturnCost)], ["costingEnabled", String(value.costingEnabled)], ["paymentInstaPayEnabled", String(value.paymentInstaPayEnabled)], ["paymentWalletEnabled", String(value.paymentWalletEnabled)], ["paymentInstaPayAddress", value.paymentInstaPayAddress], ["paymentInstaPayAccountName", value.paymentInstaPayAccountName], ["paymentWalletNumber", value.paymentWalletNumber], ["paymentDepositAmount", String(value.paymentDepositAmount)]] as const) {
         const previous = await tx.setting.findUnique({ where: { storeId_key: { storeId: actor.storeId, key } } });
         await tx.setting.upsert({ where: { storeId_key: { storeId: actor.storeId, key } }, update: { value: next }, create: { storeId: actor.storeId, key, value: next } });
         if (previous?.value !== next) await tx.auditLog.create({ data: { storeId: actor.storeId, userId: actor.userId, action: "UPDATE", entity: "Setting", entityId: key, before: { value: previous?.value ?? null }, after: { value: next } } });
@@ -90,7 +90,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <label>رقم InstaPay<input name="paymentInstaPayAddress" inputMode="numeric" pattern="01[0125][0-9]{8}" placeholder="01xxxxxxxxx" defaultValue={paymentValues[2]} maxLength={120} disabled={session.role !== "OWNER"} className="mt-2 block w-full rounded-xl border p-3"/></label>
             <label>اسم صاحب حساب InstaPay (يظهر للعميل كإرشاد)<input name="paymentInstaPayAccountName" defaultValue={paymentValues[5]} maxLength={100} placeholder="اسم المستلم كما يظهر عند التحويل" disabled={session.role !== "OWNER"} className="mt-2 block w-full rounded-xl border p-3"/></label>
             <label>رقم المحفظة<input name="paymentWalletNumber" defaultValue={paymentValues[3]} pattern="01[0125][0-9]{8}" disabled={session.role !== "OWNER"} className="mt-2 block w-full rounded-xl border p-3"/></label>
-            <label>نسبة العربون (%)<input name="paymentDepositPercent" type="number" min="1" max="99" required defaultValue={paymentValues[4]} disabled={session.role !== "OWNER"} className="mt-2 block w-full rounded-xl border p-3"/></label>
+            <label>مبلغ المقدم الثابت (جنيه)<input name="paymentDepositAmount" type="number" min="1" max="1000000" required defaultValue={paymentValues[4]} disabled={session.role !== "OWNER"} className="mt-2 block w-full rounded-xl border p-3"/></label>
           </div>
         </section>
         {session.role === "OWNER" ? <button type="submit" className="rounded-xl bg-[#191735] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#302d58]">حفظ التغييرات</button> : <p className="text-sm text-slate-500">تعديل هذه الإعدادات متاح لمالك المتجر فقط.</p>}
