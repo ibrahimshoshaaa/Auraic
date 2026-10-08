@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/services.dart';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
@@ -20,7 +21,36 @@ class ErpApi {
   static const _tokenKey = 'erp_mobile_session';
   final http.Client _client;
 
-  Future<bool> get hasSession async => (await _storage.read(key: _tokenKey)) != null;
+  Future<bool> get hasSession async => (await _readSessionToken()) != null;
+
+  bool _isInvalidKey(PlatformException e) {
+    final message = '${e.code} ${e.message} ${e.details}'.toLowerCase();
+    return message.contains('bad_decrypt') ||
+        message.contains('badpaddingexception') ||
+        message.contains('invalidkeyexception') ||
+        message.contains('keypermanentlyinvalidatedexception') ||
+        message.contains('failed to unwrap key');
+  }
+
+  Future<String?> _readSessionToken() async {
+    try {
+      return await _storage.read(key: _tokenKey);
+    } on PlatformException catch (e) {
+      if (!_isInvalidKey(e)) rethrow;
+      try { await _storage.deleteAll(); } catch (_) {}
+      return null;
+    }
+  }
+
+  Future<void> _saveSessionToken(String token) async {
+    try {
+      await _storage.write(key: _tokenKey, value: token);
+    } on PlatformException catch (e) {
+      if (!_isInvalidKey(e)) rethrow;
+      try { await _storage.deleteAll(); } catch (_) {}
+      throw const ApiException('تعذر حفظ جلسة الدخول. امسح بيانات التطبيق من إعدادات الهاتف ثم حاول مجددًا.', 500);
+    }
+  }
 
   Future<dynamic> get(String path) => _request('GET', path);
 
@@ -34,7 +64,7 @@ class ErpApi {
 
   Future<String> uploadProductImage(List<int> bytes, String filename) async {
     if (bytes.length > 3 * 1024 * 1024) throw const ApiException('اختر صورة حتى 3 ميجابايت', 422);
-    final token = await _storage.read(key: _tokenKey);
+    final token = await _readSessionToken();
     final request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/api/admin/storefront/images'));
     if (token != null) request.headers['Authorization'] = 'Bearer $token';
     request.files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
@@ -65,7 +95,7 @@ class ErpApi {
       'password': password,
     }) as Map<String, dynamic>;
     final data = result['data'] as Map<String, dynamic>;
-    await _storage.write(key: _tokenKey, value: data['token'] as String);
+    await _saveSessionToken(data['token'] as String);
   }
 
   Future<void> logout() async {
@@ -81,7 +111,7 @@ class ErpApi {
   Future<dynamic> _request(String method, String path,
       {Map<String, dynamic>? body}) async {
     if (_baseUrl.isEmpty) throw const ApiException('اضبط API_BASE_URL أثناء بناء التطبيق للاستضافة الجديدة', 503);
-    final token = await _storage.read(key: _tokenKey);
+    final token = await _readSessionToken();
     final headers = <String, String>{
       'Accept': 'application/json',
       if (body != null) 'Content-Type': 'application/json',
