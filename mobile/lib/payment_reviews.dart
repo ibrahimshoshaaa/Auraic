@@ -32,6 +32,7 @@ class _PaymentReviewsPageState extends State<PaymentReviewsPage> {
   Future<void> editDeposit() async {
     try {
       final response = await widget.api.get("/api/payments/deposit-settings");
+      if (!mounted) return;
       final data = response["data"] as Map;
       if (data["canEdit"] != true) return;
       final controller = TextEditingController(text: data["depositAmount"].toString());

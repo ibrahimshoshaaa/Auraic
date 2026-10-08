@@ -31,6 +31,7 @@ export function Checkout({ products, settings, checkout = false }: { products: S
   const signature = JSON.stringify({ items: lines.map(l => ({ variantId: l.variantId, quantity: l.quantity })), governorate, prices: products.flatMap(p => p.variants.map(v => [v.id, v.price])) });
   const activeQuote = quote?.signature === signature ? quote : null;
   const requestId = useRef<string | null>(null);
+  const uploadedReceipt = useRef<{ requestId: string; receiptId: string } | null>(null);
   const appliedCode = quote?.code;
   const quotedSignature = quote?.signature;
   useEffect(() => {
@@ -70,11 +71,16 @@ export function Checkout({ products, settings, checkout = false }: { products: S
       let receiptId = "";
       if (paymentMethod !== "COD") {
         if (!receiptFile) throw new Error("Upload a payment receipt before placing your order.");
-        const receiptForm = new FormData(); receiptForm.set("file", receiptFile); receiptForm.set("requestId", requestId.current);
-        const uploaded = await fetch("/api/storefront/payment-receipt", { method: "POST", body: receiptForm });
-        const uploadResult = await uploaded.json();
-        if (!uploaded.ok) throw new Error(uploadResult.error || "Unable to upload payment receipt.");
-        receiptId = uploadResult.data.receiptId;
+        if (uploadedReceipt.current?.requestId === requestId.current) {
+          receiptId = uploadedReceipt.current.receiptId;
+        } else {
+          const receiptForm = new FormData(); receiptForm.set("file", receiptFile); receiptForm.set("requestId", requestId.current);
+          const uploaded = await fetch("/api/storefront/payment-receipt", { method: "POST", body: receiptForm });
+          const uploadResult = await uploaded.json();
+          if (!uploaded.ok) throw new Error(uploadResult.error || "Unable to upload payment receipt.");
+          receiptId = uploadResult.data.receiptId;
+          uploadedReceipt.current = { requestId: requestId.current, receiptId };
+        }
       }
       const response = await fetch("/api/storefront/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
         couponCode: activeQuote?.code || "", note, paymentMethod, paymentPlan, transferReference, receiptId, requestId: requestId.current, expectedTotalCents: totals.totalCents, name: data.get("name"), phone: data.get("phone"), governorate: data.get("governorate"), address: data.get("address"),
