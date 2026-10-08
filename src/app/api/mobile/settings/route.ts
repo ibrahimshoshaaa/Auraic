@@ -8,6 +8,7 @@ const schema = z.object({ name: z.string().trim().min(2).max(80),
   defaultReturnCost: z.number().finite().min(0).max(1000000), costingEnabled: z.boolean(),
   paymentInstaPayEnabled: z.boolean(), paymentWalletEnabled: z.boolean(),
   paymentInstaPayAddress: z.string().trim().max(120), paymentWalletNumber: z.string().trim().regex(/^$|^01[0125]\d{8}$/),
+  paymentInstaPayAccountName: z.string().trim().max(100), paymentWalletAccountName: z.string().trim().max(100),
   paymentDepositPercent: z.number().int().min(1).max(99) });
 
 export async function GET() {
@@ -18,12 +19,12 @@ export async function GET() {
         select: { name: true, currency: true, timezone: true } }),
       getSetting(session.storeId, "defaultReturnCost"),
       getSetting(session.storeId, "costingEnabled"),
-      Promise.all((["paymentInstaPayEnabled", "paymentWalletEnabled", "paymentInstaPayAddress", "paymentWalletNumber", "paymentDepositPercent"] as const).map(key => getSetting(session.storeId, key))),
+      Promise.all((["paymentInstaPayEnabled", "paymentWalletEnabled", "paymentInstaPayAddress", "paymentWalletNumber", "paymentDepositPercent", "paymentInstaPayAccountName", "paymentWalletAccountName"] as const).map(key => getSetting(session.storeId, key))),
     ]);
     return NextResponse.json({ data: { ...store, defaultReturnCost: Number(returnCost),
       costingEnabled: costingEnabled === "true",
       paymentInstaPayEnabled: paymentValues[0] === "true", paymentWalletEnabled: paymentValues[1] === "true",
-      paymentInstaPayAddress: paymentValues[2], paymentWalletNumber: paymentValues[3], paymentDepositPercent: Number(paymentValues[4]) } }, { headers: { "Cache-Control": "no-store" } });
+      paymentInstaPayAddress: paymentValues[2], paymentWalletNumber: paymentValues[3], paymentDepositPercent: Number(paymentValues[4]), paymentInstaPayAccountName: paymentValues[5], paymentWalletAccountName: paymentValues[6] } }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) { return failure(error); }
 }
 
@@ -44,6 +45,7 @@ export async function PUT(request: NextRequest) {
         ["costingEnabled", String(input.costingEnabled)],
         ["paymentInstaPayEnabled", String(input.paymentInstaPayEnabled)], ["paymentWalletEnabled", String(input.paymentWalletEnabled)],
         ["paymentInstaPayAddress", input.paymentInstaPayAddress], ["paymentWalletNumber", input.paymentWalletNumber],
+        ["paymentInstaPayAccountName", input.paymentInstaPayAccountName], ["paymentWalletAccountName", input.paymentWalletAccountName],
         ["paymentDepositPercent", String(input.paymentDepositPercent)]]) {
         const before = await tx.setting.findUnique({ where: { storeId_key: { storeId: session.storeId, key } } });
         await tx.setting.upsert({ where: { storeId_key: { storeId: session.storeId, key } },
