@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     cloudinary.config({ cloud_name, api_key, api_secret, secure: true });
     const publicId = `auraic/payment-receipts/${shop.id}/${requestId}`;
     const image = await new Promise<UploadApiResponse>((resolve, reject) => {
-      cloudinary.uploader.upload_stream({ public_id: publicId, type: "authenticated", resource_type: "image", overwrite: true, allowed_formats: ["jpg", "jpeg", "png"], invalidate: true }, (error, result) => {
+      cloudinary.uploader.upload_stream({ public_id: publicId, type: "authenticated", resource_type: "image", overwrite: false, allowed_formats: ["jpg", "jpeg", "png"], invalidate: true }, (error, result) => {
         if (error || !result) reject(error || new Error("Upload failed")); else resolve(result);
       }).end(buffer);
     });
