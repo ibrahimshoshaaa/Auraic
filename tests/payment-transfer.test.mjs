@@ -22,7 +22,9 @@ test('checkout records transfer request without immediately counting it as paid'
   assert.match(checkout, /financialStatus: "PENDING"/);
   assert.match(checkout, /paymentReview: method === "COD" \? "NOT_REQUIRED" : "PENDING"/);
   assert.match(checkout, /requestedCents/);
-  assert.match(checkout, /method !== "COD" && \(!Number\.isInteger\(depositPercent\)/);
+  assert.match(checkout, /method !== "COD" && \(!Number\.isInteger\(depositAmount\)/);
+  assert.match(checkout, /depositAmount \* 100/);
+  assert.match(checkout, /input.receiptId !== expected/);
 });
 
 test('manual review requires actual approval and refuses duplicate receipts', () => {
