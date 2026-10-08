@@ -91,3 +91,21 @@ test('review sections default hidden, retain media while disabled and validate l
   assert.throws(() => resolveShopSettings({ ...saved, bloggerReviewVideos: ['http://example.com/review.mp4'] }));
   assert.throws(() => resolveShopSettings({ ...saved, customerReviewImages: Array(21).fill('https://example.com/review.png') }));
 });
+
+
+test('electronic checkout requires the sender mobile and keeps COD optional', async () => {
+  const { checkoutSchema } = await import('../src/lib/storefront/config.ts');
+  const input = { requestId: '11111111-1111-4111-8111-111111111111', name: 'Customer', expectedTotalCents: 10000, phone: '01012345678', governorate: 'القاهرة', address: 'Building 12, Main Street', items: [{ variantId: 'variant', quantity: 1 }] };
+  assert.equal(checkoutSchema.safeParse(input).success, true);
+  for (const paymentMethod of ['INSTAPAY', 'WALLET']) {
+    for (const transferReference of ['', 'TXN-12345', '0101234567', '010123456789', '01312345678']) {
+      assert.equal(checkoutSchema.safeParse({ ...input, paymentMethod, transferReference }).success, false);
+    }
+    for (const prefix of ['010', '011', '012', '015']) {
+      assert.equal(checkoutSchema.parse({ ...input, paymentMethod, transferReference: prefix + '12345678' }).transferReference, prefix + '12345678');
+    }
+    for (const transferReference of ['٠١٠١٢٣٤٥٦٧٨', '۰۱۰۱۲۳۴۵۶۷۸', ' 01012345678 ']) {
+      assert.equal(checkoutSchema.parse({ ...input, paymentMethod, transferReference }).transferReference, '01012345678');
+    }
+  }
+});

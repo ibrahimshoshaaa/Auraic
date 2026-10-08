@@ -96,7 +96,7 @@ class _PaymentReviewsPageState extends State<PaymentReviewsPage> {
             Text('طلب ' + p['orderNumber'].toString() + ' — ' + p['customerRef'].toString(), style: const TextStyle(fontWeight: FontWeight.bold)),
             Text(p['method'].toString() + ' · ' + p['plan'].toString() + ' · ' + p['review'].toString()),
             Text('المبلغ: ' + p['requestedAmount'].toString() + ' EGP'),
-            Text('مرجع التحويل: ' + p['reference'].toString()),
+            Text(p['senderPhone'] != null ? 'رقم الهاتف المحوّل منه: ' + p['senderPhone'].toString() : 'مرجع التحويل: ' + p['reference'].toString()),
             if (p['hasReceipt'] == true) TextButton.icon(onPressed: () => openReceipt(p['id'].toString()), icon: const Icon(Icons.receipt_long), label: const Text('عرض صورة الإيصال')),
             if (p['review'] == 'PENDING') Row(children: [
               FilledButton(onPressed: () => decide(p['id'].toString(), 'APPROVED'), child: const Text('تأكيد الوصول')),

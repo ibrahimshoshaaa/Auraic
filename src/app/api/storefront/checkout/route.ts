@@ -33,8 +33,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "طريقة الدفع غير متاحة حاليًا" }, { status: 422 });
     if (method !== "COD" && !(await getSetting(shop.id, method === "INSTAPAY" ? "paymentInstaPayAddress" : "paymentWalletNumber")))
       return NextResponse.json({ error: "بيانات التحويل غير مكتملة" }, { status: 422 });
-    if (method !== "COD" && input.transferReference.length < 5)
-      return NextResponse.json({ error: "أدخل رقم مرجع التحويل للمراجعة" }, { status: 422 });
     const depositAmount = Number(await getSetting(shop.id, "paymentDepositAmount"));
     if (method !== "COD" && (!Number.isInteger(depositAmount) || depositAmount < 1 || depositAmount > 1000000))
       return NextResponse.json({ error: "إعداد مبلغ المقدم غير صالح" }, { status: 503 });
@@ -85,7 +83,7 @@ export async function POST(request: NextRequest) {
           }) },
         } });
         await queueOrderPush(tx, shop.id, orderId);
-        await tx.auditLog.create({ data: { storeId: shop.id, action: "CREATE", entity: "Order", entityId: orderId, metadata: { source: "STOREFRONT", payment: method, paymentPlan: plan, requestedCents, transferReference: method === "COD" ? null : input.transferReference, receiptId: method === "COD" ? null : input.receiptId, paymentReview: method === "COD" ? "NOT_REQUIRED" : "PENDING", note: input.note } } });
+        await tx.auditLog.create({ data: { storeId: shop.id, action: "CREATE", entity: "Order", entityId: orderId, metadata: { source: "STOREFRONT", payment: method, paymentPlan: plan, requestedCents, transferReference: method === "COD" ? null : input.transferReference, senderPhone: method === "COD" ? null : input.transferReference, receiptId: method === "COD" ? null : input.receiptId, paymentReview: method === "COD" ? "NOT_REQUIRED" : "PENDING", note: input.note } } });
       });
     } catch (error) {
       if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002")) throw error;

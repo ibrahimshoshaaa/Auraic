@@ -69,7 +69,7 @@ export const checkoutSchema = z.object({
   note: z.string().trim().max(500).default(""),
   paymentMethod: z.enum(["COD", "INSTAPAY", "WALLET"]).default("COD"),
   paymentPlan: z.enum(["FULL", "DEPOSIT"]).default("FULL"),
-  transferReference: z.string().trim().max(120).default(""),
+  transferReference: z.string().trim().max(120).default("").transform(value => value.replace(/[٠-٩]/g, digit => String(digit.charCodeAt(0) - 1632)).replace(/[۰-۹]/g, digit => String(digit.charCodeAt(0) - 1776))),
   receiptId: z.string().trim().max(250).default(""),
   requestId: z.uuid(), name: z.string().trim().min(2).max(100),
   couponCode: z.string().trim().toUpperCase().max(40).default(""),
@@ -77,6 +77,10 @@ export const checkoutSchema = z.object({
   phone: z.string().regex(/^01[0125]\d{8}$/, "راجع رقم الموبايل المصري"),
   governorate: z.enum(governorates), address: z.string().trim().min(10).max(400),
   items: z.array(z.object({ variantId: z.string().min(1).max(100), quantity: z.number().int().min(1).max(20) })).min(1).max(20),
+}).superRefine((input, context) => {
+  if (input.paymentMethod !== "COD" && !/^01[0125]\d{8}$/.test(input.transferReference)) {
+    context.addIssue({ code: "custom", path: ["transferReference"], message: "أدخل رقم الموبايل المصري الذي حوّلت منه (11 رقمًا)" });
+  }
 });
 
 // Resolve retired default copy once at the settings boundary so editors and customers agree.
