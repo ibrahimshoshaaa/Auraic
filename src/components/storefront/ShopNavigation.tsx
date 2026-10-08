@@ -1,11 +1,13 @@
 "use client";
 import { createContext, useContext, useEffect, useTransition, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { RouteLoading } from "./RouteLoading";
 const NavigationContext = createContext<(url: string) => void>(() => {});
 export function useShopNavigation() { return useContext(NavigationContext); }
 export function ShopNavigation({ children }: { children: ReactNode }) {
-  const router = useRouter(); const [pending, startTransition] = useTransition();
+  const router = useRouter(); const pathname = usePathname(); const [pending, startTransition] = useTransition();
+  // Reset the viewport when navigating between storefront pages, including product details.
+  useEffect(() => { window.scrollTo({ top: 0, left: 0, behavior: "instant" }); }, [pathname]);
   useEffect(() => {
     function navigate(event: MouseEvent) {
       if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || !(event.target instanceof Element)) return;
@@ -15,10 +17,10 @@ export function ShopNavigation({ children }: { children: ReactNode }) {
       if (next.origin !== window.location.origin || !["http:", "https:"].includes(next.protocol)) return;
       if (next.pathname === window.location.pathname && next.search === window.location.search) return;
       event.preventDefault();
-      if (!pending) startTransition(() => router.push(next.pathname + next.search + next.hash));
+      if (!pending) startTransition(() => router.push(next.pathname + next.search + next.hash, { scroll: true }));
     }
     document.addEventListener("click", navigate, true);
     return () => document.removeEventListener("click", navigate, true);
   }, [router, pending]);
-  return <NavigationContext.Provider value={url => startTransition(() => router.push(url))}>{children}{pending && <RouteLoading/>}</NavigationContext.Provider>;
+  return <NavigationContext.Provider value={url => startTransition(() => router.push(url, { scroll: true }))}>{children}{pending && <RouteLoading/>}</NavigationContext.Provider>;
 }
