@@ -561,3 +561,6 @@
 .auraic-shop .shop-samples-summary>.shop-samples-total{display:block;margin:0!important;padding:0!important;min-height:0;font-size:21px;line-height:1.35;letter-spacing:0}
 .auraic-shop .shop-samples-summary>span{line-height:1.35}
 @media(max-width:760px){.auraic-shop .shop-samples-summary{margin:16px 0 12px;padding:14px 16px}}
+
+/* Match wishlist empty-state icon to the navigation heart. */
+.auraic-shop .shop-wishlist-heart svg{display:block;width:35px;height:35px;stroke-width:1.5;fill:none}
