@@ -331,3 +331,60 @@
 .shop-payment-reference input:focus{outline:2px solid #FAEAB1;outline-offset:1px}
 .shop-payment-notice{margin:0!important;font-size:12px;line-height:1.6;color:#cbc6d9}
 @media(max-width:600px){.auraic-shop .shop-payment-panel{padding:18px 15px;border-radius:15px}.shop-payment-plan-choices{grid-template-columns:1fr}.shop-payment-plan{min-height:64px}.shop-payment-choice{min-height:68px}}
+
+
+/* Checkout refinement: match the payment cards throughout the journey. */
+.auraic-shop .shop-checkout-page{max-width:1250px;margin-inline:auto}
+.auraic-shop .shop-checkout-redesign{gap:24px;align-items:start}
+.auraic-shop .shop-checkout-redesign .shop-checkout-form{background:#19183B;border:1px solid #FAEAB12b;border-radius:18px;padding:28px;box-shadow:none}
+.auraic-shop .shop-checkout-redesign .shop-checkout-summary{background:#242140;border:1px solid #FAEAB13b;border-radius:18px;padding:26px;box-shadow:none}
+.auraic-shop .shop-checkout-summary>header{border-color:#FAEAB12b}
+.auraic-shop .shop-checkout-summary>header h2{font-weight:700;color:#FAEAB1}
+.auraic-shop .shop-checkout-summary>header>a{color:#FAEAB1;border-color:#FAEAB155}
+.auraic-shop .shop-checkout-summary .shop-checkout-products summary{padding:10px 0 15px;font-size:13px}
+.auraic-shop .shop-checkout-summary .shop-total{border-color:#FAEAB133}
+.auraic-shop .shop-checkout-summary .shop-total strong{color:#FAEAB1}
+.auraic-shop .shop-checkout-redesign .shop-checkout-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:0 0 22px;margin-bottom:26px;border-color:#FAEAB12b}
+.auraic-shop .shop-checkout-steps>a,.auraic-shop .shop-checkout-steps>b,.auraic-shop .shop-checkout-steps>span{display:flex;justify-content:center;align-items:center;min-width:0;gap:7px;white-space:nowrap;font-size:11px;font-weight:600}
+.auraic-shop .shop-checkout-steps>a>span,.auraic-shop .shop-checkout-steps>b>span,.auraic-shop .shop-checkout-steps>span>span{width:27px;height:27px;flex:0 0 27px;border-radius:8px;border-color:#FAEAB15b}
+.auraic-shop .shop-checkout-steps>b{color:#FAEAB1}
+.auraic-shop .shop-checkout-steps>b>span{color:#19183B}
+.auraic-shop .shop-delivery-heading{padding:0 0 19px;margin-bottom:22px;border-bottom:1px solid #FAEAB12b}
+.auraic-shop .shop-delivery-heading h2{color:#FAEAB1;font-size:clamp(23px,3vw,30px);font-weight:700;line-height:1.25;margin:7px 0}
+.auraic-shop .shop-delivery-heading>p:last-child{font-size:13px;line-height:1.65;margin:0;color:#c8c2d8}
+.auraic-shop .shop-checkout-redesign .shop-delivery-fields{gap:18px}
+.auraic-shop .shop-checkout-redesign .shop-delivery-fields>label{display:grid;gap:9px;font-size:13px;font-weight:650;color:#fff8e9}
+.auraic-shop .shop-checkout-redesign .shop-delivery-fields input,.auraic-shop .shop-checkout-redesign .shop-delivery-fields select,.auraic-shop .shop-checkout-redesign .shop-delivery-fields textarea{min-height:52px;padding:13px 15px;border:1px solid #FAEAB14b;border-radius:11px;background:#242140;color:#fff8e9;line-height:1.5;transition:border-color .15s,box-shadow .15s}
+.auraic-shop .shop-checkout-redesign .shop-delivery-fields textarea{min-height:92px}
+.auraic-shop .shop-checkout-redesign .shop-delivery-fields input::placeholder,.auraic-shop .shop-checkout-redesign .shop-delivery-fields textarea::placeholder{color:#b8b2ca;opacity:1}
+.auraic-shop .shop-checkout-redesign .shop-delivery-fields :is(input,select,textarea):focus{outline:2px solid #FAEAB1;outline-offset:1px;border-color:#FAEAB1}
+.auraic-shop .shop-checkout-redesign .shop-delivery-fields select{color-scheme:dark}
+.auraic-shop .shop-checkout-redesign .shop-delivery-fields small{color:#bdb7cf}
+.auraic-shop .shop-checkout-summary .shop-coupon{padding:16px 0;border-block:1px solid #FAEAB12b}
+.auraic-shop .shop-checkout-summary .shop-coupon>label{display:block;font-size:13px;font-weight:650;color:#fff8e9;margin-bottom:10px}
+.auraic-shop .shop-checkout-summary .shop-coupon>div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;align-items:stretch}
+.auraic-shop .shop-checkout-summary .shop-coupon input{width:100%;min-width:0;min-height:48px;padding:11px 13px;border:1px solid #FAEAB14b;border-radius:10px;background:#19183B;color:#fff8e9;font-size:16px}
+.auraic-shop .shop-checkout-summary .shop-coupon input:focus{outline:2px solid #FAEAB1;outline-offset:1px}
+.auraic-shop .shop-checkout-summary .shop-coupon button{min-height:48px;padding:10px 17px;border:1px solid #FAEAB1;border-radius:10px;background:#FAEAB1;color:#19183B;font-weight:700;font-size:13px}
+.auraic-shop .shop-checkout-summary .shop-coupon button:disabled{opacity:.45;cursor:not-allowed}
+.auraic-shop .shop-checkout-redesign .shop-consent{color:#c8c2d8;font-size:12px;line-height:1.7}
+.auraic-shop .shop-checkout-confirm-bar .shop-button{clip-path:none;border-radius:12px;font-weight:800;letter-spacing:.025em}
+.auraic-shop .shop-checkout-confirm-bar .shop-button:focus-visible{outline:2px solid #FAEAB1;outline-offset:3px}
+@media(max-width:760px){
+.auraic-shop .shop-checkout-page{padding:24px 16px 115px}
+.auraic-shop .shop-checkout-title{margin-bottom:18px;padding-bottom:17px}
+.auraic-shop .shop-checkout-title h1{font-size:34px}
+.auraic-shop .shop-checkout-redesign{gap:16px}
+.auraic-shop .shop-checkout-redesign .shop-checkout-summary{padding:19px 17px;border-radius:15px}
+.auraic-shop .shop-checkout-redesign .shop-checkout-form{padding:19px 16px;border-radius:15px}
+.auraic-shop .shop-checkout-redesign .shop-checkout-steps{margin-bottom:22px;padding-bottom:18px}
+.auraic-shop .shop-checkout-steps>a,.auraic-shop .shop-checkout-steps>b,.auraic-shop .shop-checkout-steps>span{font-size:10px;gap:5px}
+.auraic-shop .shop-checkout-steps>a>span,.auraic-shop .shop-checkout-steps>b>span,.auraic-shop .shop-checkout-steps>span>span{width:24px;height:24px;flex-basis:24px}
+.auraic-shop .shop-checkout-redesign .shop-delivery-fields{grid-template-columns:1fr;gap:16px}
+.auraic-shop .shop-checkout-confirm-bar{position:sticky;bottom:0;z-index:20;margin-inline:-16px;padding:12px 16px max(12px,env(safe-area-inset-bottom));border-top:1px solid #FAEAB13b;background:#19183B;box-shadow:0 -10px 30px #09071966}
+.auraic-shop .shop-checkout-confirm-bar .shop-button{min-height:49px;padding:12px 14px;font-size:11px}
+.auraic-shop .shop-checkout-confirm-bar>div>span{font-size:11px}
+.auraic-shop .shop-checkout-confirm-bar strong{font-size:19px}
+.auraic-shop:has(.shop-checkout-confirm-bar) .shop-whatsapp{bottom:calc(106px + env(safe-area-inset-bottom))}
+}
+@media(max-width:370px){.auraic-shop .shop-checkout-steps>a,.auraic-shop .shop-checkout-steps>b,.auraic-shop .shop-checkout-steps>span{font-size:9px}.auraic-shop .shop-checkout-confirm-bar .shop-button{padding:10px;font-size:10px}}
