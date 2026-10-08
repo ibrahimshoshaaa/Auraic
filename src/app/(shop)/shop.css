@@ -400,3 +400,24 @@
 .shop-payment-copy:hover span{background:#FAEAB122}
 .shop-payment-copy:focus-visible{outline:2px solid #FAEAB1;outline-offset:4px;border-radius:4px}
 .shop-payment-recipient{display:block;margin-top:2px;font-size:12px;line-height:1.5;color:#cbc6d9}
+
+
+/* Order placed: clear separation between order acceptance and transfer verification. */
+.auraic-shop .shop-order-success{max-width:680px;margin:32px auto 70px;padding:36px 32px;text-align:center;border:1px solid #faeab14a;border-radius:22px;background:#242140;color:#f9f5ed}
+.auraic-shop .shop-order-success-icon{display:grid;place-items:center;width:66px;height:66px;margin:0 auto 20px;border-radius:50%;border:2px solid #faeab1;background:#faeab11a;color:#faeab1;font-size:33px;font-weight:700}
+.auraic-shop .shop-order-success .shop-eyebrow{margin:0 0 10px;color:#faeab1;letter-spacing:.16em;font-size:10px;font-weight:800}
+.auraic-shop .shop-order-success h1{margin:0;color:#faeab1;font-size:clamp(26px,5vw,39px);line-height:1.2;font-weight:700}
+.auraic-shop .shop-order-success-intro{max-width:440px;margin:13px auto 24px;color:#cbc6d9;font-size:14px;line-height:1.65}
+.auraic-shop .shop-order-success-status{display:flex;align-items:center;gap:13px;text-align:left;margin:0 0 20px;padding:16px;border:1px solid #faeab15c;border-radius:13px;background:#19183b}
+.auraic-shop .shop-order-status-dot{width:11px;height:11px;flex:0 0 11px;border-radius:50%;background:#faeab1;box-shadow:0 0 0 5px #faeab124}
+.auraic-shop .shop-order-success-status div{display:grid;gap:5px}
+.auraic-shop .shop-order-success-status strong{font-size:14px;color:#faeab1}
+.auraic-shop .shop-order-success-status small{font-size:12px;color:#cbc6d9;line-height:1.5}
+.auraic-shop .shop-order-success-details{overflow:hidden;border:1px solid #faeab13b;border-radius:13px;background:#19183b;text-align:left}
+.auraic-shop .shop-order-success-details>div{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px}
+.auraic-shop .shop-order-success-details>div+div{border-top:1px solid #faeab124}
+.auraic-shop .shop-order-success-details span{font-size:12px;color:#cbc6d9}
+.auraic-shop .shop-order-success-details strong{font-size:15px;color:#faeab1;overflow-wrap:anywhere;text-align:right}
+.auraic-shop .shop-order-success-notice{margin:18px 0;color:#cbc6d9;font-size:12px;line-height:1.7}
+.auraic-shop .shop-order-success-action{display:inline-flex;align-items:center;justify-content:center;min-height:48px;margin-top:22px;padding:12px 26px;border:0;border-radius:12px;background:#faeab1;color:#19183b;font-size:13px;font-weight:800;text-decoration:none;clip-path:none}
+@media(max-width:600px){.auraic-shop .shop-order-success{margin:16px 15px 42px;padding:26px 18px;border-radius:17px}.auraic-shop .shop-order-success-details>div{padding:14px 12px}.auraic-shop .shop-order-success-details strong{font-size:13px}.auraic-shop .shop-order-success-action{width:100%}}
