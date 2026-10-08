@@ -438,3 +438,27 @@
   .auraic-shop .shop-fragrance-card .shop-card-photo-controls{inset:14px 12px auto;height:30px}
   .auraic-shop .shop-fragrance-card .shop-card-badges{max-width:calc(100% - 47px);gap:6px}
 }
+
+
+/* Wishlist: compact mobile spacing and premium empty state. */
+.auraic-shop .shop-wishlist-page{padding-top:36px;padding-bottom:48px}
+.auraic-shop .shop-wishlist-page .shop-page-heading{margin-bottom:24px}
+.auraic-shop .shop-wishlist-page .shop-page-heading h1{font-size:clamp(30px,5vw,43px);line-height:1.15;margin:9px 0 0}
+.auraic-shop .shop-wishlist-page .shop-result-count{margin:0 0 18px;color:#cbc6d9;font-size:13px}
+.auraic-shop .shop-wishlist-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;max-width:720px;min-height:340px;margin:0 auto;padding:36px 22px;text-align:center;border:1px solid #faeab13c;border-radius:18px;background:#292542;color:#faeab1}
+.auraic-shop .shop-wishlist-heart{display:grid;place-items:center;width:68px;height:68px;margin:0 auto 17px;border:1px solid #faeab177;border-radius:50%;background:#faeab10e;color:#faeab1;font-size:46px;line-height:1}
+.auraic-shop .shop-wishlist-kicker{margin:0 0 10px;color:#d7c79b;font-size:10px;font-weight:700;letter-spacing:.16em}
+.auraic-shop .shop-wishlist-empty h2{margin:0 0 10px;color:#faeab1;font-size:clamp(22px,4vw,29px);line-height:1.3;font-weight:650}
+.auraic-shop .shop-wishlist-empty>p:not(.shop-wishlist-kicker){max-width:350px;margin:0 auto 25px;color:#cbc6d9;font-size:14px;line-height:1.65}
+.auraic-shop .shop-wishlist-empty .shop-wishlist-cta{display:inline-flex;justify-content:center;align-items:center;gap:14px;min-height:49px;padding:12px 23px;border:0;border-radius:10px;background:#faeab1;color:#19183b;font-size:13px;font-weight:750;text-decoration:none;clip-path:none}
+.auraic-shop .shop-wishlist-empty .shop-wishlist-cta:hover{background:#fff0bf;color:#19183b}
+.auraic-shop .shop-wishlist-empty .shop-wishlist-cta:focus-visible{outline:2px solid #faeab1;outline-offset:4px}
+.auraic-shop .shop-wishlist-loading{min-height:170px;padding:30px;text-align:center;color:#cbc6d9}
+@media(max-width:760px){
+  .auraic-shop .shop-wishlist-page{padding-top:24px;padding-bottom:30px}
+  .auraic-shop .shop-wishlist-page .shop-page-heading{margin-bottom:20px}
+  .auraic-shop .shop-wishlist-page .shop-page-heading h1{font-size:33px}
+  .auraic-shop .shop-wishlist-page .shop-result-count{margin-bottom:15px}
+  .auraic-shop .shop-wishlist-empty{min-height:315px;padding:30px 18px;border-radius:15px}
+  .auraic-shop .shop-wishlist-empty .shop-wishlist-cta{width:100%;max-width:285px}
+}
