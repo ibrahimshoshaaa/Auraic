@@ -151,7 +151,7 @@ class _OrdersPageState extends State<OrdersPage> {
           if (o['paymentTransfer'] is Map && str(o['financialStatus']) == 'PENDING')
             _detailRow(Icons.hourglass_top_rounded, 'عربون بانتظار المراجعة',
               '${statistic((o['paymentTransfer'] as Map)['requestedAmount'])} $currency'),
-          if (o['paymentTransfer'] is Map && str(o['financialStatus']) == 'PENDING')
+          if (widget.canWrite && o['paymentTransfer'] is Map && str(o['financialStatus']) == 'PENDING')
             Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: OutlinedButton.icon(
               onPressed: () async {
                 await Navigator.of(context).push(MaterialPageRoute(builder: (_) => PaymentReviewsPage(api: widget.api)));
