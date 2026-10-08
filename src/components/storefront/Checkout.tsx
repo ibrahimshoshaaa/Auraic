@@ -19,7 +19,7 @@ export function Checkout({ products, settings, checkout = false }: { products: S
     try { await navigator.clipboard.writeText(value); setCopiedDestination(true); }
     catch { setCopiedDestination(false); }
   }
-  const [paymentOptions, setPaymentOptions] = useState<{ instapay: boolean; wallet: boolean; address: string; number: string; accountName: string; depositPercent: number } | null>(null);
+  const [paymentOptions, setPaymentOptions] = useState<{ instapay: boolean; wallet: boolean; address: string; number: string; accountName: string; walletAccountName: string; depositPercent: number } | null>(null);
   useEffect(() => { if (!checkout) return; void fetch("/api/storefront/payment-options").then(r => { if (!r.ok) throw new Error("Payment settings unavailable"); return r.json(); }).then(setPaymentOptions).catch(() => setPaymentOptions(null)); }, [checkout]);
   const [summaryOpen, setSummaryOpen] = useState(false);
   useEffect(() => { setSummaryOpen(window.matchMedia("(min-width: 761px)").matches); }, []);
@@ -98,7 +98,7 @@ export function Checkout({ products, settings, checkout = false }: { products: S
         </label>}
       </div>
       {paymentMethod !== "COD" && <div className="shop-payment-transfer">
-        <div className="shop-payment-destination"><span>Send your transfer to</span><button type="button" className="shop-payment-copy" aria-label="Copy payment number" onClick={() => void copyDestination(paymentMethod === "INSTAPAY" ? paymentOptions?.address || "" : paymentOptions?.number || "")}><strong dir="ltr">{paymentMethod === "INSTAPAY" ? paymentOptions?.address : paymentOptions?.number}</strong><span>{copiedDestination ? "✓ Copied" : "Copy"}</span></button>{paymentMethod === "INSTAPAY" && paymentOptions?.accountName && <small className="shop-payment-recipient">Account name: {paymentOptions.accountName}</small>}</div>
+        <div className="shop-payment-destination"><span>Send your transfer to</span><button type="button" className="shop-payment-copy" aria-label="Copy payment number" onClick={() => void copyDestination(paymentMethod === "INSTAPAY" ? paymentOptions?.address || "" : paymentOptions?.number || "")}><strong dir="ltr">{paymentMethod === "INSTAPAY" ? paymentOptions?.address : paymentOptions?.number}</strong><span>{copiedDestination ? "✓ Copied" : "Copy"}</span></button>{(paymentMethod === "INSTAPAY" ? paymentOptions?.accountName : paymentOptions?.walletAccountName) && <small className="shop-payment-recipient">Account name: {paymentMethod === "INSTAPAY" ? paymentOptions?.accountName : paymentOptions?.walletAccountName}</small>}</div>
         <h4>How much would you like to pay now?</h4>
         <div className="shop-payment-plan-choices" role="radiogroup" aria-label="Payment amount">
           <label className={`shop-payment-plan ${paymentPlan === "FULL" ? "is-selected" : ""}`}><input type="radio" name="paymentPlan" checked={paymentPlan === "FULL"} onChange={() => setPaymentPlan("FULL")}/><span><strong>Full payment</strong><small>Pay the complete amount now</small></span><span className="shop-payment-radio" aria-hidden="true"/></label>
