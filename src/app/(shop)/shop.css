@@ -523,3 +523,34 @@
 .auraic-shop .shop-bag-content:not(.shop-bag-is-empty) .shop-bag-item h2{font-size:16px}
 .auraic-shop .shop-bag-content:not(.shop-bag-is-empty) .shop-bag-items{padding-inline:12px}
 }
+
+
+/* Auraic samples: compact mobile-first selection cards and clear price summary. */
+.auraic-shop .shop-samples-copy{max-width:680px}
+.auraic-shop .shop-sample-count{gap:10px;margin-bottom:23px}
+.auraic-shop .shop-sample-count button{border-radius:14px;width:62px;height:52px;transition:background .2s,border-color .2s}
+.auraic-shop .shop-sample-count button[aria-pressed=true]{box-shadow:0 4px 16px #faeab121}
+.auraic-shop .shop-sample-select{margin-bottom:16px;letter-spacing:.1em}
+.auraic-shop .shop-sample-trigger{min-height:82px;margin-top:9px;padding:13px 15px;border:1px solid #faeab13a;border-radius:13px;background:#302c50;transition:border-color .2s,background .2s}
+.auraic-shop .shop-sample-trigger:hover,.auraic-shop .shop-sample-trigger:focus-visible{border-color:#faeab1;background:#393456}
+.auraic-shop .shop-sample-select.is-selected .shop-sample-trigger{background:#252140;border-color:#faeab180}
+.auraic-shop .shop-sample-trigger img{width:52px;height:60px;border-radius:9px;object-fit:cover}
+.auraic-shop .shop-sample-placeholder{display:grid;gap:5px;font-size:16px;font-weight:600;letter-spacing:0}
+.auraic-shop .shop-sample-placeholder small{font-size:11px;font-weight:400;color:#c6bed3}
+.auraic-shop .shop-sample-chevron{flex-shrink:0;width:20px;height:20px}
+.auraic-shop .shop-samples-total{display:flex;flex-direction:column;gap:8px;margin:22px 0 16px;padding:17px 18px;border:1px solid #faeab130;border-radius:13px;background:#282442;font-size:14px;letter-spacing:0}
+.auraic-shop .shop-samples-total>span{font-size:12px;font-weight:500;color:#c6bed3}
+.auraic-shop .shop-samples-total>strong{font-size:19px;line-height:1.35;font-weight:650;color:#faeab1}
+.auraic-shop .shop-samples-copy .shop-samples-add,.auraic-shop .shop-samples-copy .shop-samples-buy{min-height:54px;border-radius:12px;font-size:13px;font-weight:700;letter-spacing:.06em}
+.auraic-shop .shop-samples-copy .shop-samples-add:disabled,.auraic-shop .shop-samples-copy .shop-samples-buy:disabled{opacity:.45;cursor:not-allowed}
+.auraic-shop .shop-sample-dialog-content{border-radius:16px}
+.auraic-shop .shop-sample-option{border-radius:10px}
+@media(max-width:760px){
+.auraic-shop .shop-samples-page{padding:22px 18px 45px}
+.auraic-shop .shop-samples-layout{gap:22px}
+.auraic-shop .shop-samples-copy h1{font-size:clamp(30px,8vw,42px)}
+.auraic-shop .shop-sample-count legend{margin-bottom:12px}
+.auraic-shop .shop-sample-trigger{min-height:72px}
+.auraic-shop .shop-sample-select{margin-bottom:15px}
+.auraic-shop .shop-samples-total{margin-top:20px}
+}
