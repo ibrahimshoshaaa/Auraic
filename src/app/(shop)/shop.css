@@ -538,9 +538,9 @@
 .auraic-shop .shop-sample-placeholder{display:grid;gap:5px;font-size:16px;font-weight:600;letter-spacing:0}
 .auraic-shop .shop-sample-placeholder small{font-size:11px;font-weight:400;color:#c6bed3}
 .auraic-shop .shop-sample-chevron{flex-shrink:0;width:20px;height:20px}
-.auraic-shop .shop-samples-total{display:flex;flex-direction:column;gap:8px;margin:22px 0 16px;padding:17px 18px;border:1px solid #faeab130;border-radius:13px;background:#282442;font-size:14px;letter-spacing:0}
-.auraic-shop .shop-samples-total>span{font-size:12px;font-weight:500;color:#c6bed3}
-.auraic-shop .shop-samples-total>strong{font-size:19px;line-height:1.35;font-weight:650;color:#faeab1}
+.auraic-shop .shop-samples-summary{display:flex;flex-direction:column;gap:8px;margin:22px 0 16px;padding:17px 18px;border:1px solid #faeab130;border-radius:13px;background:#282442;font-size:14px;letter-spacing:0}
+.auraic-shop .shop-samples-summary>span{font-size:12px;font-weight:500;color:#c6bed3}
+.auraic-shop .shop-samples-summary>.shop-samples-total{font-size:19px;line-height:1.35;font-weight:650;color:#faeab1}
 .auraic-shop .shop-samples-copy .shop-samples-add,.auraic-shop .shop-samples-copy .shop-samples-buy{min-height:54px;border-radius:12px;font-size:13px;font-weight:700;letter-spacing:.06em}
 .auraic-shop .shop-samples-copy .shop-samples-add:disabled,.auraic-shop .shop-samples-copy .shop-samples-buy:disabled{opacity:.45;cursor:not-allowed}
 .auraic-shop .shop-sample-dialog-content{border-radius:16px}
@@ -552,5 +552,5 @@
 .auraic-shop .shop-sample-count legend{margin-bottom:12px}
 .auraic-shop .shop-sample-trigger{min-height:72px}
 .auraic-shop .shop-sample-select{margin-bottom:15px}
-.auraic-shop .shop-samples-total{margin-top:20px}
+.auraic-shop .shop-samples-summary{margin-top:20px}
 }
