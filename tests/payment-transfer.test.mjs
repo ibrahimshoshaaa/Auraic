@@ -22,7 +22,9 @@ test('checkout records transfer request without immediately counting it as paid'
   assert.match(checkout, /financialStatus: "PENDING"/);
   assert.match(checkout, /paymentReview: method === "COD" \? "NOT_REQUIRED" : "PENDING"/);
   assert.match(checkout, /requestedCents/);
-  assert.match(checkout, /method !== "COD" && \(!Number\.isInteger\(depositPercent\)/);
+  assert.match(checkout, /method !== "COD" && \(!Number\.isInteger\(depositAmount\)/);
+  assert.match(checkout, /depositAmount \* 100/);
+  assert.match(checkout, /input.receiptId !== expected/);
 });
 
 test('manual review requires actual approval and refuses duplicate receipts', () => {
@@ -65,4 +67,24 @@ test('refund confirmation is available in both admin clients and requires transa
   assert.match(flutterPayments, /\/api\/payments\/refund-confirm/);
   assert.match(webPayments, /window\.confirm\("هل تأكدت من إرسال المبلغ/);
   assert.match(flutterPayments, /'reference': reference/);
+});
+
+test('fixed deposit and private receipts are shared by checkout, web and mobile', () => {
+  const receiptUpload = readFileSync(new URL('../src/app/api/storefront/payment-receipt/route.ts', import.meta.url), 'utf8');
+  const receiptView = readFileSync(new URL('../src/app/api/payments/receipt/route.ts', import.meta.url), 'utf8');
+  const publicOptions = readFileSync(new URL('../src/app/api/storefront/payment-options/route.ts', import.meta.url), 'utf8');
+  const webCheckout = readFileSync(new URL('../src/components/storefront/Checkout.tsx', import.meta.url), 'utf8');
+  const webPayments = readFileSync(new URL('../src/app/dashboard/payments/page.tsx', import.meta.url), 'utf8');
+  const flutterPayments = readFileSync(new URL('../mobile/lib/payment_reviews.dart', import.meta.url), 'utf8');
+  const mobileSettings = readFileSync(new URL('../src/app/api/mobile/settings/route.ts', import.meta.url), 'utf8');
+  assert.match(publicOptions, /paymentDepositAmount/);
+  assert.match(mobileSettings, /paymentDepositAmount/);
+  assert.match(webCheckout, /receiptForm\.set\("file", receiptFile\)/);
+  assert.match(receiptUpload, /type: "authenticated"/);
+  assert.match(receiptUpload, /overwrite: false/);
+  assert.match(receiptView, /session\.storeId/);
+  assert.match(receiptView, /expires_at/);
+  assert.match(webPayments, /\/api\/payments\/receipt/);
+  assert.match(flutterPayments, /\/api\/payments\/receipt/);
+  assert.match(flutterPayments, /\/api\/payments\/deposit-settings/);
 });

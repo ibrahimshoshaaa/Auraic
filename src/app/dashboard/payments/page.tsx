@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-type Payment = { id: string; orderNumber: string | null; customerRef: string | null; customerPhone: string | null; method: string; plan: string; reference: string; requestedAmount: number; total: number; depositAmount: number; review: string };
+type Payment = { id: string; orderNumber: string | null; customerRef: string | null; customerPhone: string | null; method: string; plan: string; reference: string; requestedAmount: number; total: number; depositAmount: number; review: string; hasReceipt: boolean };
 type Refund = { id: string; orderNumber: string | null; customerRef: string | null; customerPhone: string | null; amount: number };
 export default function PaymentsPage() {
   const [refunds, setRefunds] = useState<Refund[]>([]);
@@ -24,6 +24,20 @@ export default function PaymentsPage() {
     catch (err) { setError(err instanceof Error ? err.message : "Error"); }
     finally { setBusy(null); }
   }
+  async function openReceipt(id: string) {
+    const preview = window.open("about:blank", "_blank");
+    if (preview) preview.opener = null;
+    try {
+      const response = await fetch(`/api/payments/receipt?orderId=${encodeURIComponent(id)}`, { cache: "no-store" });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "تعذر فتح الإيصال");
+      if (preview && !preview.closed) preview.location.replace(body.data.url);
+      else window.location.assign(body.data.url);
+    } catch (err) {
+      preview?.close();
+      setError(err instanceof Error ? err.message : "تعذر فتح الإيصال");
+    }
+  }
   async function confirmRefund(id: string) {
     const reference = (refundRefs[id] || "").trim();
     if (reference.length < 3) { setError("أدخل مرجع عملية رد المبلغ"); return; }
@@ -43,6 +57,7 @@ export default function PaymentsPage() {
       <p>{p.method === "INSTAPAY" ? "InstaPay" : "محفظة"} · {p.plan === "FULL" ? "دفع كامل" : "عربون"} · {p.review === "PENDING" ? "بانتظار المراجعة" : p.review === "APPROVED" ? "تم التأكيد" : "مرفوض"}</p>
       <p>المطلوب تحويله: <strong>{p.requestedAmount} EGP</strong> · إجمالي الطلب: {p.total} EGP</p>
       <p>رقم التحويل: <span dir="ltr">{p.reference}</span> · هاتف العميل: {p.customerPhone}</p>
+      {p.hasReceipt && <button type="button" onClick={() => void openReceipt(p.id)} className="rounded-lg border px-4 py-2">عرض صورة الإيصال</button>}
       {p.review === "PENDING" && <div className="flex gap-3"><button disabled={busy === p.id} onClick={() => void review(p.id, "APPROVED")} className="rounded-lg bg-emerald-700 px-4 py-2 text-white">تأكيد وصول المبلغ</button><button disabled={busy === p.id} onClick={() => void review(p.id, "REJECTED")} className="rounded-lg border px-4 py-2">رفض</button></div>}
     </article>)}
     <section className="space-y-3 pt-6">

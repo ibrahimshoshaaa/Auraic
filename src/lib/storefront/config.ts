@@ -70,6 +70,7 @@ export const checkoutSchema = z.object({
   paymentMethod: z.enum(["COD", "INSTAPAY", "WALLET"]).default("COD"),
   paymentPlan: z.enum(["FULL", "DEPOSIT"]).default("FULL"),
   transferReference: z.string().trim().max(120).default(""),
+  receiptId: z.string().trim().max(250).default(""),
   requestId: z.uuid(), name: z.string().trim().min(2).max(100),
   couponCode: z.string().trim().toUpperCase().max(40).default(""),
   expectedTotalCents: z.number().int().nonnegative().max(1000000000),

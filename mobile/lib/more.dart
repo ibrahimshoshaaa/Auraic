@@ -129,11 +129,11 @@ class _SettingsPageState extends State<SettingsPage> {
   bool walletEnabled = false;
   final instaPayAddress = TextEditingController();
   final walletNumber = TextEditingController();
-  final depositPercent = TextEditingController();
+  final depositAmount = TextEditingController();
   bool initialized = false;
   late Future<dynamic> current = widget.api.get('/api/mobile/settings');
   @override
-  void dispose() { name.dispose(); amount.dispose(); instaPayAddress.dispose(); walletNumber.dispose(); depositPercent.dispose(); super.dispose(); }
+  void dispose() { name.dispose(); amount.dispose(); instaPayAddress.dispose(); walletNumber.dispose(); depositAmount.dispose(); super.dispose(); }
   @override
   Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(16), children: [
     const PageIntro(title: 'الإعدادات', subtitle: 'الحساب وإعدادات المتجر', icon: Icons.settings_outlined),
@@ -157,7 +157,7 @@ class _SettingsPageState extends State<SettingsPage> {
         walletEnabled = store['paymentWalletEnabled'] == true;
         instaPayAddress.text = str(store['paymentInstaPayAddress']);
         walletNumber.text = str(store['paymentWalletNumber']);
-        depositPercent.text = str(store['paymentDepositPercent']);
+        depositAmount.text = str(store['paymentDepositAmount']);
       }
       return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
         field('اسم المتجر', name),
@@ -167,25 +167,25 @@ class _SettingsPageState extends State<SettingsPage> {
         SwitchListTile(title: const Text('إظهار التكلفة التقديرية'),
           value: costing, onChanged: widget.isOwner ? (value) => setState(() => costing = value) : null),
         const Divider(height: 32),
-        const ListTile(title: Text('طرق الدفع الإلكتروني'), subtitle: Text('إدارة InstaPay والمحفظة ونسبة العربون')),
+        const ListTile(title: Text('طرق الدفع الإلكتروني'), subtitle: Text('إدارة InstaPay والمحفظة والمقدم الثابت')),
         SwitchListTile(title: const Text('تفعيل InstaPay'), value: instaPayEnabled,
           onChanged: widget.isOwner ? (value) => setState(() => instaPayEnabled = value) : null),
         field('عنوان InstaPay', instaPayAddress),
         SwitchListTile(title: const Text('تفعيل المحفظة الإلكترونية'), value: walletEnabled,
           onChanged: widget.isOwner ? (value) => setState(() => walletEnabled = value) : null),
         field('رقم المحفظة', walletNumber, type: TextInputType.phone),
-        field('نسبة العربون (%)', depositPercent, type: TextInputType.number),
+        field('مبلغ المقدم الثابت (جنيه)', depositAmount, type: TextInputType.number),
         if (widget.isOwner) FilledButton(onPressed: () async {
           final value = double.tryParse(amount.text);
-          final percent = int.tryParse(depositPercent.text);
-          if (percent == null || percent < 1 || percent > 99 || (walletNumber.text.isNotEmpty && !RegExp('^01[0125][0-9]{8}' + String.fromCharCode(36)).hasMatch(walletNumber.text)) || (instaPayEnabled && instaPayAddress.text.trim().isEmpty) || (walletEnabled && walletNumber.text.trim().isEmpty) || value == null || value < 0 || name.text.trim().length < 2) {
-            showMessage(context, 'راجع اسم المتجر وتكلفة المرتجع'); return;
+          final deposit = int.tryParse(depositAmount.text.trim());
+          if (deposit == null || deposit < 1 || deposit > 1000000 || (walletNumber.text.isNotEmpty && !RegExp('^01[0125][0-9]{8}' + String.fromCharCode(36)).hasMatch(walletNumber.text)) || (instaPayEnabled && instaPayAddress.text.trim().isEmpty) || (walletEnabled && walletNumber.text.trim().isEmpty) || value == null || value < 0 || name.text.trim().length < 2) {
+            showMessage(context, 'راجع اسم المتجر وتكلفة المرتجع ومبلغ المقدم وبيانات التحويل'); return;
           }
           try { await perform(context, () => widget.api.put('/api/mobile/settings',
             {'name': name.text.trim(), 'defaultReturnCost': value, 'costingEnabled': costing,
               'paymentInstaPayEnabled': instaPayEnabled, 'paymentWalletEnabled': walletEnabled,
               'paymentInstaPayAddress': instaPayAddress.text.trim(), 'paymentWalletNumber': walletNumber.text.trim(),
-              'paymentDepositPercent': percent})); }
+              'paymentDepositAmount': deposit})); }
           catch (_) { /* Error shown by helper. */ }
         }, child: const Text('حفظ الإعدادات')),
       ])));

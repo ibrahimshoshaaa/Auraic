@@ -14,12 +14,13 @@ export function Checkout({ products, settings, checkout = false }: { products: S
   const [paymentMethod, setPaymentMethod] = useState<"COD" | "INSTAPAY" | "WALLET">("COD");
   const [paymentPlan, setPaymentPlan] = useState<"FULL" | "DEPOSIT">("FULL");
   const [transferReference, setTransferReference] = useState("");
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [copiedDestination, setCopiedDestination] = useState(false);
   async function copyDestination(value: string) {
     try { await navigator.clipboard.writeText(value); setCopiedDestination(true); }
     catch { setCopiedDestination(false); }
   }
-  const [paymentOptions, setPaymentOptions] = useState<{ instapay: boolean; wallet: boolean; address: string; number: string; accountName: string; depositPercent: number } | null>(null);
+  const [paymentOptions, setPaymentOptions] = useState<{ instapay: boolean; wallet: boolean; address: string; number: string; accountName: string; depositAmount: number } | null>(null);
   useEffect(() => { if (!checkout) return; void fetch("/api/storefront/payment-options").then(r => { if (!r.ok) throw new Error("Payment settings unavailable"); return r.json(); }).then(setPaymentOptions).catch(() => setPaymentOptions(null)); }, [checkout]);
   const [summaryOpen, setSummaryOpen] = useState(false);
   useEffect(() => { setSummaryOpen(window.matchMedia("(min-width: 761px)").matches); }, []);
@@ -30,6 +31,7 @@ export function Checkout({ products, settings, checkout = false }: { products: S
   const signature = JSON.stringify({ items: lines.map(l => ({ variantId: l.variantId, quantity: l.quantity })), governorate, prices: products.flatMap(p => p.variants.map(v => [v.id, v.price])) });
   const activeQuote = quote?.signature === signature ? quote : null;
   const requestId = useRef<string | null>(null);
+  const uploadedReceipt = useRef<{ requestId: string; receiptId: string } | null>(null);
   const appliedCode = quote?.code;
   const quotedSignature = quote?.signature;
   useEffect(() => {
@@ -66,8 +68,22 @@ export function Checkout({ products, settings, checkout = false }: { products: S
     setError(""); setBusy(true);
     const data = new FormData(event.currentTarget); requestId.current ??= crypto.randomUUID();
     try {
+      let receiptId = "";
+      if (paymentMethod !== "COD") {
+        if (!receiptFile) throw new Error("Upload a payment receipt before placing your order.");
+        if (uploadedReceipt.current?.requestId === requestId.current) {
+          receiptId = uploadedReceipt.current.receiptId;
+        } else {
+          const receiptForm = new FormData(); receiptForm.set("file", receiptFile); receiptForm.set("requestId", requestId.current);
+          const uploaded = await fetch("/api/storefront/payment-receipt", { method: "POST", body: receiptForm });
+          const uploadResult = await uploaded.json();
+          if (!uploaded.ok) throw new Error(uploadResult.error || "Unable to upload payment receipt.");
+          receiptId = uploadResult.data.receiptId;
+          uploadedReceipt.current = { requestId: requestId.current, receiptId };
+        }
+      }
       const response = await fetch("/api/storefront/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-        couponCode: activeQuote?.code || "", note, paymentMethod, paymentPlan, transferReference, requestId: requestId.current, expectedTotalCents: totals.totalCents, name: data.get("name"), phone: data.get("phone"), governorate: data.get("governorate"), address: data.get("address"),
+        couponCode: activeQuote?.code || "", note, paymentMethod, paymentPlan, transferReference, receiptId, requestId: requestId.current, expectedTotalCents: totals.totalCents, name: data.get("name"), phone: data.get("phone"), governorate: data.get("governorate"), address: data.get("address"),
         items: lines.map(line => ({ variantId: line.variantId, quantity: line.quantity })),
       }) });
       const body = await response.json(); if (!response.ok) throw new Error(response.status === 409 ? body.error || "Your bag or its prices have changed. Review your bag before continuing." : response.status === 422 ? "Please check your delivery details and try again." : "Unable to place your order. Please try again.");
@@ -102,10 +118,11 @@ export function Checkout({ products, settings, checkout = false }: { products: S
         <h4>How much would you like to pay now?</h4>
         <div className="shop-payment-plan-choices" role="radiogroup" aria-label="Payment amount">
           <label className={`shop-payment-plan ${paymentPlan === "FULL" ? "is-selected" : ""}`}><input type="radio" name="paymentPlan" checked={paymentPlan === "FULL"} onChange={() => setPaymentPlan("FULL")}/><span><strong>Full payment</strong><small>Pay the complete amount now</small></span><span className="shop-payment-radio" aria-hidden="true"/></label>
-          <label className={`shop-payment-plan ${paymentPlan === "DEPOSIT" ? "is-selected" : ""}`}><input type="radio" name="paymentPlan" checked={paymentPlan === "DEPOSIT"} onChange={() => setPaymentPlan("DEPOSIT")}/><span><strong>{paymentOptions?.depositPercent}% deposit</strong><small>Pay the rest on delivery</small></span><span className="shop-payment-radio" aria-hidden="true"/></label>
+          <label className={`shop-payment-plan ${paymentPlan === "DEPOSIT" ? "is-selected" : ""}`}><input type="radio" name="paymentPlan" checked={paymentPlan === "DEPOSIT"} onChange={() => setPaymentPlan("DEPOSIT")}/><span><strong>{formatMoney(paymentOptions?.depositAmount || 0)} deposit</strong><small>Pay the rest on delivery</small></span><span className="shop-payment-radio" aria-hidden="true"/></label>
         </div>
-        <div className="shop-payment-breakdown"><div><span>Transfer now</span><strong>{formatMoney((paymentPlan === "FULL" ? totals.totalCents : Math.round(totals.totalCents * (paymentOptions?.depositPercent || 30) / 100)) / 100)}</strong></div><div><span>Remaining on delivery</span><strong>{formatMoney((paymentPlan === "FULL" ? 0 : totals.totalCents - Math.round(totals.totalCents * (paymentOptions?.depositPercent || 30) / 100)) / 100)}</strong></div></div>
+        <div className="shop-payment-breakdown"><div><span>Transfer now</span><strong>{formatMoney((paymentPlan === "FULL" ? totals.totalCents : (paymentOptions?.depositAmount || 0) * 100) / 100)}</strong></div><div><span>Remaining on delivery</span><strong>{formatMoney((paymentPlan === "FULL" ? 0 : totals.totalCents - (paymentOptions?.depositAmount || 0) * 100) / 100)}</strong></div></div>
         <label className="shop-payment-reference">Transfer reference or sender number<input required minLength={5} maxLength={120} value={transferReference} onChange={e => setTransferReference(e.target.value)} placeholder="Enter your transaction reference" /></label>
+        <label className="shop-payment-reference">Payment receipt (JPG or PNG, max 2 MB)<input type="file" accept="image/jpeg,image/png" required onChange={event => { const file = event.target.files?.[0] || null; setReceiptFile(file); requestId.current = null; }} /></label>
         <p className="shop-payment-notice">Your payment will be manually verified. Entering a reference does not confirm receipt.</p>
       </div>}
     </section><p className="shop-consent">By confirming, you agree to our <Link href="/shipping">shipping policy</Link> and <Link href="/returns">returns policy</Link>.</p>{error && <p className="shop-error" role="alert">{error}</p>}<div className="shop-checkout-confirm-bar"><div><span>{awaitingShipping ? "Subtotal · choose governorate" : "Total · Payment summary"}</span><strong>{displayedTotal}</strong></div><button type="submit" disabled={busy || couponBusy || missing || !settings.enabled || !governorate || (!!coupon.trim() && !activeQuote)} className="shop-button">{busy ? "Placing order…" : "CONFIRM ORDER →"}</button></div><Link className="shop-checkout-back" href="/cart">← Return to your bag</Link></form>}
