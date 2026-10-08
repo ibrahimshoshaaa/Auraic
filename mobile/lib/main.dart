@@ -18,8 +18,8 @@ import 'customers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await OrderNotifications.instance.initialize();
   runApp(const PerfumeErpApp());
+  unawaited(OrderNotifications.instance.initialize());
 }
 
 class PerfumeErpApp extends StatefulWidget {
@@ -40,9 +40,14 @@ class _PerfumeErpAppState extends State<PerfumeErpApp> {
   }
 
   Future<void> _restoreSession() async {
-    final session = api.hasSession;
-    await Future<void>.delayed(const Duration(milliseconds: 1300));
-    final value = await session;
+    bool value = false;
+    try {
+      value = await api.hasSession.timeout(const Duration(seconds: 4));
+    } catch (_) {
+      // A locked or unavailable secure store must not trap users on splash.
+      value = false;
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 900));
     if (mounted) setState(() => signedIn = value);
   }
 
