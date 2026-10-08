@@ -438,3 +438,21 @@
   .auraic-shop .shop-fragrance-card .shop-card-photo-controls{inset:14px 12px auto;height:30px}
   .auraic-shop .shop-fragrance-card .shop-card-badges{max-width:calc(100% - 47px);gap:6px}
 }
+
+
+/* Premium compact search dialog, aligned with Auraic payment cards. */
+.auraic-shop .shop-search-dialog{box-sizing:border-box;width:min(92vw,500px);max-width:500px;margin:clamp(64px,12vh,110px) auto 0;padding:25px;border:1px solid #faeab13f;border-radius:18px;background:#242140;box-shadow:0 22px 70px #09071c88;color:#faeab1}
+.auraic-shop .shop-search-dialog header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin:0 0 24px}
+.auraic-shop .shop-search-dialog .shop-search-eyebrow{margin:0 0 7px;font-size:10px;font-weight:750;letter-spacing:.17em;color:#c6bed3}
+.auraic-shop .shop-search-dialog h2{margin:0;font-size:clamp(23px,4vw,29px);line-height:1.25;font-weight:650;color:#faeab1}
+.auraic-shop .shop-search-dialog header>button{display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px;padding:7px;border:1px solid #faeab14f;border-radius:10px;background:transparent;color:#faeab1}
+.auraic-shop .shop-search-dialog form{display:flex;flex-direction:column;gap:13px}
+.auraic-shop .shop-search-input-wrap{display:flex;align-items:center;gap:11px;min-width:0;min-height:54px;padding:0 14px;border:1px solid #817b9b;border-radius:11px;background:#19183b;color:#faeab1}
+.auraic-shop .shop-search-input-wrap:focus-within{border-color:#faeab1;box-shadow:0 0 0 2px #faeab12a}
+.auraic-shop .shop-search-input-wrap>svg{width:21px;height:21px;flex:0 0 21px;color:#faeab1}
+.auraic-shop .shop-search-dialog .shop-search-input-wrap input{box-sizing:border-box;width:100%;min-width:0;min-height:52px;flex:1;padding:10px 0;border:0!important;outline:0!important;box-shadow:none!important;background:transparent;color:#faeab1;font-size:15px}
+.auraic-shop .shop-search-dialog .shop-search-input-wrap input::placeholder{color:#a9a3bb}
+.auraic-shop .shop-search-dialog .shop-button{display:flex;justify-content:center;align-items:center;gap:10px;width:100%;min-height:49px;padding:12px 16px;border:0;border-radius:11px;background:#faeab1;color:#19183b;font-size:14px;font-weight:750;clip-path:none}
+.auraic-shop .shop-search-dialog .shop-button svg{width:19px;height:19px}
+.auraic-shop .shop-search-dialog button:focus-visible{outline:2px solid #faeab1;outline-offset:3px}
+@media(max-width:760px){.auraic-shop .shop-search-dialog{width:calc(100% - 32px);margin:70px auto 0;padding:22px 18px;border-radius:15px}.auraic-shop .shop-search-dialog header{margin-bottom:20px}}
