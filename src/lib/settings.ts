@@ -9,6 +9,7 @@ export const DEFAULT_SETTINGS = {
   paymentInstaPayEnabled: "false",
   paymentWalletEnabled: "false",
   paymentInstaPayAddress: "",
+  paymentInstaPayAccountName: "",
   paymentWalletNumber: "",
   paymentDepositPercent: "30",
   returnRestocking: "CONFIGURABLE",
