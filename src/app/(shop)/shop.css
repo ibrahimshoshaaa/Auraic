@@ -388,3 +388,15 @@
 .auraic-shop:has(.shop-checkout-confirm-bar) .shop-whatsapp{bottom:calc(106px + env(safe-area-inset-bottom))}
 }
 @media(max-width:370px){.auraic-shop .shop-checkout-steps>a,.auraic-shop .shop-checkout-steps>b,.auraic-shop .shop-checkout-steps>span{font-size:9px}.auraic-shop .shop-checkout-confirm-bar .shop-button{padding:10px;font-size:10px}}
+
+
+/* Compact coupon confirmation: don't inherit the large Apply button styling. */
+.auraic-shop .shop-checkout-summary .shop-coupon .shop-coupon-applied{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 0;color:#FAEAB1;font-size:12px;line-height:1.4}
+.auraic-shop .shop-checkout-summary .shop-coupon .shop-coupon-applied button{min-height:0;width:auto;flex:0 0 auto;padding:5px 9px;border:1px solid #FAEAB15b;border-radius:7px;background:transparent;color:#FAEAB1;font-size:11px;font-weight:600;line-height:1.3}
+.auraic-shop .shop-checkout-summary .shop-coupon .shop-coupon-applied button:hover{background:#FAEAB11c}
+.shop-payment-copy{display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;padding:0;border:0;background:transparent;text-align:left;cursor:pointer;color:#FAEAB1}
+.shop-payment-copy strong{font-size:16px;color:#FAEAB1;overflow-wrap:anywhere}
+.shop-payment-copy span{flex-shrink:0;padding:7px 11px;border:1px solid #FAEAB17a;border-radius:8px;color:#FAEAB1;font-size:12px;font-weight:700}
+.shop-payment-copy:hover span{background:#FAEAB122}
+.shop-payment-copy:focus-visible{outline:2px solid #FAEAB1;outline-offset:4px;border-radius:4px}
+.shop-payment-recipient{display:block;margin-top:2px;font-size:12px;line-height:1.5;color:#cbc6d9}
