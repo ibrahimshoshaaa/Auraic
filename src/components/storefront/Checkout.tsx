@@ -19,7 +19,7 @@ export function Checkout({ products, settings, checkout = false }: { products: S
     try { await navigator.clipboard.writeText(value); setCopiedDestination(true); }
     catch { setCopiedDestination(false); }
   }
-  const [paymentOptions, setPaymentOptions] = useState<{ instapay: boolean; wallet: boolean; address: string; number: string; accountName: string; depositPercent: number } | null>(null);
+  const [paymentOptions, setPaymentOptions] = useState<{ instapay: boolean; wallet: boolean; address: string; number: string; accountName: string; depositAmount: number } | null>(null);
   useEffect(() => { if (!checkout) return; void fetch("/api/storefront/payment-options").then(r => { if (!r.ok) throw new Error("Payment settings unavailable"); return r.json(); }).then(setPaymentOptions).catch(() => setPaymentOptions(null)); }, [checkout]);
   const [summaryOpen, setSummaryOpen] = useState(false);
   useEffect(() => { setSummaryOpen(window.matchMedia("(min-width: 761px)").matches); }, []);
@@ -102,9 +102,9 @@ export function Checkout({ products, settings, checkout = false }: { products: S
         <h4>How much would you like to pay now?</h4>
         <div className="shop-payment-plan-choices" role="radiogroup" aria-label="Payment amount">
           <label className={`shop-payment-plan ${paymentPlan === "FULL" ? "is-selected" : ""}`}><input type="radio" name="paymentPlan" checked={paymentPlan === "FULL"} onChange={() => setPaymentPlan("FULL")}/><span><strong>Full payment</strong><small>Pay the complete amount now</small></span><span className="shop-payment-radio" aria-hidden="true"/></label>
-          <label className={`shop-payment-plan ${paymentPlan === "DEPOSIT" ? "is-selected" : ""}`}><input type="radio" name="paymentPlan" checked={paymentPlan === "DEPOSIT"} onChange={() => setPaymentPlan("DEPOSIT")}/><span><strong>{paymentOptions?.depositPercent}% deposit</strong><small>Pay the rest on delivery</small></span><span className="shop-payment-radio" aria-hidden="true"/></label>
+          <label className={`shop-payment-plan ${paymentPlan === "DEPOSIT" ? "is-selected" : ""}`}><input type="radio" name="paymentPlan" checked={paymentPlan === "DEPOSIT"} onChange={() => setPaymentPlan("DEPOSIT")}/><span><strong>{formatMoney(paymentOptions?.depositAmount || 0)} deposit</strong><small>Pay the rest on delivery</small></span><span className="shop-payment-radio" aria-hidden="true"/></label>
         </div>
-        <div className="shop-payment-breakdown"><div><span>Transfer now</span><strong>{formatMoney((paymentPlan === "FULL" ? totals.totalCents : Math.round(totals.totalCents * (paymentOptions?.depositPercent || 30) / 100)) / 100)}</strong></div><div><span>Remaining on delivery</span><strong>{formatMoney((paymentPlan === "FULL" ? 0 : totals.totalCents - Math.round(totals.totalCents * (paymentOptions?.depositPercent || 30) / 100)) / 100)}</strong></div></div>
+        <div className="shop-payment-breakdown"><div><span>Transfer now</span><strong>{formatMoney((paymentPlan === "FULL" ? totals.totalCents : (paymentOptions?.depositAmount || 0) * 100) / 100)}</strong></div><div><span>Remaining on delivery</span><strong>{formatMoney((paymentPlan === "FULL" ? 0 : totals.totalCents - (paymentOptions?.depositAmount || 0) * 100) / 100)}</strong></div></div>
         <label className="shop-payment-reference">Transfer reference or sender number<input required minLength={5} maxLength={120} value={transferReference} onChange={e => setTransferReference(e.target.value)} placeholder="Enter your transaction reference" /></label>
         <p className="shop-payment-notice">Your payment will be manually verified. Entering a reference does not confirm receipt.</p>
       </div>}
