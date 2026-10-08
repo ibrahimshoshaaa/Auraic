@@ -24,7 +24,7 @@ export async function GET() {
   return NextResponse.json({ data: transferLogs.flatMap(log => {
     const order = byId.get(log.entityId || ""); if (!order) return [];
     const meta = metadata(log.metadata);
-    return [{ ...order, total: Number(order.total), depositAmount: Number(order.depositAmount), method: meta.payment, plan: meta.paymentPlan, reference: meta.transferReference, hasReceipt: typeof meta.receiptId === "string" && meta.receiptId.startsWith(`auraic/payment-receipts/${session.storeId}/`), requestedAmount: Number(meta.requestedCents || 0) / 100, review: reviewById.get(order.id) || "PENDING" }];
+    return [{ ...order, total: Number(order.total), depositAmount: Number(order.depositAmount), method: meta.payment, plan: meta.paymentPlan, reference: meta.transferReference, senderPhone: typeof meta.senderPhone === "string" ? meta.senderPhone : null, hasReceipt: typeof meta.receiptId === "string" && meta.receiptId.startsWith(`auraic/payment-receipts/${session.storeId}/`), requestedAmount: Number(meta.requestedCents || 0) / 100, review: reviewById.get(order.id) || "PENDING" }];
   }) }, { headers: { "Cache-Control": "no-store" } });
 }
 export async function POST(request: NextRequest) {
