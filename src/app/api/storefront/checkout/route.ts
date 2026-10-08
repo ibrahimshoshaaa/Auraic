@@ -34,9 +34,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "بيانات التحويل غير مكتملة" }, { status: 422 });
     if (method !== "COD" && input.transferReference.length < 5)
       return NextResponse.json({ error: "أدخل رقم مرجع التحويل للمراجعة" }, { status: 422 });
-    const depositPercent = Number(await getSetting(shop.id, "paymentDepositPercent"));
-    if (method !== "COD" && (!Number.isInteger(depositPercent) || depositPercent < 1 || depositPercent > 99))
-      return NextResponse.json({ error: "إعداد نسبة العربون غير صالح" }, { status: 503 });
+    const depositAmount = Number(await getSetting(shop.id, "paymentDepositAmount"));
+    if (method !== "COD" && (!Number.isInteger(depositAmount) || depositAmount < 1 || depositAmount > 1000000))
+      return NextResponse.json({ error: "إعداد مبلغ المقدم غير صالح" }, { status: 503 });
     const secret = process.env.AUTH_SECRET;
     if (!secret) throw new Error("AUTH_SECRET missing");
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
@@ -59,7 +59,8 @@ export async function POST(request: NextRequest) {
         const { byId, totals, coupon, lineDiscounts } = await quoteOrder(tx, shop.id, shop.settings, input.items, input.governorate, input.couponCode, true);
         if (totals.totalCents !== input.expectedTotalCents) throw new QuoteError("Prices or shipping have changed. Review your bag and reapply your coupon.");
         finalTotal = totals.totalCents;
-        const requestedCents = method === "COD" ? 0 : plan === "FULL" ? finalTotal : Math.round(finalTotal * depositPercent / 100);
+        const requestedCents = method === "COD" ? 0 : plan === "FULL" ? finalTotal : depositAmount * 100;
+        if (method !== "COD" && plan === "DEPOSIT" && requestedCents > finalTotal) throw new QuoteError("قيمة الطلب أقل من المقدم المحدد");
         if (coupon) await tx.coupon.update({ where: { id: coupon.id }, data: { usedCount: { increment: 1 } } });
         await tx.order.create({ data: {
           id: orderId, storeId: shop.id, orderNumber, financialStatus: "PENDING", fulfillmentStatus: "UNFULFILLED", manualStatus: "NEW",
