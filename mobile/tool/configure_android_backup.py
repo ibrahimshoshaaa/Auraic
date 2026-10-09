@@ -1,22 +1,25 @@
 """Exclude encrypted session preferences from cloud backups and device transfers."""
 from pathlib import Path
-import re
+import xml.etree.ElementTree as ET
 
-manifest = Path('android/app/src/main/AndroidManifest.xml')
-contents = manifest.read_text()
-match = re.search(r'<application\b[^>]*>', contents)
-if not match:
+root = Path.cwd().resolve()
+manifest = (root / 'android/app/src/main/AndroidManifest.xml').resolve()
+if not manifest.is_relative_to(root):
+    raise SystemExit('Android manifest must stay inside the build directory')
+ET.register_namespace('android', 'http://schemas.android.com/apk/res/android')
+ET.register_namespace('tools', 'http://schemas.android.com/tools')
+tree = ET.parse(manifest)
+application = tree.getroot().find('application')
+if application is None:
     raise SystemExit('Android manifest has no application element')
-tag = match.group()
-for attribute in ('allowBackup', 'fullBackupContent', 'dataExtractionRules'):
-    tag = re.sub(r'\s+android:' + attribute + r'\s*=\s*[\"\'][^\"\']*[\"\']', '', tag)
-attributes = (' android:allowBackup="false"'
-              ' android:fullBackupContent="@xml/auraic_backup_rules"'
-              ' android:dataExtractionRules="@xml/auraic_data_extraction_rules"')
-end = '/>' if tag.endswith('/>') else '>'
-tag = tag[:-len(end)] + attributes + end
-manifest.write_text(contents[:match.start()] + tag + contents[match.end():])
-xml = manifest.parent / 'res/xml'
+android = '{http://schemas.android.com/apk/res/android}'
+application.set(android + 'allowBackup', 'false')
+application.set(android + 'fullBackupContent', '@xml/auraic_backup_rules')
+application.set(android + 'dataExtractionRules', '@xml/auraic_data_extraction_rules')
+tree.write(manifest, encoding='utf-8', xml_declaration=True)
+xml = (root / 'android/app/src/main/res/xml').resolve()
+if not xml.is_relative_to(root):
+    raise SystemExit('Android backup resources must stay inside the build directory')
 xml.mkdir(parents=True, exist_ok=True)
 (xml / 'auraic_backup_rules.xml').write_text('''<?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
