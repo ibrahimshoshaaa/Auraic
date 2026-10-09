@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 class ApiException implements Exception {
@@ -20,7 +21,46 @@ class ErpApi {
   static const _tokenKey = 'erp_mobile_session';
   final http.Client _client;
 
-  Future<bool> get hasSession async => (await _storage.read(key: _tokenKey)) != null;
+  Future<bool> get hasSession async => (await _readToken()) != null;
+
+  bool _isCorruptStorage(PlatformException error) {
+    final message = '${error.code} ${error.message} ${error.details}'.toLowerCase();
+    return message.contains('bad_decrypt') ||
+        message.contains('badpaddingexception') ||
+        message.contains('failed to unwrap key') ||
+        message.contains('aeadbadtagexception') ||
+        message.contains('invalidkeyexception');
+  }
+
+  Future<String?> _readToken() async {
+    try {
+      return await _storage.read(key: _tokenKey);
+    } on PlatformException catch (error) {
+      if (!_isCorruptStorage(error)) rethrow;
+      // This secure store contains only the session, never business records.
+      await _storage.deleteAll();
+      return null;
+    }
+  }
+
+  Future<void> _writeToken(String token) async {
+    try {
+      await _storage.write(key: _tokenKey, value: token);
+    } on PlatformException catch (error) {
+      if (!_isCorruptStorage(error)) rethrow;
+      await _storage.deleteAll();
+      await _storage.write(key: _tokenKey, value: token);
+    }
+  }
+
+  Future<void> _deleteToken() async {
+    try {
+      await _storage.delete(key: _tokenKey);
+    } on PlatformException catch (error) {
+      if (!_isCorruptStorage(error)) rethrow;
+      await _storage.deleteAll();
+    }
+  }
 
   Future<dynamic> get(String path) => _request('GET', path);
 
@@ -34,7 +74,7 @@ class ErpApi {
 
   Future<String> uploadProductImage(List<int> bytes, String filename) async {
     if (bytes.length > 3 * 1024 * 1024) throw const ApiException('اختر صورة حتى 3 ميجابايت', 422);
-    final token = await _storage.read(key: _tokenKey);
+    final token = await _readToken();
     final request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/api/admin/storefront/images'));
     if (token != null) request.headers['Authorization'] = 'Bearer $token';
     request.files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
@@ -65,23 +105,23 @@ class ErpApi {
       'password': password,
     }) as Map<String, dynamic>;
     final data = result['data'] as Map<String, dynamic>;
-    await _storage.write(key: _tokenKey, value: data['token'] as String);
+    await _writeToken(data['token'] as String);
   }
 
   Future<void> logout() async {
     try {
       await post('/api/mobile/auth/logout', {});
     } finally {
-      await _storage.delete(key: _tokenKey);
+      await _deleteToken();
     }
   }
 
-  Future<void> clearSession() => _storage.delete(key: _tokenKey);
+  Future<void> clearSession() => _deleteToken();
 
   Future<dynamic> _request(String method, String path,
       {Map<String, dynamic>? body}) async {
     if (_baseUrl.isEmpty) throw const ApiException('اضبط API_BASE_URL أثناء بناء التطبيق للاستضافة الجديدة', 503);
-    final token = await _storage.read(key: _tokenKey);
+    final token = path == '/api/mobile/auth/login' ? null : await _readToken();
     final headers = <String, String>{
       'Accept': 'application/json',
       if (body != null) 'Content-Type': 'application/json',
@@ -106,7 +146,7 @@ class ErpApi {
     }
     if (response.statusCode >= 400) {
       if (response.statusCode == 401 && token != null) {
-        await _storage.delete(key: _tokenKey);
+        await _deleteToken();
       }
       throw ApiException(
           decoded is Map ? (decoded['error']?.toString() ?? 'حدث خطأ') : 'حدث خطأ',
