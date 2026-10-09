@@ -54,6 +54,21 @@ test('mobile login, tenant access, and revocable logout through real HTTP routes
       const me = await fetch(`${url}/api/mobile/me`, { headers });
       assert.equal(me.status, 200);
       assert.equal((await me.json()).data.store.name, store.name);
+      const settingsUrl = `${url}/api/mobile/settings`;
+      const settingsBefore = (await (await fetch(settingsUrl, { headers })).json()).data;
+      const putSettings = value => fetch(settingsUrl, { method: 'PUT', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify(value) });
+      const names = { paymentInstaPayAccountName: '  InstaPay Recipient  ', paymentWalletAccountName: '  Wallet Recipient  ' };
+      assert.equal((await putSettings({ ...settingsBefore, ...names })).status, 200);
+      const savedSettings = (await (await fetch(settingsUrl, { headers })).json()).data;
+      assert.equal(savedSettings.paymentInstaPayAccountName, 'InstaPay Recipient');
+      assert.equal(savedSettings.paymentWalletAccountName, 'Wallet Recipient');
+      const legacySettings = { ...savedSettings }; delete legacySettings.paymentInstaPayAccountName; delete legacySettings.paymentWalletAccountName;
+      assert.equal((await putSettings(legacySettings)).status, 200);
+      assert.equal((await (await fetch(settingsUrl, { headers })).json()).data.paymentWalletAccountName, 'Wallet Recipient');
+      assert.equal((await putSettings({ ...savedSettings, paymentWalletAccountName: 'x'.repeat(101) })).status, 422);
+      assert.equal((await putSettings({ ...savedSettings, paymentWalletAccountName: '' })).status, 200);
+      assert.equal((await (await fetch(settingsUrl, { headers })).json()).data.paymentWalletAccountName, '');
+      assert.equal(await db.setting.count({ where: { storeId: otherStore.id, key: { in: ['paymentInstaPayAccountName', 'paymentWalletAccountName'] } } }), 0);
       const deviceToken = 'ci-device-token-not-real-123456789';
       const notificationUrl = `${url}/api/mobile/notifications`;
       const registerPush = (authHeaders, token) => fetch(notificationUrl, { method: 'POST',

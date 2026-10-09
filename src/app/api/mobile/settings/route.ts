@@ -8,6 +8,8 @@ const schema = z.object({ name: z.string().trim().min(2).max(80),
   defaultReturnCost: z.number().finite().min(0).max(1000000), costingEnabled: z.boolean(),
   paymentInstaPayEnabled: z.boolean(), paymentWalletEnabled: z.boolean(),
   paymentInstaPayAddress: z.string().trim().max(120), paymentWalletNumber: z.string().trim().regex(/^$|^01[0125]\d{8}$/),
+  paymentInstaPayAccountName: z.string().trim().max(100).optional(),
+  paymentWalletAccountName: z.string().trim().max(100).optional(),
   paymentDepositAmount: z.number().int().min(1).max(1000000) });
 
 export async function GET() {
@@ -18,12 +20,12 @@ export async function GET() {
         select: { name: true, currency: true, timezone: true } }),
       getSetting(session.storeId, "defaultReturnCost"),
       getSetting(session.storeId, "costingEnabled"),
-      Promise.all((["paymentInstaPayEnabled", "paymentWalletEnabled", "paymentInstaPayAddress", "paymentWalletNumber", "paymentDepositAmount"] as const).map(key => getSetting(session.storeId, key))),
+      Promise.all((["paymentInstaPayEnabled", "paymentWalletEnabled", "paymentInstaPayAddress", "paymentWalletNumber", "paymentDepositAmount", "paymentInstaPayAccountName", "paymentWalletAccountName"] as const).map(key => getSetting(session.storeId, key))),
     ]);
     return NextResponse.json({ data: { ...store, defaultReturnCost: Number(returnCost),
       costingEnabled: costingEnabled === "true",
       paymentInstaPayEnabled: paymentValues[0] === "true", paymentWalletEnabled: paymentValues[1] === "true",
-      paymentInstaPayAddress: paymentValues[2], paymentWalletNumber: paymentValues[3], paymentDepositAmount: Number(paymentValues[4]) } }, { headers: { "Cache-Control": "no-store" } });
+      paymentInstaPayAddress: paymentValues[2], paymentWalletNumber: paymentValues[3], paymentDepositAmount: Number(paymentValues[4]), paymentInstaPayAccountName: paymentValues[5], paymentWalletAccountName: paymentValues[6] } }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) { return failure(error); }
 }
 
@@ -40,11 +42,12 @@ export async function PUT(request: NextRequest) {
       if (store.name !== input.name) await tx.auditLog.create({ data: { storeId: session.storeId,
         userId: session.userId, action: "UPDATE", entity: "Store", entityId: session.storeId,
         before: { name: store.name }, after: { name: input.name } } });
-      for (const [key, value] of [["defaultReturnCost", String(input.defaultReturnCost)],
+      for (const [key, value] of [["paymentInstaPayAccountName", input.paymentInstaPayAccountName], ["paymentWalletAccountName", input.paymentWalletAccountName], ["defaultReturnCost", String(input.defaultReturnCost)],
         ["costingEnabled", String(input.costingEnabled)],
         ["paymentInstaPayEnabled", String(input.paymentInstaPayEnabled)], ["paymentWalletEnabled", String(input.paymentWalletEnabled)],
         ["paymentInstaPayAddress", input.paymentInstaPayAddress], ["paymentWalletNumber", input.paymentWalletNumber],
-        ["paymentDepositAmount", String(input.paymentDepositAmount)]]) {
+        ["paymentDepositAmount", String(input.paymentDepositAmount)]] as const) {
+        if (value === undefined) continue;
         const before = await tx.setting.findUnique({ where: { storeId_key: { storeId: session.storeId, key } } });
         await tx.setting.upsert({ where: { storeId_key: { storeId: session.storeId, key } },
           create: { storeId: session.storeId, key, value }, update: { value } });

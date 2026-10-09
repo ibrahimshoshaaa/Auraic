@@ -11,6 +11,7 @@ export const DEFAULT_SETTINGS = {
   paymentInstaPayAddress: "",
   paymentInstaPayAccountName: "",
   paymentWalletNumber: "",
+  paymentWalletAccountName: "",
   paymentDepositAmount: "150",
   returnRestocking: "CONFIGURABLE",
   costingEnabled: "false",
