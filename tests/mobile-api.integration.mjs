@@ -72,6 +72,18 @@ test('mobile login, tenant access, and revocable logout through real HTTP routes
         assert.equal(Number(cleared.total), 1000); assert.equal(Number(cleared.discount), 100); assert.equal(Number(cleared.netSales), 940);
         const listed = (await (await fetch(`${url}/api/mobile/orders?orderId=${order.id}`, { headers })).json()).data[0];
         assert.equal(Number(listed.adminDiscount), 0); assert.ok(listed.updatedAt);
+        if (prefix === 'web_') {
+          const pending = await db.order.update({ where: { id: order.id }, data: { financialStatus: 'PENDING', depositAmount: 0 } });
+          const receipt = await db.auditLog.create({ data: { storeId: store.id, action: 'CREATE', entity: 'Order', entityId: order.id,
+            metadata: { payment: 'INSTAPAY', paymentPlan: 'FULL', requestedCents: 100000 } } });
+          assert.equal((await saveDiscount(50, pending.updatedAt.toISOString())).status, 409);
+          await db.auditLog.update({ where: { id: receipt.id }, data: { metadata: { payment: 'INSTAPAY', paymentPlan: 'DEPOSIT', requestedCents: 15000 } } });
+          assert.equal((await saveDiscount(100, pending.updatedAt.toISOString())).status, 200);
+          const discounted = await db.order.findUniqueOrThrow({ where: { id: order.id } });
+          assert.equal((await saveDiscount(900, discounted.updatedAt.toISOString())).status, 409);
+          const simultaneous = await Promise.all([saveDiscount(50, discounted.updatedAt.toISOString()), saveDiscount(75, discounted.updatedAt.toISOString())]);
+          assert.deepEqual(simultaneous.map(response => response.status).sort((a, b) => a - b), [200, 409]);
+        }
         await db.order.update({ where: { id: order.id }, data: { manualStatus: 'DELIVERED', financialStatus: 'PAID' } });
         assert.equal((await saveDiscount(100, cleared.updatedAt.toISOString())).status, 409);
         await db.order.delete({ where: { id: order.id } });
