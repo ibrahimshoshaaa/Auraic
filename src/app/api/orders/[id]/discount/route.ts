@@ -14,6 +14,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const input = schema.parse(await request.json());
     const { id } = await params;
     const result = await db.$transaction(async tx => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${id}, 0))::text`;
       const order = await tx.order.findFirst({ where: { id, storeId: session.storeId }, include: { items: true } });
       if (!order) return { error: "الطلب غير موجود", status: 404 };
       if (!["NEW", "PREPARED", "SHIPPING"].includes(order.manualStatus ?? "") ||
