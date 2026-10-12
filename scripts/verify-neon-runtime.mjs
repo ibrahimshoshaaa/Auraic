@@ -28,7 +28,7 @@ try {
   assert.ok(ready);
   const headers = { authorization: `Bearer ${token}` };
   const me = await fetch(`${base}/api/mobile/me`, { headers }); assert.equal(me.status, 200);
-  const profile = (await me.json()).data; assert.equal(profile.store.id, owner.storeId);
+  const profile = (await me.json()).data; assert.equal(profile.id, owner.id); assert.equal(profile.role, owner.role);
   const orders = await fetch(`${base}/api/mobile/orders`, { headers }); assert.equal(orders.status, 200); assert.equal((await orders.json()).count, 0);
   const settings = await fetch(`${base}/api/mobile/settings`, { headers }); assert.equal(settings.status, 200);
   assert.equal(await db.order.count(), 0); assert.equal(await db.product.count(), 0);
