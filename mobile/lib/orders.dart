@@ -118,6 +118,11 @@ class _OrdersPageState extends State<OrdersPage> {
             Text('· ${items.length} صنف', style: const TextStyle(
               fontSize: 13, color: Color(0xff718089))),
           ]),
+          if (widget.canWrite && ['NEW', 'PREPARED', 'SHIPPING'].contains(o['manualStatus']) && ['PENDING', 'PARTIALLY_PAID'].contains(o['financialStatus']))
+            Align(alignment: AlignmentDirectional.centerStart, child: TextButton.icon(
+              onPressed: updatingOrder != null ? null : () => editDiscount(o),
+              icon: const Icon(Icons.local_offer_outlined),
+              label: Text((double.tryParse(str(o['adminDiscount'])) ?? 0) > 0 ? 'تعديل خصم الأدمن' : 'إضافة خصم'))),
           if (widget.canWrite && ['NEW', 'PREPARED', 'SHIPPING'].contains(o['manualStatus']))
             Padding(padding: const EdgeInsets.only(top: 12), child: Row(children: [
               Expanded(child: FilledButton.icon(
@@ -151,7 +156,10 @@ class _OrdersPageState extends State<OrdersPage> {
           if (str(o['depositAmount']).isNotEmpty)
             _detailRow(Icons.account_balance_wallet_outlined, 'الديبوزت',
               '${str(o['depositAmount'])} $currency'),
-          if (str(o['couponCode']).isNotEmpty) _detailRow(Icons.local_offer_outlined, 'الكوبون', '${o['couponCode']} · خصم ${statistic(o['discount'])} $currency'),
+          if (str(o['couponCode']).isNotEmpty) _detailRow(Icons.local_offer_outlined, 'الكوبون', str(o['couponCode'])),
+          _detailRow(Icons.local_offer_outlined, 'إجمالي الخصومات', '${statistic(o['discount'])} $currency'),
+          _detailRow(Icons.local_offer_outlined, 'خصم الأدمن', '${statistic(o['adminDiscount'])} $currency'),
+          _detailRow(Icons.payments_outlined, 'المطلوب تحصيله', '${isDelivered || isReturned || o['financialStatus'] == 'PAID' ? 0 : ((double.tryParse(str(o['total'])) ?? 0) - (double.tryParse(str(o['depositAmount'])) ?? 0)).clamp(0, double.infinity)} $currency'),
           const SizedBox(height: 14),
           _sectionTitle('بيانات العميل'),
           Wrap(spacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
@@ -210,6 +218,11 @@ class _OrdersPageState extends State<OrdersPage> {
       Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600))),
     ]));
 
+  Future<void> editDiscount(Json order) async {
+    final saved = await showDialog<bool>(context: context, builder: (_) => OrderDiscountDialog(api: widget.api, order: order));
+    if (saved == true && mounted) reload();
+  }
+
   String? updatingOrder;
   Future<void> updateOrder(Json order, String status, String label, {bool destructive = false}) async {
     if (updatingOrder != null) return;
@@ -225,6 +238,45 @@ class _OrdersPageState extends State<OrdersPage> {
   Widget action(Json order, String status, String label, {bool destructive = false}) => ListTile(leading: Icon(destructive ? Icons.undo : Icons.check_circle_outline), title: Text(label), onTap: updatingOrder == null ? () => updateOrder(order, status, label, destructive: destructive) : null);
 
 
+}
+
+class OrderDiscountDialog extends StatefulWidget {
+  const OrderDiscountDialog({required this.api, required this.order, super.key});
+  final ErpApi api;
+  final Json order;
+  @override
+  State<OrderDiscountDialog> createState() => _OrderDiscountDialogState();
+}
+class _OrderDiscountDialogState extends State<OrderDiscountDialog> {
+  late final amount = TextEditingController(text: str(widget.order['adminDiscount']).isEmpty ? '0' : str(widget.order['adminDiscount']));
+  bool busy = false;
+  String? error;
+  double number(String key) => double.tryParse(str(widget.order[key])) ?? 0;
+  @override
+  void dispose() { amount.dispose(); super.dispose(); }
+  Future<void> save() async {
+    final value = double.tryParse(amount.text);
+    if (value == null || !value.isFinite || value < 0) { setState(() => error = 'أدخل مبلغ خصم صحيحًا'); return; }
+    setState(() { busy = true; error = null; });
+    try {
+      await widget.api.post('/api/orders/${Uri.encodeComponent(str(widget.order['id']))}/discount', {'amount': value, 'updatedAt': widget.order['updatedAt']});
+      if (mounted) Navigator.pop(context, true);
+    } catch (cause) { if (mounted) setState(() => error = cause.toString()); }
+    finally { if (mounted) setState(() => busy = false); }
+  }
+  @override
+  Widget build(BuildContext context) {
+    final total = number('total') + number('adminDiscount') - (double.tryParse(amount.text) ?? 0);
+    return AlertDialog(title: const Text('خصم الأدمن'), content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+      TextField(controller: amount, enabled: !busy, keyboardType: const TextInputType.numberWithOptions(decimal: true), onChanged: (_) => setState(() {}), decoration: const InputDecoration(labelText: 'الخصم بالجنيه (٠ للإلغاء)')),
+      const SizedBox(height: 12),
+      Text('الإجمالي بعد الخصم: ${total.toStringAsFixed(2)} EGP'),
+      Text('المطلوب تحصيله: ${(total - number('depositAmount')).clamp(0, double.infinity).toStringAsFixed(2)} EGP'),
+      const SizedBox(height: 12),
+      const Text('خصم إضافي للكوبون، بحد أقصى قيمة المنتجات. أعد طباعة البوليصة وأبلغ الشحن بعد التعديل.', style: TextStyle(fontSize: 12)),
+      if (error != null) Text(error!, style: const TextStyle(color: Colors.red)),
+    ])), actions: [TextButton(onPressed: busy ? null : () => Navigator.pop(context, false), child: const Text('إلغاء')), FilledButton(onPressed: busy ? null : save, child: Text(busy ? 'جارٍ الحفظ...' : 'حفظ الخصم'))]);
+  }
 }
 
 class NewOrderPage extends StatefulWidget {
