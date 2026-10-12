@@ -74,9 +74,11 @@ test('mobile login, tenant access, and revocable logout through real HTTP routes
         assert.equal(Number(listed.adminDiscount), 0); assert.ok(listed.updatedAt);
         await db.order.update({ where: { id: order.id }, data: { manualStatus: 'DELIVERED', financialStatus: 'PAID' } });
         assert.equal((await saveDiscount(100, cleared.updatedAt.toISOString())).status, 409);
+        await db.order.delete({ where: { id: order.id } });
       }
       const foreignOrder = await db.order.create({ data: { storeId: otherStore.id, currency: 'EGP', occurredAt: new Date(), manualStatus: 'NEW', financialStatus: 'PENDING', total: 100 } });
       assert.equal((await fetch(`${url}/api/orders/${foreignOrder.id}/discount`, { method: 'POST', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify({ amount: 10, updatedAt: foreignOrder.updatedAt.toISOString() }) })).status, 404);
+      await db.order.delete({ where: { id: foreignOrder.id } });
       const settingsUrl = `${url}/api/mobile/settings`;
       const settingsBefore = (await (await fetch(settingsUrl, { headers })).json()).data;
       const putSettings = value => fetch(settingsUrl, { method: 'PUT', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify(value) });
