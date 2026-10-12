@@ -461,6 +461,7 @@ model Order {
   shipping        Decimal?    @db.Decimal(18, 4)
   tax             Decimal?    @db.Decimal(18, 4)
   discount        Decimal?    @db.Decimal(18, 4)
+  adminDiscount   Decimal     @default(0) @db.Decimal(18, 4)
   couponCode      String?
   total           Decimal?    @db.Decimal(18, 4)
   refunded        Decimal?    @db.Decimal(18, 4)
@@ -491,6 +492,7 @@ model OrderItem {
   quantity        Decimal       @db.Decimal(18, 6)
   originalPrice   Decimal?      @db.Decimal(18, 4)
   discount        Decimal?      @db.Decimal(18, 4)
+  adminDiscount   Decimal       @default(0) @db.Decimal(18, 4)
   finalLinePrice  Decimal?      @db.Decimal(18, 4)
   refunded        Decimal?      @db.Decimal(18, 4)
   recipeVersionId String?

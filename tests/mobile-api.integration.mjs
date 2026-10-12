@@ -54,6 +54,29 @@ test('mobile login, tenant access, and revocable logout through real HTTP routes
       const me = await fetch(`${url}/api/mobile/me`, { headers });
       assert.equal(me.status, 200);
       assert.equal((await me.json()).data.store.name, store.name);
+      // Both storefront and manual orders share the authenticated discount route.
+      for (const prefix of ['manual_', 'web_']) {
+        const order = await db.order.create({ data: { id: `${prefix}discount_${store.id}`, storeId: store.id, currency: 'EGP', occurredAt: new Date(), manualStatus: 'NEW', financialStatus: 'PARTIALLY_PAID', subtotal: 1040, shipping: 60, discount: 100, couponCode: prefix === 'web_' ? 'FRIEND' : null, total: 1000, netSales: 940, depositAmount: 150,
+          items: { create: [{ title: 'Perfume', quantity: 1, originalPrice: 660, finalLinePrice: 600, discount: 60 }, { title: 'Sample', quantity: 1, originalPrice: 380, finalLinePrice: 340, discount: 40 }] } } });
+        const discountUrl = `${url}/api/orders/${order.id}/discount`;
+        const saveDiscount = (amount, updatedAt) => fetch(discountUrl, { method: 'POST', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify({ amount, updatedAt }) });
+        assert.equal((await fetch(discountUrl, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ amount: 100, updatedAt: order.updatedAt.toISOString() }) })).status, 401);
+        assert.equal((await saveDiscount(100, order.updatedAt.toISOString())).status, 200);
+        const saved = await db.order.findUniqueOrThrow({ where: { id: order.id }, include: { items: true } });
+        assert.equal(Number(saved.total), 900); assert.equal(Number(saved.netSales), 840); assert.equal(Number(saved.discount), 200); assert.equal(Number(saved.adminDiscount), 100); assert.equal(Number(saved.shipping), 60);
+        assert.equal(saved.items.reduce((sum, item) => sum + Number(item.adminDiscount), 0), 100);
+        assert.equal((await saveDiscount(50, order.updatedAt.toISOString())).status, 409);
+        assert.equal((await saveDiscount(900, saved.updatedAt.toISOString())).status, 422);
+        assert.equal((await saveDiscount(0, saved.updatedAt.toISOString())).status, 200);
+        const cleared = await db.order.findUniqueOrThrow({ where: { id: order.id } });
+        assert.equal(Number(cleared.total), 1000); assert.equal(Number(cleared.discount), 100); assert.equal(Number(cleared.netSales), 940);
+        const listed = (await (await fetch(`${url}/api/mobile/orders?orderId=${order.id}`, { headers })).json()).data[0];
+        assert.equal(Number(listed.adminDiscount), 0); assert.ok(listed.updatedAt);
+        await db.order.update({ where: { id: order.id }, data: { manualStatus: 'DELIVERED', financialStatus: 'PAID' } });
+        assert.equal((await saveDiscount(100, cleared.updatedAt.toISOString())).status, 409);
+      }
+      const foreignOrder = await db.order.create({ data: { storeId: otherStore.id, currency: 'EGP', occurredAt: new Date(), manualStatus: 'NEW', financialStatus: 'PENDING', total: 100 } });
+      assert.equal((await fetch(`${url}/api/orders/${foreignOrder.id}/discount`, { method: 'POST', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify({ amount: 10, updatedAt: foreignOrder.updatedAt.toISOString() }) })).status, 404);
       const settingsUrl = `${url}/api/mobile/settings`;
       const settingsBefore = (await (await fetch(settingsUrl, { headers })).json()).data;
       const putSettings = value => fetch(settingsUrl, { method: 'PUT', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify(value) });

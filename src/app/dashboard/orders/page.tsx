@@ -1,3 +1,4 @@
+import { OrderDiscount } from "@/components/orders/OrderDiscount";
 import { orderWhatsAppUrl } from "@/lib/order-whatsapp";
 import { ShopIcon } from "@/components/storefront/ShopIcon";
 import Link from "next/link";
@@ -69,7 +70,8 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                 <div className="flex flex-wrap items-center gap-2"><Link href={`/dashboard/orders/${encodeURIComponent(order.id)}/print`} target="_blank" className="inline-flex items-center gap-2 rounded-xl border border-[#191735] px-4 py-3 text-sm font-semibold">طباعة البوليصة</Link>
                 {(() => { const href = orderWhatsAppUrl(normalizeCustomerPhone(order.customerPhone), { number: order.orderNumber ?? order.id.slice(-8), customer: order.customerRef, address: order.customerAddress, currency: order.currency, total: Number(order.total ?? 0), shipping: Number(order.shipping ?? 0), subtotal: Number(order.subtotal ?? 0), discount: Number(order.discount ?? 0), tax: Number(order.tax ?? 0), deposit: Number(order.depositAmount ?? 0), items: order.items.map(item => ({ title: item.title, quantity: Number(item.quantity) })) }); return href ? <a href={href} target="_blank" rel="noopener noreferrer" aria-label="تأكيد الطلب عبر واتساب" className="inline-flex items-center gap-2 rounded-xl bg-[#128c4e] px-4 py-3 text-sm font-semibold text-white"><ShopIcon name="whatsapp" width={24} height={24}/>تأكيد الطلب عبر واتساب</a> : <p className="text-xs text-slate-500">أضف رقم هاتف صحيحًا للعميل للتواصل عبر واتساب.</p>; })()}
                 </div>
-                {order.couponCode && <p className="text-sm">الكوبون: <b dir="ltr">{order.couponCode}</b> · الخصم: {Number(order.discount || 0)} {order.currency}</p>}
+                {order.couponCode && <p className="text-sm">الكوبون: <b dir="ltr">{order.couponCode}</b> · الخصم: {Number(order.discount || 0) - Number(order.adminDiscount)} {order.currency}</p>}
+                {Number(order.adminDiscount) > 0 && <p className="text-sm">خصم الأدمن: {Number(order.adminDiscount)} {order.currency}</p>}
                 <p className="text-sm text-slate-600">الإجمالي: <strong className="text-slate-900">{Number(order.total ?? 0).toFixed(2)} {order.currency}</strong> · صافي: {Number(order.netSales ?? 0).toFixed(2)} {order.currency}</p>
                 <p className="mb-2 text-xs font-semibold text-slate-500">بنود الطلب ({order.items.length})</p>
                 <div className="flex flex-wrap gap-2">{order.items.map(item => <span key={item.id} className="rounded-lg bg-slate-50 px-3 py-1.5 text-xs text-slate-700">{item.title} × {Number(item.quantity)} <span className="text-slate-400">· {item.consumptionStatus}</span></span>)}</div>
@@ -78,6 +80,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                 {order.manualStatus && can(session.role, "orders.write") && <ManualOrderActions showNext={false} orderId={order.id} status={order.manualStatus as ManualOrderStatus} canReturn={false} />}
               </div>
             </details>
+            {can(session.role, "orders.write") && ["NEW", "PREPARED", "SHIPPING"].includes(order.manualStatus ?? "") && ["PENDING", "PARTIALLY_PAID"].includes(order.financialStatus ?? "") && <div className="px-4 pb-4 sm:px-5"><OrderDiscount key={order.updatedAt.toISOString()} orderId={order.id} amount={Number(order.adminDiscount)} total={Number(order.total)} deposit={Number(order.depositAmount)} updatedAt={order.updatedAt.toISOString()} /></div>}
             {order.manualStatus && can(session.role, "orders.write") && !["DELIVERED", "RETURNED"].includes(order.manualStatus) && <div className="px-4 pb-4 sm:px-5"><ManualOrderActions quick orderId={order.id} status={order.manualStatus as ManualOrderStatus} canReturn={["returns.write", "expenses.write", "inventory.write"].every(permission => can(session.role, permission))} /></div>}
             </article>
           ))}
