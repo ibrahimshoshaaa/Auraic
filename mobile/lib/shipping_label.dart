@@ -22,8 +22,6 @@ class _ShippingLabelPageState extends State<ShippingLabelPage> {
   static const double labelWidth = 50;
   static const double labelHeight = 70;
   bool busy = false;
-  num amount(dynamic v) => num.tryParse('$v') ?? 0;
-  String money(num n) => '${n == n.round() ? n.toInt() : n.toStringAsFixed(2)} ${widget.order['currency'] ?? 'EGP'}';
   Future<Uint8List> document() async {
     await WidgetsBinding.instance.endOfFrame;
     final boundary = receipt.currentContext!.findRenderObject()! as RenderRepaintBoundary;
@@ -53,10 +51,6 @@ class _ShippingLabelPageState extends State<ShippingLabelPage> {
   }
   @override
   Widget build(BuildContext context) {
-    final o = widget.order;
-    Widget line(String text, {bool bold = false, double size = 13}) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3), child: Text(text,
-        style: TextStyle(color: Colors.black, fontSize: size, fontWeight: bold ? FontWeight.w800 : FontWeight.normal)));
     return Scaffold(appBar: AppBar(title: const Text('استيكر الطلب')),
       body: SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(children: [
         Wrap(spacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
@@ -66,18 +60,98 @@ class _ShippingLabelPageState extends State<ShippingLabelPage> {
         ]),
         const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Text('اختار الطابعة من نافذة أندرويد، أو شارك PDF مع تطبيق الطابعة.', textAlign: TextAlign.center)),
         SingleChildScrollView(scrollDirection: Axis.horizontal, child: RepaintBoundary(key: receipt,
-          child: Container(width: labelWidth * 3.78, height: labelHeight * 3.78, color: Colors.white, padding: const EdgeInsets.all(8),
-            child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.topRight, child: SizedBox(width: labelWidth * 3.78 - 16, child: Directionality(textDirection: TextDirection.rtl, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              const Text('Auraic', textAlign: TextAlign.center, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.black)),
-              const Divider(color: Colors.black),
-              line('رقم الطلب: ${o['orderNumber'] ?? o['id'] ?? ''}', bold: true),
-              line('العميل: ${o['customerRef'] ?? 'غير متاح'}', bold: true, size: 17), line('الهاتف: ${o['customerPhone'] ?? 'غير متاح'}', bold: true, size: 17),
-              line('العنوان: ${o['customerAddress'] ?? 'غير متاح'}', bold: true, size: 16), const Divider(color: Colors.black),
-              line('المنتجات', bold: true),
-              for (final item in (o['items'] as List? ?? [])) line('${item['title']} × ${item['quantity']}'),
-              const Divider(color: Colors.black), line('المطلوب تحصيله: ${money(shippingCollection(o))}', bold: true, size: 17),
-            ])))),
-          ))),
+          child: SizedBox(width: labelWidth * 3.78, height: labelHeight * 3.78,
+            child: ShippingLabelContent(order: widget.order)),
+          )),
       ])));
   }
+}
+
+class ShippingLabelContent extends StatelessWidget {
+  const ShippingLabelContent({required this.order, super.key});
+  final Map<String, dynamic> order;
+
+  @override
+  Widget build(BuildContext context) {
+    String money(num value) => '${value == value.round() ? value.toInt() : value.toStringAsFixed(2)} ${order['currency'] ?? 'EGP'}';
+    final rows = <({String? text, double size, bool bold})>[
+      (text: 'رقم الطلب: ${order['orderNumber'] ?? order['id'] ?? ''}', size: 12, bold: false),
+      (text: 'العميل: ${order['customerRef'] ?? 'غير متاح'}', size: 20, bold: true),
+      (text: '${order['customerPhone'] ?? 'غير متاح'}', size: 22, bold: true),
+      (text: 'العنوان: ${order['customerAddress'] ?? 'غير متاح'}', size: 20, bold: true),
+      (text: null, size: 6, bold: false),
+      (text: 'المطلوب تحصيله', size: 13, bold: true),
+      (text: money(shippingCollection(order)), size: 25, bold: true),
+    ];
+    final style = DefaultTextStyle.of(context).style;
+    return Semantics(label: rows.where((row) => row.text != null).map((row) => row.text).join('، '),
+      child: CustomPaint(painter: ShippingLabelPainter(rows: rows, baseStyle: style)));
+  }
+}
+
+class ShippingLabelPainter extends CustomPainter {
+  ShippingLabelPainter({required this.rows, required this.baseStyle});
+  final List<({String? text, double size, bool bold})> rows;
+  final TextStyle baseStyle;
+
+  TextPainter paragraph(int index, double scale, double width) {
+    final row = rows[index];
+    final painter = TextPainter(text: TextSpan(text: row.text, style: baseStyle.copyWith(
+      color: Colors.black, fontSize: row.size * scale, height: 1.15,
+      fontWeight: row.bold ? FontWeight.w800 : FontWeight.normal)),
+      textAlign: TextAlign.right,
+      textDirection: index == 2 || index == rows.length - 1 ? TextDirection.ltr : TextDirection.rtl,
+      textScaler: TextScaler.noScaling);
+    painter.layout(minWidth: width, maxWidth: width);
+    return painter;
+  }
+
+  List<({int index, double top, double height, double scale})> layout(Size size) {
+    double height(double scale) {
+      double total = 0;
+      for (int index = 0; index < rows.length; index++) {
+        final row = rows[index];
+        if (row.text == null) { total += row.size * scale; continue; }
+        final painter = paragraph(index, scale, size.width);
+        total += painter.height;
+        painter.dispose();
+      }
+      return total;
+    }
+    double low = 0;
+    double high = 1.25;
+    for (int i = 0; i < 18; i++) {
+      final middle = (low + high) / 2;
+      if (height(middle) <= size.height) { low = middle; } else { high = middle; }
+    }
+    final gap = (size.height - height(low)).clamp(0, size.height) / (rows.length - 1);
+    double y = 0;
+    return [for (int index = 0; index < rows.length; index++) (() {
+      final row = rows[index];
+      final painter = row.text == null ? null : paragraph(index, low, size.width);
+      final rowHeight = painter?.height ?? row.size * low;
+      painter?.dispose();
+      final result = (index: index, top: y, height: rowHeight, scale: low);
+      y += rowHeight + gap;
+      return result;
+    })()];
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(Offset.zero & size, Paint()..color = Colors.white);
+    for (final line in layout(size)) {
+      if (rows[line.index].text == null) {
+        final y = line.top + line.height / 2;
+        canvas.drawLine(Offset(0, y), Offset(size.width, y), Paint()..color = Colors.black..strokeWidth = 1);
+      } else {
+        final painter = paragraph(line.index, line.scale, size.width);
+        painter.paint(canvas, Offset(0, line.top));
+        painter.dispose();
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant ShippingLabelPainter oldDelegate) => true;
 }
