@@ -12,14 +12,14 @@ void main() {
           'items': List.generate(count, (i) => {'title': 'عطر أورايك ٥٠ مل', 'quantity': 2}),
         }))))));
       expect(tester.takeException(), isNull);
-      expect(find.text('Auraic'), findsNothing);
-      expect(find.text('01012345678'), findsOneWidget);
-      expect(find.text('410 EGP'), findsOneWidget);
-      expect(tester.getSize(find.text('01012345678')).width, 189);
-      final phone = tester.widget<Text>(find.text('01012345678'));
-      expect(phone.style!.fontWeight, FontWeight.w800);
-      final total = tester.widget<Text>(find.text('410 EGP'));
-      expect(total.style!.fontSize, greaterThan(phone.style!.fontSize!));
+      expect(find.text('Auraic', findRichText: true), findsNothing);
+      expect(find.text('01012345678', findRichText: true), findsOneWidget);
+      expect(find.text('410 EGP', findRichText: true), findsOneWidget);
+      expect(tester.getSize(find.text('01012345678', findRichText: true)).width, 189);
+      final phone = tester.widget<RichText>(find.text('01012345678', findRichText: true));
+      expect(phone.text.style!.fontWeight, FontWeight.w800);
+      final total = tester.widget<RichText>(find.text('410 EGP', findRichText: true));
+      expect(total.text.style!.fontSize, greaterThan(phone.text.style!.fontSize!));
     }
   });
   test('collection includes shipping, subtracts deposit and excludes paid orders', () {

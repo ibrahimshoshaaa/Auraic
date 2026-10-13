@@ -97,6 +97,7 @@ class ShippingLabelContent extends StatelessWidget {
           for (final (index, row) in rows.indexed) {
             if (row.text == null) { total += row.size * scale; continue; }
             final painter = TextPainter(text: TextSpan(text: row.text, style: style(row.size, row.bold, scale)),
+              textAlign: TextAlign.right,
               textDirection: index == 2 || index == rows.length - 1 ? TextDirection.ltr : TextDirection.rtl,
               textScaler: TextScaler.noScaling);
             painter.layout(maxWidth: constraints.maxWidth);
@@ -114,9 +115,9 @@ class ShippingLabelContent extends StatelessWidget {
         return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [for (final (index, row) in rows.indexed)
             if (row.text == null) SizedBox(height: row.size * low, child: const Divider(height: 0, thickness: 1, color: Colors.black))
-            else Text(row.text!, textAlign: TextAlign.right,
+            else RichText(text: TextSpan(text: row.text, style: style(row.size, row.bold, low)), textAlign: TextAlign.right,
               textDirection: index == 2 || index == rows.length - 1 ? TextDirection.ltr : TextDirection.rtl,
-              textScaler: TextScaler.noScaling, style: style(row.size, row.bold, low)),
+              textScaler: TextScaler.noScaling),
           ]);
       })));
   }
