@@ -22,8 +22,6 @@ class _ShippingLabelPageState extends State<ShippingLabelPage> {
   static const double labelWidth = 50;
   static const double labelHeight = 70;
   bool busy = false;
-  num amount(dynamic v) => num.tryParse('$v') ?? 0;
-  String money(num n) => '${n == n.round() ? n.toInt() : n.toStringAsFixed(2)} ${widget.order['currency'] ?? 'EGP'}';
   Future<Uint8List> document() async {
     await WidgetsBinding.instance.endOfFrame;
     final boundary = receipt.currentContext!.findRenderObject()! as RenderRepaintBoundary;
@@ -53,10 +51,6 @@ class _ShippingLabelPageState extends State<ShippingLabelPage> {
   }
   @override
   Widget build(BuildContext context) {
-    final o = widget.order;
-    Widget line(String text, {bool bold = false, double size = 13}) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3), child: Text(text,
-        style: TextStyle(color: Colors.black, fontSize: size, fontWeight: bold ? FontWeight.w800 : FontWeight.normal)));
     return Scaffold(appBar: AppBar(title: const Text('استيكر الطلب')),
       body: SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(children: [
         Wrap(spacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
@@ -66,18 +60,61 @@ class _ShippingLabelPageState extends State<ShippingLabelPage> {
         ]),
         const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Text('اختار الطابعة من نافذة أندرويد، أو شارك PDF مع تطبيق الطابعة.', textAlign: TextAlign.center)),
         SingleChildScrollView(scrollDirection: Axis.horizontal, child: RepaintBoundary(key: receipt,
-          child: Container(width: labelWidth * 3.78, height: labelHeight * 3.78, color: Colors.white, padding: const EdgeInsets.all(8),
-            child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.topRight, child: SizedBox(width: labelWidth * 3.78 - 16, child: Directionality(textDirection: TextDirection.rtl, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              const Text('Auraic', textAlign: TextAlign.center, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.black)),
-              const Divider(color: Colors.black),
-              line('رقم الطلب: ${o['orderNumber'] ?? o['id'] ?? ''}', bold: true),
-              line('العميل: ${o['customerRef'] ?? 'غير متاح'}', bold: true, size: 17), line('الهاتف: ${o['customerPhone'] ?? 'غير متاح'}', bold: true, size: 17),
-              line('العنوان: ${o['customerAddress'] ?? 'غير متاح'}', bold: true, size: 16), const Divider(color: Colors.black),
-              line('المنتجات', bold: true),
-              for (final item in (o['items'] as List? ?? [])) line('${item['title']} × ${item['quantity']}'),
-              const Divider(color: Colors.black), line('المطلوب تحصيله: ${money(shippingCollection(o))}', bold: true, size: 17),
-            ])))),
-          ))),
+          child: SizedBox(width: labelWidth * 3.78, height: labelHeight * 3.78,
+            child: ShippingLabelContent(order: widget.order)),
+          )),
       ])));
+  }
+}
+
+class ShippingLabelContent extends StatelessWidget {
+  const ShippingLabelContent({required this.order, super.key});
+  final Map<String, dynamic> order;
+
+  @override
+  Widget build(BuildContext context) {
+    String money(num value) => '${value == value.round() ? value.toInt() : value.toStringAsFixed(2)} ${order['currency'] ?? 'EGP'}';
+    final rows = <({String? text, double size, bool bold})>[
+      (text: 'رقم الطلب: ${order['orderNumber'] ?? order['id'] ?? ''}', size: 12, bold: false),
+      (text: 'العميل: ${order['customerRef'] ?? 'غير متاح'}', size: 20, bold: true),
+      (text: '${order['customerPhone'] ?? 'غير متاح'}', size: 22, bold: true),
+      (text: 'العنوان: ${order['customerAddress'] ?? 'غير متاح'}', size: 20, bold: true),
+      (text: null, size: 6, bold: false),
+      (text: 'المنتجات', size: 13, bold: true),
+      for (final item in (order['items'] as List? ?? []))
+        (text: '${item['title']} × ${item['quantity']}', size: 13, bold: false),
+      (text: null, size: 6, bold: false),
+      (text: 'المطلوب تحصيله', size: 13, bold: true),
+      (text: money(shippingCollection(order)), size: 25, bold: true),
+    ];
+    return ColoredBox(color: Colors.white, child: Directionality(textDirection: TextDirection.rtl,
+      child: LayoutBuilder(builder: (context, constraints) {
+        TextStyle style(double size, bool bold, double scale) => DefaultTextStyle.of(context).style.copyWith(
+          color: Colors.black, fontSize: size * scale, height: 1.15,
+          fontWeight: bold ? FontWeight.w800 : FontWeight.normal);
+        double height(double scale) {
+          double total = 0;
+          for (final row in rows) {
+            if (row.text == null) { total += row.size * scale; continue; }
+            final painter = TextPainter(text: TextSpan(text: row.text, style: style(row.size, row.bold, scale)),
+              textDirection: TextDirection.rtl, textScaler: TextScaler.noScaling);
+            painter.layout(maxWidth: constraints.maxWidth);
+            total += painter.height;
+            painter.dispose();
+          }
+          return total;
+        }
+        double low = 0;
+        double high = 1.25;
+        for (int i = 0; i < 18; i++) {
+          final middle = (low + high) / 2;
+          if (height(middle) <= constraints.maxHeight) { low = middle; } else { high = middle; }
+        }
+        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [for (final row in rows)
+            if (row.text == null) SizedBox(height: row.size * low, child: const Divider(height: 0, thickness: 1, color: Colors.black))
+            else Text(row.text!, textAlign: TextAlign.right, textScaler: TextScaler.noScaling, style: style(row.size, row.bold, low)),
+          ]);
+      })));
   }
 }

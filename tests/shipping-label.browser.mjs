@@ -30,8 +30,9 @@ test('Arabic label fills its own PDF page and long orders fit without clipping',
         const draws = [];
         const original = CanvasRenderingContext2D.prototype.fillText;
         CanvasRenderingContext2D.prototype.fillText = function(text, x, y) {
-          const fontSize = this.font.split(' ').find(part => part.endsWith('px'));
-          draws.push({ text, x, y, width: this.measureText(text).width, height: Number.parseFloat(fontSize ?? '0') * 1.3 });
+          const metrics = this.measureText(text);
+          draws.push({ text, left: x - metrics.actualBoundingBoxLeft, right: x + metrics.actualBoundingBoxRight,
+            top: y - metrics.actualBoundingBoxAscent, bottom: y + metrics.actualBoundingBoxDescent });
           return original.call(this, text, x, y);
         };
         try {
@@ -44,13 +45,14 @@ test('Arabic label fills its own PDF page and long orders fit without clipping',
       }, order);
       assert.equal(rendered.width, 591);
       assert.equal(rendered.height, 827);
-      const margin = 2.5 * 300 / 25.4;
       for (const draw of rendered.draws) {
-        assert.ok(draw.height > 0, `${name}: font size was measured`);
-        assert.ok(draw.y + draw.height <= rendered.height - margin + 0.01, `${name}: bottom clipping`);
-        assert.ok(draw.width <= rendered.width - 2 * margin + 0.01, `${name}: horizontal clipping`);
+        assert.ok(draw.top >= -0.01 && draw.bottom <= rendered.height + 0.01, `${name}: vertical clipping`);
+        assert.ok(draw.left >= -0.01 && draw.right <= rendered.width + 0.01, `${name}: horizontal clipping`);
       }
+      assert.ok(Math.abs(rendered.draws[0].top) < 0.01, `${name}: no top margin`);
+      assert.ok(Math.abs(rendered.draws.at(-1).bottom - rendered.height) < 0.01, `${name}: no bottom margin`);
       const text = rendered.draws.map(draw => draw.text).join(' ');
+      assert.ok(!text.includes('Auraic'));
       assert.ok(text.includes(order.phone));
       assert.ok(text.includes('410 EGP'));
       assert.ok(text.includes('إبراهيم'));

@@ -1,6 +1,6 @@
 import type { ShippingLabelOrder } from './shipping-label';
 
-type Row = { text?: string; size?: number; bold?: boolean; center?: boolean; divider?: boolean };
+type Row = { text?: string; size?: number; bold?: boolean; divider?: boolean };
 
 export function renderShippingLabel(order: ShippingLabelOrder, collection: string, fontFamily: string): HTMLCanvasElement {
   const pixelsPerMm = 300 / 25.4;
@@ -9,37 +9,40 @@ export function renderShippingLabel(order: ShippingLabelOrder, collection: strin
   canvas.height = Math.round(70 * pixelsPerMm);
   const context = canvas.getContext('2d');
   if (!context) throw new Error('Canvas is unavailable');
-  const margin = 2.5 * pixelsPerMm;
-  const contentWidth = canvas.width - 2 * margin;
+  const contentWidth = canvas.width;
   const rows: Row[] = [
-    { text: 'Auraic', size: 5, bold: true, center: true },
-    { divider: true },
     { text: `رقم الطلب: ${order.number.replace(/^#+/, '')}`, size: 3.1 },
-    { text: `العميل: ${order.customer}`, size: 4.2, bold: true },
-    { text: `الهاتف: ${order.phone}`, size: 4.2, bold: true },
-    { text: `العنوان: ${order.address}`, size: 4, bold: true },
+    { text: `العميل: ${order.customer}`, size: 4.8, bold: true },
+    { text: order.phone, size: 5.2, bold: true },
+    { text: `العنوان: ${order.address}`, size: 4.8, bold: true },
     { divider: true },
     { text: 'المنتجات', size: 3.1, bold: true },
     ...order.items.map(item => ({ text: `${item.title} × ${item.quantity}`, size: 3.1 })),
     { divider: true },
-    { text: `المطلوب تحصيله: ${collection}`, size: 4.2, bold: true },
+    { text: 'المطلوب تحصيله', size: 3.1, bold: true },
+    { text: collection, size: 6, bold: true },
   ];
   context.direction = 'rtl';
-  context.textBaseline = 'top';
+  context.textBaseline = 'alphabetic';
+
+  function textWidth(text: string): number {
+    const metrics = context!.measureText(text);
+    return Math.max(metrics.width, metrics.actualBoundingBoxLeft + metrics.actualBoundingBoxRight);
+  }
 
   function wrap(text: string): string[] {
     const lines: string[] = [];
     let line = '';
     for (const word of text.split(/\s+/)) {
       const candidate = line ? `${line} ${word}` : word;
-      if (context!.measureText(candidate).width <= contentWidth) {
+      if (textWidth(candidate) <= contentWidth) {
         line = candidate;
         continue;
       }
       if (line) lines.push(line);
       line = '';
       for (const character of word) {
-        if (line && context!.measureText(line + character).width > contentWidth) {
+        if (line && textWidth(line + character) > contentWidth) {
           lines.push(line);
           line = '';
         }
@@ -50,15 +53,16 @@ export function renderShippingLabel(order: ShippingLabelOrder, collection: strin
     return lines;
   }
 
-  function layout(scale: number, paint: boolean): number {
-    let y = margin;
-    for (const row of rows) {
+  function layout(scale: number, paint: boolean, extraGap = 0): number {
+    let y = 0;
+    for (const [index, row] of rows.entries()) {
+      if (index > 0) y += extraGap;
       if (row.divider) {
         y += pixelsPerMm * scale;
         if (paint) {
           context!.beginPath();
-          context!.moveTo(margin, y);
-          context!.lineTo(canvas.width - margin, y);
+          context!.moveTo(0, y);
+          context!.lineTo(canvas.width, y);
           context!.stroke();
         }
         y += 1.5 * pixelsPerMm * scale;
@@ -66,23 +70,24 @@ export function renderShippingLabel(order: ShippingLabelOrder, collection: strin
       }
       const size = (row.size ?? 3.1) * pixelsPerMm * scale;
       context!.font = `${row.bold ? 800 : 400} ${size}px ${fontFamily}`;
-      context!.textAlign = row.center ? 'center' : 'right';
+      context!.textAlign = 'right';
       for (const line of wrap(row.text ?? '')) {
-        if (paint) context!.fillText(line, row.center ? canvas.width / 2 : canvas.width - margin, y);
-        y += size * 1.3;
+        const metrics = context!.measureText(line);
+        if (paint) context!.fillText(line, canvas.width - Math.max(0, metrics.actualBoundingBoxRight), y + metrics.actualBoundingBoxAscent);
+        y += metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
+        y += 0.65 * pixelsPerMm * scale;
       }
-      y += 0.55 * pixelsPerMm * scale;
     }
-    return y;
+    return y - 0.65 * pixelsPerMm * scale;
   }
 
-  let scale = 1;
-  if (layout(scale, false) > canvas.height - margin) {
+  let scale = 1.25;
+  if (layout(scale, false) > canvas.height) {
     let low = 0;
-    let high = 1;
+    let high = scale;
     for (let iteration = 0; iteration < 18; iteration++) {
       const middle = (low + high) / 2;
-      if (layout(middle, false) <= canvas.height - margin) low = middle;
+      if (layout(middle, false) <= canvas.height) low = middle;
       else high = middle;
     }
     scale = low;
@@ -92,6 +97,7 @@ export function renderShippingLabel(order: ShippingLabelOrder, collection: strin
   context.fillStyle = 'black';
   context.strokeStyle = 'black';
   context.lineWidth = Math.max(1, 0.15 * pixelsPerMm * scale);
-  layout(scale, true);
+  const extraGap = Math.max(0, canvas.height - layout(scale, false)) / (rows.length - 1);
+  layout(scale, true, extraGap);
   return canvas;
 }
