@@ -20,7 +20,7 @@ class ShippingLabelPage extends StatefulWidget {
 class _ShippingLabelPageState extends State<ShippingLabelPage> {
   final receipt = GlobalKey();
   static const double labelWidth = 50;
-  static const double labelHeight = 100;
+  static const double labelHeight = 70;
   bool busy = false;
   num amount(dynamic v) => num.tryParse('$v') ?? 0;
   String money(num n) => '${n == n.round() ? n.toInt() : n.toStringAsFixed(2)} ${widget.order['currency'] ?? 'EGP'}';
@@ -60,7 +60,7 @@ class _ShippingLabelPageState extends State<ShippingLabelPage> {
     return Scaffold(appBar: AppBar(title: const Text('استيكر الطلب')),
       body: SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(children: [
         Wrap(spacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
-          const Text('٥ × ١٠ سم'),
+          const Text('٥ × ٧ سم'),
           FilledButton.icon(onPressed: busy ? null : () => output(false), icon: const Icon(Icons.print_outlined), label: const Text('طباعة')),
           OutlinedButton.icon(onPressed: busy ? null : () => output(true), icon: const Icon(Icons.share_outlined), label: const Text('مشاركة PDF')),
         ]),
