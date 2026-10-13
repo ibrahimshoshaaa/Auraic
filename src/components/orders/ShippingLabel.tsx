@@ -1,37 +1,69 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { shippingCollection, type ShippingLabelOrder } from '@/lib/shipping-label';
+import { renderShippingLabel } from '@/lib/shipping-label-canvas';
+
 export function ShippingLabel({ order }: { order: ShippingLabelOrder }) {
-  const content = useRef<HTMLDivElement>(null);
-  const label = useRef<HTMLElement>(null);
-  const [scale, setScale] = useState(1);
+  const preview = useRef<HTMLDivElement>(null);
+  const canvas = useRef<HTMLCanvasElement | null>(null);
+  const [ready, setReady] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
   useEffect(() => {
-    const fit = () => {
-      if (!content.current || !label.current) return;
-      const style = getComputedStyle(label.current);
-      const height = label.current.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
-      setScale(Math.min(1, height / Math.max(1, content.current.scrollHeight)));
-    };
-    const observer = new ResizeObserver(fit);
-    if (content.current) observer.observe(content.current);
-    fit();
-    return () => observer.disconnect();
+    let cancelled = false;
+    setReady(false);
+    setError('');
+    document.fonts.ready.then(() => {
+      if (cancelled || !preview.current) return;
+      try {
+        const collection = `${new Intl.NumberFormat('en-EG', { maximumFractionDigits: 2 }).format(shippingCollection(order))} ${order.currency}`;
+        const rendered = renderShippingLabel(order, collection, getComputedStyle(preview.current).fontFamily);
+        rendered.style.width = '50mm';
+        rendered.style.height = '70mm';
+        rendered.setAttribute('role', 'img');
+        rendered.setAttribute('aria-label', `بوليصة الطلب ${order.number}، العميل ${order.customer}، الهاتف ${order.phone}، العنوان ${order.address}، المنتجات ${order.items.map(item => `${item.title} × ${item.quantity}`).join('، ')}، المطلوب تحصيله ${collection}`);
+        preview.current.replaceChildren(rendered);
+        canvas.current = rendered;
+        setReady(true);
+      } catch {
+        setError('تعذر تجهيز البوليصة. أعد تحميل الصفحة وحاول مرة أخرى.');
+      }
+    });
+    return () => { cancelled = true; canvas.current = null; };
   }, [order]);
-  const money = (n: number) => `${new Intl.NumberFormat('en-EG', { maximumFractionDigits: 2 }).format(n)} ${order.currency}`;
+
+  async function download() {
+    if (!canvas.current) return;
+    setBusy(true);
+    setError('');
+    try {
+      const png = await new Promise<Blob>((resolve, reject) => {
+        canvas.current!.toBlob(blob => blob ? resolve(blob) : reject(new Error('PNG export failed')), 'image/png');
+      });
+      const { createShippingLabelPdf } = await import('@/lib/shipping-label-pdf');
+      const bytes = await createShippingLabelPdf(new Uint8Array(await png.arrayBuffer()));
+      const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'auraic-shipping-label-50x70mm.pdf';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      setError('تعذر تحميل البوليصة. حاول مرة أخرى.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return <main className="mx-auto max-w-lg space-y-5 p-5">
-    <div className="flex flex-wrap items-center gap-3"><span>مقاس الاستيكر: ٥ × ٧ سم</span><button onClick={() => window.print()} className="rounded-xl bg-[#191735] px-5 py-3 text-white">طباعة</button></div>
-    <p className="text-sm text-slate-500">اختار مقاس ٥٠ × ٧٠ مم في إعدادات الطابعة، أو احفظ PDF وافتحه في تطبيق الطابعة.</p>
-    <article ref={label} id="shipping-label" dir="rtl" style={{ width: '50mm', height: '70mm', padding: '3mm', boxSizing: 'border-box', margin: 'auto', background: 'white', color: 'black', fontSize: '12px', overflowWrap: 'anywhere' }}>
-      <div ref={content} style={{ transform: `scale(${scale})`, transformOrigin: 'top right' }}>
-        <h1 style={{ textAlign: 'center', fontWeight: 800, fontSize: '20px' }}>Auraic</h1><hr />
-        <p><b>رقم الطلب: </b><span dir="ltr">{order.number.replace(/^#+/, '')}</span></p>
-        <p style={{ fontSize: '17px', fontWeight: 800 }}>العميل: {order.customer}</p>
-        <p style={{ fontSize: '17px', fontWeight: 800 }}>الهاتف: <span dir="ltr">{order.phone}</span></p>
-        <p style={{ fontSize: '16px', fontWeight: 800 }}>العنوان: {order.address}</p><hr />
-        <h2>المنتجات</h2>{order.items.map((item, i) => <p key={i}>{item.title} × {item.quantity}</p>)}
-        <p style={{ fontSize: '16px', fontWeight: 800, borderTop: '2px solid black', paddingTop: '3mm' }}>المطلوب تحصيله: <span dir="ltr">{money(shippingCollection(order))}</span></p>
-      </div>
-    </article>
-    <style>{`#shipping-label p { margin: 1.5mm 0; } #shipping-label hr { margin: 2mm 0; border-top: 1px dashed black; } @media print { @page { size: 50mm 70mm; margin: 0; } body * { visibility: hidden; } #shipping-label, #shipping-label * { visibility: visible; } #shipping-label { position: absolute; top: 0; right: 0; margin: 0 !important; } }`}</style>
+    <div className="flex flex-wrap items-center gap-3">
+      <span>مقاس الاستيكر: ٥ × ٧ سم</span>
+      <button type="button" disabled={!ready || busy} onClick={download} className="rounded-xl bg-[#191735] px-5 py-3 text-white disabled:opacity-50">{busy ? 'جارٍ تجهيز الملف…' : 'تحميل البوليصة PDF'}</button>
+    </div>
+    <p className="text-sm text-slate-500">افتح ملف PDF في تطبيق الطابعة. اختار Custom بمقاس عرض ٥٠ × طول ٧٠ مم، وAspect Fit بدون هوامش.</p>
+    <div ref={preview} className="mx-auto w-fit bg-white text-black" style={{ minWidth: '50mm', minHeight: '70mm' }} />
+    {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
   </main>;
 }
