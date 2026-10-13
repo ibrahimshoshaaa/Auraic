@@ -12,14 +12,22 @@ void main() {
           'items': List.generate(count, (i) => {'title': 'عطر أورايك ٥٠ مل', 'quantity': 2}),
         }))))));
       expect(tester.takeException(), isNull);
-      expect(find.text('Auraic', findRichText: true), findsNothing);
-      expect(find.text('01012345678', findRichText: true), findsOneWidget);
-      expect(find.text('410 EGP', findRichText: true), findsOneWidget);
-      expect(tester.getSize(find.text('01012345678', findRichText: true)).width, 189);
-      final phone = tester.widget<RichText>(find.text('01012345678', findRichText: true));
-      expect(phone.text.style!.fontWeight, FontWeight.w800);
-      final total = tester.widget<RichText>(find.text('410 EGP', findRichText: true));
-      expect(total.text.style!.fontSize, greaterThan(phone.text.style!.fontSize!));
+      final content = find.byType(ShippingLabelContent);
+      expect(tester.getSize(content), const Size(189, 264.6));
+      final painted = tester.widget<CustomPaint>(find.descendant(of: content, matching: find.byType(CustomPaint)));
+      final painter = painted.painter! as ShippingLabelPainter;
+      final text = painter.rows.map((row) => row.text ?? '').join(' ');
+      expect(text.contains('Auraic'), isFalse);
+      expect(text.contains('01012345678'), isTrue);
+      expect(text.contains('410 EGP'), isTrue);
+      final layout = painter.layout(const Size(189, 264.6));
+      expect(layout.first.top, 0);
+      expect(layout.last.top + layout.last.height, closeTo(264.6, 0.01));
+      for (final line in layout) {
+        expect(line.top + line.height, lessThanOrEqualTo(264.61));
+      }
+      expect(painter.rows[2].bold, isTrue);
+      expect(painter.rows.last.size, greaterThan(painter.rows[2].size));
     }
   });
   test('collection includes shipping, subtracts deposit and excludes paid orders', () {

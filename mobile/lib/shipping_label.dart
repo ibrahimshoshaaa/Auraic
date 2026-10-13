@@ -87,38 +87,75 @@ class ShippingLabelContent extends StatelessWidget {
       (text: 'المطلوب تحصيله', size: 13, bold: true),
       (text: money(shippingCollection(order)), size: 25, bold: true),
     ];
-    return ColoredBox(color: Colors.white, child: Directionality(textDirection: TextDirection.rtl,
-      child: LayoutBuilder(builder: (context, constraints) {
-        TextStyle style(double size, bool bold, double scale) => DefaultTextStyle.of(context).style.copyWith(
-          color: Colors.black, fontSize: size * scale, height: 1.15,
-          fontWeight: bold ? FontWeight.w800 : FontWeight.normal);
-        double height(double scale) {
-          double total = 0;
-          for (final (index, row) in rows.indexed) {
-            if (row.text == null) { total += row.size * scale; continue; }
-            final painter = TextPainter(text: TextSpan(text: row.text, style: style(row.size, row.bold, scale)),
-              textAlign: TextAlign.right,
-              textDirection: index == 2 || index == rows.length - 1 ? TextDirection.ltr : TextDirection.rtl,
-              textScaler: TextScaler.noScaling);
-            painter.layout(maxWidth: constraints.maxWidth);
-            total += painter.height;
-            painter.dispose();
-          }
-          return total;
-        }
-        double low = 0;
-        double high = 1.25;
-        for (int i = 0; i < 18; i++) {
-          final middle = (low + high) / 2;
-          if (height(middle) <= constraints.maxHeight) { low = middle; } else { high = middle; }
-        }
-        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [for (final (index, row) in rows.indexed)
-            if (row.text == null) SizedBox(height: row.size * low, child: const Divider(height: 0, thickness: 1, color: Colors.black))
-            else RichText(text: TextSpan(text: row.text, style: style(row.size, row.bold, low)), textAlign: TextAlign.right,
-              textDirection: index == 2 || index == rows.length - 1 ? TextDirection.ltr : TextDirection.rtl,
-              textScaler: TextScaler.noScaling),
-          ]);
-      })));
+    final style = DefaultTextStyle.of(context).style;
+    return Semantics(label: rows.where((row) => row.text != null).map((row) => row.text).join('، '),
+      child: CustomPaint(painter: ShippingLabelPainter(rows: rows, baseStyle: style)));
   }
+}
+
+class ShippingLabelPainter extends CustomPainter {
+  ShippingLabelPainter({required this.rows, required this.baseStyle});
+  final List<({String? text, double size, bool bold})> rows;
+  final TextStyle baseStyle;
+
+  TextPainter paragraph(int index, double scale, double width) {
+    final row = rows[index];
+    final painter = TextPainter(text: TextSpan(text: row.text, style: baseStyle.copyWith(
+      color: Colors.black, fontSize: row.size * scale, height: 1.15,
+      fontWeight: row.bold ? FontWeight.w800 : FontWeight.normal)),
+      textAlign: TextAlign.right,
+      textDirection: index == 2 || index == rows.length - 1 ? TextDirection.ltr : TextDirection.rtl,
+      textScaler: TextScaler.noScaling);
+    painter.layout(minWidth: width, maxWidth: width);
+    return painter;
+  }
+
+  List<({int index, double top, double height, double scale})> layout(Size size) {
+    double height(double scale) {
+      double total = 0;
+      for (int index = 0; index < rows.length; index++) {
+        final row = rows[index];
+        if (row.text == null) { total += row.size * scale; continue; }
+        final painter = paragraph(index, scale, size.width);
+        total += painter.height;
+        painter.dispose();
+      }
+      return total;
+    }
+    double low = 0;
+    double high = 1.25;
+    for (int i = 0; i < 18; i++) {
+      final middle = (low + high) / 2;
+      if (height(middle) <= size.height) { low = middle; } else { high = middle; }
+    }
+    final gap = (size.height - height(low)).clamp(0, size.height) / (rows.length - 1);
+    double y = 0;
+    return [for (int index = 0; index < rows.length; index++) (() {
+      final row = rows[index];
+      final painter = row.text == null ? null : paragraph(index, low, size.width);
+      final rowHeight = painter?.height ?? row.size * low;
+      painter?.dispose();
+      final result = (index: index, top: y, height: rowHeight, scale: low);
+      y += rowHeight + gap;
+      return result;
+    })()];
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(Offset.zero & size, Paint()..color = Colors.white);
+    for (final line in layout(size)) {
+      if (rows[line.index].text == null) {
+        final y = line.top + line.height / 2;
+        canvas.drawLine(Offset(0, y), Offset(size.width, y), Paint()..color = Colors.black..strokeWidth = 1);
+      } else {
+        final painter = paragraph(line.index, line.scale, size.width);
+        painter.paint(canvas, Offset(0, line.top));
+        painter.dispose();
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant ShippingLabelPainter oldDelegate) => true;
 }
