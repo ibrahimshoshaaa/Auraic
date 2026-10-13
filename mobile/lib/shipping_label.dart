@@ -94,10 +94,11 @@ class ShippingLabelContent extends StatelessWidget {
           fontWeight: bold ? FontWeight.w800 : FontWeight.normal);
         double height(double scale) {
           double total = 0;
-          for (final row in rows) {
+          for (final (index, row) in rows.indexed) {
             if (row.text == null) { total += row.size * scale; continue; }
             final painter = TextPainter(text: TextSpan(text: row.text, style: style(row.size, row.bold, scale)),
-              textDirection: TextDirection.rtl, textScaler: TextScaler.noScaling);
+              textDirection: index == 2 || index == rows.length - 1 ? TextDirection.ltr : TextDirection.rtl,
+              textScaler: TextScaler.noScaling);
             painter.layout(maxWidth: constraints.maxWidth);
             total += painter.height;
             painter.dispose();
@@ -111,9 +112,11 @@ class ShippingLabelContent extends StatelessWidget {
           if (height(middle) <= constraints.maxHeight) { low = middle; } else { high = middle; }
         }
         return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [for (final row in rows)
+          children: [for (final (index, row) in rows.indexed)
             if (row.text == null) SizedBox(height: row.size * low, child: const Divider(height: 0, thickness: 1, color: Colors.black))
-            else Text(row.text!, textAlign: TextAlign.right, textScaler: TextScaler.noScaling, style: style(row.size, row.bold, low)),
+            else Text(row.text!, textAlign: TextAlign.right,
+              textDirection: index == 2 || index == rows.length - 1 ? TextDirection.ltr : TextDirection.rtl,
+              textScaler: TextScaler.noScaling, style: style(row.size, row.bold, low)),
           ]);
       })));
   }

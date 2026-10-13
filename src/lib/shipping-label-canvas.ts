@@ -1,6 +1,6 @@
 import type { ShippingLabelOrder } from './shipping-label';
 
-type Row = { text?: string; size?: number; bold?: boolean; divider?: boolean };
+type Row = { text?: string; size?: number; bold?: boolean; divider?: boolean; ltr?: boolean };
 
 export function renderShippingLabel(order: ShippingLabelOrder, collection: string, fontFamily: string): HTMLCanvasElement {
   const pixelsPerMm = 300 / 25.4;
@@ -13,14 +13,14 @@ export function renderShippingLabel(order: ShippingLabelOrder, collection: strin
   const rows: Row[] = [
     { text: `رقم الطلب: ${order.number.replace(/^#+/, '')}`, size: 3.1 },
     { text: `العميل: ${order.customer}`, size: 4.8, bold: true },
-    { text: order.phone, size: 5.2, bold: true },
+    { text: order.phone, size: 5.2, bold: true, ltr: true },
     { text: `العنوان: ${order.address}`, size: 4.8, bold: true },
     { divider: true },
     { text: 'المنتجات', size: 3.1, bold: true },
     ...order.items.map(item => ({ text: `${item.title} × ${item.quantity}`, size: 3.1 })),
     { divider: true },
     { text: 'المطلوب تحصيله', size: 3.1, bold: true },
-    { text: collection, size: 6, bold: true },
+    { text: collection, size: 6, bold: true, ltr: true },
   ];
   context.direction = 'rtl';
   context.textBaseline = 'alphabetic';
@@ -69,6 +69,7 @@ export function renderShippingLabel(order: ShippingLabelOrder, collection: strin
         continue;
       }
       const size = (row.size ?? 3.1) * pixelsPerMm * scale;
+      context!.direction = row.ltr ? 'ltr' : 'rtl';
       context!.font = `${row.bold ? 800 : 400} ${size}px ${fontFamily}`;
       context!.textAlign = 'right';
       for (const line of wrap(row.text ?? '')) {
