@@ -16,9 +16,6 @@ export function renderShippingLabel(order: ShippingLabelOrder, collection: strin
     { text: order.phone, size: 5.2, bold: true, ltr: true },
     { text: `العنوان: ${order.address}`, size: 4.8, bold: true },
     { divider: true },
-    { text: 'المنتجات', size: 3.1, bold: true },
-    ...order.items.map(item => ({ text: `${item.title} × ${item.quantity}`, size: 3.1 })),
-    { divider: true },
     { text: 'المطلوب تحصيله', size: 3.1, bold: true },
     { text: collection, size: 6, bold: true, ltr: true },
   ];

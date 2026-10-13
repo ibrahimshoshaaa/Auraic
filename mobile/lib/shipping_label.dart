@@ -80,10 +80,6 @@ class ShippingLabelContent extends StatelessWidget {
       (text: '${order['customerPhone'] ?? 'غير متاح'}', size: 22, bold: true),
       (text: 'العنوان: ${order['customerAddress'] ?? 'غير متاح'}', size: 20, bold: true),
       (text: null, size: 6, bold: false),
-      (text: 'المنتجات', size: 13, bold: true),
-      for (final item in (order['items'] as List? ?? []))
-        (text: '${item['title']} × ${item['quantity']}', size: 13, bold: false),
-      (text: null, size: 6, bold: false),
       (text: 'المطلوب تحصيله', size: 13, bold: true),
       (text: money(shippingCollection(order)), size: 25, bold: true),
     ];

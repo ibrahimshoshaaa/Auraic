@@ -53,6 +53,8 @@ test('Arabic label fills its own PDF page and long orders fit without clipping',
       assert.ok(Math.abs(rendered.draws.at(-1).bottom - rendered.height) < 0.01, `${name}: no bottom margin`);
       const text = rendered.draws.map(draw => draw.text).join(' ');
       assert.ok(!text.includes('Auraic'));
+      assert.ok(!text.includes('المنتجات'));
+      assert.ok(!text.includes(order.items[0].title));
       assert.ok(text.includes(order.phone));
       assert.ok(text.includes('410 EGP'));
       assert.ok(text.includes('إبراهيم'));

@@ -18,6 +18,8 @@ void main() {
       final painter = painted.painter! as ShippingLabelPainter;
       final text = painter.rows.map((row) => row.text ?? '').join(' ');
       expect(text.contains('Auraic'), isFalse);
+      expect(text.contains('المنتجات'), isFalse);
+      expect(text.contains('عطر أورايك'), isFalse);
       expect(text.contains('01012345678'), isTrue);
       expect(text.contains('410 EGP'), isTrue);
       final layout = painter.layout(const Size(189, 264.6));

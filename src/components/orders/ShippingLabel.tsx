@@ -20,7 +20,7 @@ export function ShippingLabel({ order }: { order: ShippingLabelOrder }) {
       rendered.style.width = '50mm';
       rendered.style.height = '70mm';
       rendered.setAttribute('role', 'img');
-      rendered.setAttribute('aria-label', `بوليصة الطلب ${order.number}، العميل ${order.customer}، الهاتف ${order.phone}، العنوان ${order.address}، المنتجات ${order.items.map(item => `${item.title} × ${item.quantity}`).join('، ')}، المطلوب تحصيله ${collection}`);
+      rendered.setAttribute('aria-label', `بوليصة الطلب ${order.number}، العميل ${order.customer}، الهاتف ${order.phone}، العنوان ${order.address}، المطلوب تحصيله ${collection}`);
       preview.current.replaceChildren(rendered);
       canvas.current = rendered;
       setReady(true);
