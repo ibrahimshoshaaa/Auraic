@@ -70,10 +70,15 @@ jobs:
         env:
           STOREFRONT_BROWSER_TESTS: '1'
         run: node --test tests/storefront-api.integration.mjs
+      - name: Verify Arabic shipping label PDF size and layout
+        run: node --experimental-strip-types --test tests/shipping-label.browser.mjs
       - name: Upload storefront interaction previews
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: auraic-collection-navigation-previews
-          path: artifacts/navigation-*.png
+          path: |
+            artifacts/navigation-*.png
+            artifacts/shipping-label-*.png
+            artifacts/shipping-label-*.pdf
           if-no-files-found: ignore
