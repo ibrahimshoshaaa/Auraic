@@ -15,19 +15,17 @@ export function ShippingLabel({ order }: { order: ShippingLabelOrder }) {
     setError('');
     document.fonts.ready.then(() => {
       if (cancelled || !preview.current) return;
-      try {
-        const collection = `${new Intl.NumberFormat('en-EG', { maximumFractionDigits: 2 }).format(shippingCollection(order))} ${order.currency}`;
-        const rendered = renderShippingLabel(order, collection, getComputedStyle(preview.current).fontFamily);
-        rendered.style.width = '50mm';
-        rendered.style.height = '70mm';
-        rendered.setAttribute('role', 'img');
-        rendered.setAttribute('aria-label', `بوليصة الطلب ${order.number}، العميل ${order.customer}، الهاتف ${order.phone}، العنوان ${order.address}، المنتجات ${order.items.map(item => `${item.title} × ${item.quantity}`).join('، ')}، المطلوب تحصيله ${collection}`);
-        preview.current.replaceChildren(rendered);
-        canvas.current = rendered;
-        setReady(true);
-      } catch {
-        setError('تعذر تجهيز البوليصة. أعد تحميل الصفحة وحاول مرة أخرى.');
-      }
+      const collection = `${new Intl.NumberFormat('en-EG', { maximumFractionDigits: 2 }).format(shippingCollection(order))} ${order.currency}`;
+      const rendered = renderShippingLabel(order, collection, getComputedStyle(preview.current).fontFamily);
+      rendered.style.width = '50mm';
+      rendered.style.height = '70mm';
+      rendered.setAttribute('role', 'img');
+      rendered.setAttribute('aria-label', `بوليصة الطلب ${order.number}، العميل ${order.customer}، الهاتف ${order.phone}، العنوان ${order.address}، المنتجات ${order.items.map(item => `${item.title} × ${item.quantity}`).join('، ')}، المطلوب تحصيله ${collection}`);
+      preview.current.replaceChildren(rendered);
+      canvas.current = rendered;
+      setReady(true);
+    }).catch(() => {
+      if (!cancelled) setError('تعذر تجهيز البوليصة. أعد تحميل الصفحة وحاول مرة أخرى.');
     });
     return () => { cancelled = true; canvas.current = null; };
   }, [order]);

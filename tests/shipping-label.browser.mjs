@@ -30,7 +30,8 @@ test('Arabic label fills its own PDF page and long orders fit without clipping',
         const draws = [];
         const original = CanvasRenderingContext2D.prototype.fillText;
         CanvasRenderingContext2D.prototype.fillText = function(text, x, y) {
-          draws.push({ text, x, y, width: this.measureText(text).width, height: Number.parseFloat(this.font.match(/[\d.]+px/)[0]) * 1.3 });
+          const fontSize = this.font.split(' ').find(part => part.endsWith('px'));
+          draws.push({ text, x, y, width: this.measureText(text).width, height: Number.parseFloat(fontSize ?? '0') * 1.3 });
           return original.call(this, text, x, y);
         };
         try {
@@ -45,6 +46,7 @@ test('Arabic label fills its own PDF page and long orders fit without clipping',
       assert.equal(rendered.height, 827);
       const margin = 2.5 * 300 / 25.4;
       for (const draw of rendered.draws) {
+        assert.ok(draw.height > 0, `${name}: font size was measured`);
         assert.ok(draw.y + draw.height <= rendered.height - margin + 0.01, `${name}: bottom clipping`);
         assert.ok(draw.width <= rendered.width - 2 * margin + 0.01, `${name}: horizontal clipping`);
       }
