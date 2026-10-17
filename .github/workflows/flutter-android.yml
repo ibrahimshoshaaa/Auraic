@@ -33,6 +33,10 @@ jobs:
         run: flutter create --platforms android --project-name perfume_erp .
       - name: Enable Internet for release builds
         run: python3 tool/ensure_android_internet.py
+      - name: Protect session storage from Android backup and restore
+        run: |
+          python3 tool/test_android_backup.py
+          python3 tool/configure_android_backup.py
       - name: Verify Firebase Android setup
         run: python3 tool/test_firebase_android.py
       - name: Configure Firebase notifications
