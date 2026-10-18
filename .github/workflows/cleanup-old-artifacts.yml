@@ -1,0 +1,37 @@
+name: Clean old build artifacts
+on:
+  workflow_dispatch:
+permissions:
+  actions: write
+  contents: read
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Delete artifacts older than two days, preserving newest build
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const artifacts = await github.paginate(
+              github.rest.actions.listArtifactsForRepo, { owner, repo, per_page: 100 }
+            );
+            const active = artifacts.filter(a => !a.expired);
+            active.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            const newestRun = active[0]?.workflow_run?.id;
+            const cutoff = Date.now() - 2 * 24 * 60 * 60 * 1000;
+            let deleted = 0, bytes = 0;
+            for (const artifact of active) {
+              if (artifact.id === active[0]?.id) continue;
+              if (newestRun && artifact.workflow_run?.id === newestRun) continue;
+              if (new Date(artifact.created_at).getTime() >= cutoff) continue;
+              await github.rest.actions.deleteArtifact({ owner, repo, artifact_id: artifact.id });
+              deleted++;
+              bytes += artifact.size_in_bytes;
+              core.info('Deleted ' + artifact.name + ' (' + artifact.id + ')');
+            }
+            await core.summary.addHeading('Artifact cleanup')
+              .addRaw('Deleted ' + deleted + ' artifacts; freed approximately ' +
+                (bytes / 1024 / 1024).toFixed(1) + ' MiB. Newest build preserved.')
+              .write();
