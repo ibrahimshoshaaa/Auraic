@@ -81,4 +81,5 @@ jobs:
             artifacts/navigation-*.png
             artifacts/shipping-label-*.png
             artifacts/shipping-label-*.pdf
+          retention-days: 1
           if-no-files-found: ignore
