@@ -1,4 +1,5 @@
 "use client";
+import { trackShopEvent } from "@/lib/storefront/tracking";
 import { ShopIcon } from "./ShopIcon";
 import Image from "next/image";
 import Link from "next/link";
@@ -28,7 +29,8 @@ export function ProductDetail({ product, enabled }: { product: ShopProduct; enab
     setPhoto(current => (current + direction + imageCount) % imageCount);
   }
   const disabled = !enabled || !cart.ready || (cart.lines.length >= 20 && !cart.lines.some(item => item.variantId === variant.id));
-  function add() { cart.add({ variantId: variant.id, productId: product.id, name: product.name, size: variant.title, image: images[0], quantity }); setAdded(true); }
+  function add() { cart.add({ variantId: variant.id, productId: product.id, name: product.name, size: variant.title, image: images[0], quantity }); setAdded(true); trackShopEvent("AddToCart", { content_ids: [product.id], content_type: "product", value: variant.price * quantity, currency: "EGP" }); }
+  useEffect(() => { trackShopEvent("ViewContent", { content_ids: [product.id], content_type: "product", value: variant.price, currency: "EGP" }); }, [product.id, variant.id, variant.price]);
   const label = !enabled ? "Orders paused" : added ? "✓ Added to bag" : "Add to bag";
   return <div className="shop-detail shop-fragrance-detail">
     <section className="shop-gallery" aria-label={`${product.name} photos`}>

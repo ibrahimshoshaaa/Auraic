@@ -15,6 +15,7 @@ const nav = [
   { label: "الاستهلاك", href: "/dashboard/consumption", mark: "⌁" },
   { label: "التقارير", href: "/dashboard/reports", mark: "▥" },
   { label: "الإعدادات", href: "/dashboard/settings", mark: "⚙" },
+  { label: "زيارات الموقع", href: "/dashboard/traffic", mark: "▥" },
   { label: "إدارة المتجر", href: "/dashboard/storefront", mark: "♧" },
   { label: "الكوبونات", href: "/dashboard/coupons", mark: "%" },
   { label: "العملاء", href: "/dashboard/customers", mark: "♙" },

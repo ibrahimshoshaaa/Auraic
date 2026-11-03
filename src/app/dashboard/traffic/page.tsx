@@ -1,0 +1,12 @@
+import Link from "next/link";
+import { requireAuth } from "@/lib/auth-helpers";
+import { can } from "@/lib/rbac";
+import { db } from "@/lib/db";
+export default async function Traffic({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
+ const session = await requireAuth(); if (!can(session.role, "reports.read")) throw new Error("Forbidden");
+ const query = await searchParams; const days = [1,7,30,90].includes(Number(query.days)) ? Number(query.days) : 7;
+ const where = { storeId: session.storeId, createdAt: { gte: new Date(Date.now()-days*86400000) } };
+ let views = 0; let visits = 0; let pages: { path: string; _count: { _all: number } }[] = []; let unavailable = false;
+ try { [views, visits, pages] = await Promise.all([db.storeVisit.count({ where }), db.storeVisit.groupBy({ by: ["session"], where }).then(rows => rows.length), db.storeVisit.groupBy({ by: ["path"], where, _count: { _all: true }, orderBy: { _count: { path: "desc" } }, take: 15 })]); } catch { unavailable = true; }
+ return <main className="mx-auto max-w-5xl space-y-6 p-6" dir="rtl"><h1 className="text-3xl font-bold">زيارات الموقع</h1><p>إحصائيات تقريبية من بدء تفعيل الميزة. الزيارة جلسة متصفح؛ فتح تبويب جديد قد يبدأ زيارة أخرى، وليست عدد أشخاص فريدين. آخر 90 يومًا محفوظة.</p><nav className="flex gap-3" aria-label="الفترة">{[1,7,30,90].map(n => <Link key={n} className="rounded border p-3" aria-current={n===days ? "page" : undefined} href={`?days=${n}`}>آخر {n} يوم</Link>)}</nav>{unavailable ? <p role="alert">الإحصائيات غير جاهزة. تأكد من تطبيق ترحيل قاعدة البيانات.</p> : <><div className="grid gap-4 sm:grid-cols-2"><div className="rounded-xl border p-5">الزيارات<strong className="block text-3xl">{visits}</strong></div><div className="rounded-xl border p-5">مشاهدات الصفحات<strong className="block text-3xl">{views}</strong></div></div><h2 className="text-xl font-bold">الصفحات الأكثر مشاهدة</h2><table className="w-full text-right"><thead><tr><th>الصفحة</th><th>المشاهدات</th></tr></thead><tbody>{pages.map(p => <tr key={p.path}><td dir="ltr">{p.path}</td><td>{p._count._all}</td></tr>)}</tbody></table>{!views && <p>لا توجد زيارات مسجلة في هذه الفترة بعد.</p>}</>}<p>قد تؤثر أدوات الحظر أو تعطيل JavaScript على الأرقام. لوحة الإدارة لا تدخل ضمن العد.</p></main>;
+}

@@ -1,4 +1,5 @@
 "use client";
+import { trackShopEvent } from "@/lib/storefront/tracking";
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -22,6 +23,7 @@ export function Checkout({ products, settings, checkout = false }: { products: S
   }
   const [paymentOptions, setPaymentOptions] = useState<{ instapay: boolean; wallet: boolean; address: string; number: string; accountName: string; walletAccountName: string; depositAmount: number } | null>(null);
   useEffect(() => { if (!checkout) return; void fetch("/api/storefront/payment-options").then(r => { if (!r.ok) throw new Error("Payment settings unavailable"); return r.json(); }).then(setPaymentOptions).catch(() => setPaymentOptions(null)); }, [checkout]);
+  useEffect(() => { if (checkout) trackShopEvent("InitiateCheckout", { currency: "EGP" }); }, [checkout]);
   const [summaryOpen, setSummaryOpen] = useState(false);
   useEffect(() => { setSummaryOpen(window.matchMedia("(min-width: 761px)").matches); }, []);
   const [busy, setBusy] = useState(false); const [error, setError] = useState("");
@@ -87,6 +89,10 @@ export function Checkout({ products, settings, checkout = false }: { products: S
         items: lines.map(line => ({ variantId: line.variantId, quantity: line.quantity })),
       }) });
       const body = await response.json(); if (!response.ok) throw new Error(response.status === 409 ? body.error || "Your bag or its prices have changed. Review your bag before continuing." : response.status === 422 ? "Please check your delivery details and try again." : "Unable to place your order. Please try again.");
+      // Deduplicate successful retries using the server-confirmed order number.
+      let sent = false;
+      try { const key = `auraic-purchase:${body.data.orderNumber}`; sent = sessionStorage.getItem(key) === "1"; sessionStorage.setItem(key, "1"); } catch { /* order submission remains independent of analytics storage */ }
+      if (!sent) trackShopEvent("Purchase", { value: Number(body.data.total), currency: "EGP" });
       setResult(body.data); clear(); requestId.current = null;
     } catch (failure) { setError(failure instanceof Error ? failure.message : "We could not place your order. Please try again."); }
     finally { setBusy(false); }
