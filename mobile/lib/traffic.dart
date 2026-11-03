@@ -22,7 +22,7 @@ class _TrafficPageState extends State<TrafficPage> {
   Future<dynamic> load() => widget.api.get('/api/reports/traffic?days=$days');
   void choose(int value) => setState(() { days = value; report = load(); });
   Future<void> refresh() async {
-    final next = load(); setState(() => report = next);
+    final next = load(); setState(() { report = next; });
     try { await next; } catch (_) { /* FutureBuilder shows retry and authorization errors. */ }
   }
   Widget section(String title, List<Widget> children) => Card(child: Padding(

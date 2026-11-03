@@ -14,7 +14,7 @@ void main() {
     final api = PixelSettingsApi();
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: SingleChildScrollView(child: StorefrontSettings(api: api, initial: {
       'enabled':true, 'heroImages':<String>[], 'heroTitle':'Keep this title',
-      'heroMode':'images', 'heroInterval':6, 'shippingFee':60, 'freeShippingFrom':0,
+      'shippingRates':<String, dynamic>{}, 'heroMode':'images', 'heroInterval':6, 'shippingFee':60, 'freeShippingFrom':0,
       'metaPixelId':'1931487371567376','tiktokPixelId':'',
     })))));
     await tester.pumpAndSettle();
