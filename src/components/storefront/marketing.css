@@ -1,0 +1,11 @@
+
+/* Consent stays outside document flow; saved choices leave only a footer link. */
+.auraic-shop .shop-cookie-banner{position:fixed;inset:auto 16px calc(16px + env(safe-area-inset-bottom));z-index:1000;max-width:640px;margin-inline:auto;background:#f9f5eb;color:#1b1739;border:1px solid #d7cba4;border-radius:16px;padding:20px 24px;box-shadow:0 8px 36px #0004;max-height:calc(100dvh - 32px);overflow:auto}
+.auraic-shop .shop-cookie-banner h2{font-size:18px;line-height:1.4;margin:0 0 6px;font-weight:600;letter-spacing:0}
+.auraic-shop .shop-cookie-banner p{font-size:14px;line-height:1.6;margin:0}
+.auraic-shop .shop-cookie-actions{display:flex;gap:12px;margin-top:16px}
+.auraic-shop .shop-cookie-actions button{flex:1;min-height:44px;padding:10px 18px;border:1px solid #1b1739;border-radius:8px;background:transparent;color:#1b1739;font-size:14px;font-weight:600;cursor:pointer}
+.auraic-shop .shop-cookie-actions button:first-child{background:#1b1739;color:#faeab1}
+.auraic-shop .shop-cookie-preferences{display:block;width:fit-content;text-align:start;border:0;padding:0;background:none;color:inherit;font:inherit;cursor:pointer;text-decoration:underline;text-underline-offset:4px}
+.auraic-shop .shop-cookie-actions button:focus-visible,.auraic-shop .shop-cookie-preferences:focus-visible{outline:2px solid #a48130;outline-offset:4px}
+@media(max-width:600px){.auraic-shop .shop-cookie-banner{inset-inline:12px;bottom:calc(12px + env(safe-area-inset-bottom));padding:16px;border-radius:12px}}
