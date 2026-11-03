@@ -8,6 +8,7 @@ import 'recipe_picker.dart';
 import 'product_images.dart';
 import 'hero_video.dart';
 import 'ui.dart';
+import 'traffic.dart';
 
 const shippingGovernorates = ['القاهرة', 'الجيزة', 'الإسكندرية', 'القليوبية', 'المنوفية', 'الغربية', 'الدقهلية', 'الشرقية', 'البحيرة', 'كفر الشيخ', 'دمياط', 'بورسعيد', 'الإسماعيلية', 'السويس', 'الفيوم', 'بني سويف', 'المنيا', 'أسيوط', 'سوهاج', 'قنا', 'الأقصر', 'أسوان', 'مطروح', 'البحر الأحمر', 'الوادي الجديد', 'شمال سيناء', 'جنوب سيناء'];
 
@@ -43,6 +44,8 @@ class _StorefrontPageState extends State<StorefrontPage> {
       }, icon: const Icon(Icons.open_in_new), label: const Text('معاينة المتجر')),), IconButton(onPressed: reload, tooltip: 'تحديث بيانات الموقع', icon: const Icon(Icons.refresh))]),
       const SizedBox(height: 16),
       if (data['linked'] != true) Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [const Text('اضبط STOREFRONT_STORE_ID في Vercel على:'), SelectableText(str(data['storeId']))]))),
+      Card(child: ListTile(leading: const Icon(Icons.insights_outlined), title: const Text('زيارات الموقع'), subtitle: const Text('حركة الزوار والصفحات وخطوات التسوق'), trailing: const Icon(Icons.chevron_left), onTap: () => openPage(context, Scaffold(appBar: AppBar(title: const Text('زيارات الموقع')), body: TrafficPage(api: widget.api))))),
+      const SizedBox(height: 16),
       if (data['owner'] == true) StorefrontSettings(key: ValueKey(result), api: widget.api, initial: json(data['settings'])),
       const SizedBox(height: 20),
       FilledButton.icon(onPressed: () async { final saved = await openPage<bool>(context, ProductManagePage(api: widget.api)); if (saved == true) reload(); }, icon: const Icon(Icons.add), label: const Text('إضافة عطر وأحجامه')),
@@ -79,6 +82,13 @@ class _StorefrontSettingsState extends State<StorefrontSettings> {
     decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
     validator: number ? (value) => double.tryParse(value ?? '') == null || double.parse(value!) < 0 ? 'أدخل مبلغًا صحيحًا' : null : null,
     onChanged: (value) => settings[name] = name == 'heroImages' ? value.split('\n').map((v) => v.trim()).where((v) => v.isNotEmpty).toList() : number ? double.tryParse(value) ?? -1 : value));
+  Widget pixelField(String name, String label, RegExp pattern, String hint) => Padding(
+    padding: const EdgeInsets.only(bottom: 16),
+    child: TextFormField(key: ValueKey(name), initialValue: str(settings[name]), enabled: !busy,
+      textDirection: TextDirection.ltr, autocorrect: false, enableSuggestions: false,
+      decoration: InputDecoration(labelText: label, helperText: hint, helperMaxLines: 2, border: const OutlineInputBorder()),
+      validator: (value) { final id = (value ?? '').trim(); return id.isEmpty || pattern.hasMatch(id) ? null : 'رقم البيكسل غير صحيح'; },
+      onChanged: (value) => settings[name] = value.trim()));
   Widget reviewVideos() {
     final videos = (settings['bloggerReviewVideos'] as List? ?? []).map(str).toList();
     return Column(children: [for (var i = 0; i < videos.length; i++) Padding(padding: const EdgeInsets.only(bottom: 16), child: Column(children: [HeroVideo(label: 'فيديو ريفيو', key: ValueKey('review-$i-${videos.length}'), api: widget.api, enabled: !busy, initial: videos[i], onChanged: (value) { videos[i] = value; settings['bloggerReviewVideos'] = videos; }, onBusy: (value) { if (mounted) setState(() => busy = value); }), TextButton(onPressed: busy ? null : () => setState(() { videos.removeAt(i); settings['bloggerReviewVideos'] = videos; }), child: const Text('حذف الريفيو'))])), OutlinedButton(onPressed: busy || videos.length >= 20 ? null : () => setState(() => settings['bloggerReviewVideos'] = [...videos, '']), child: const Text('+ إضافة فيديو ريفيو'))]);
@@ -138,6 +148,7 @@ class _StorefrontSettingsState extends State<StorefrontSettings> {
   Widget build(BuildContext context) => Form(key: form, child: Column(children: [
     Card(color: appNavy, child: SwitchListTile(title: const Text('استقبال طلبات العملاء', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)), subtitle: const Text('الحالة تتحفظ فورًا', style: TextStyle(color: Colors.white70)), value: settings['enabled'] == true, onChanged: busy ? null : (_) => save(toggle: true))),
     if (message.isNotEmpty) Padding(padding: const EdgeInsets.all(12), child: Text(message, style: TextStyle(color: failed ? Colors.red : Colors.green))),
+    section('التسويق والبيكسلز', [const Text('إعدادات تتبع زوار الموقع، وليست تتبع استخدام تطبيق الإدارة. تعمل بعد موافقة الزائر على ملفات الإعلانات.'), const SizedBox(height: 16), pixelField('metaPixelId', 'Meta Pixel ID', RegExp(r'^\d{5,30}$'), 'رقم البيكسل من مدير أحداث ميتا. اتركه فارغًا لإيقافه.'), pixelField('tiktokPixelId', 'TikTok Pixel ID', RegExp(r'^[A-Za-z0-9]{10,40}$'), 'معرّف البيكسل من TikTok Events Manager. اتركه فارغًا لإيقافه.'), const Text('لا تضع سكربتات أو كلمات مرور أو Access Tokens هنا.')]),
     section('التصميم والبانرات', [field('announcement', 'النص الأساسي للشريط العلوي'), announcementMessages(), announcementDuration(), announcementColor('announcementBackground', 'لون خلفية الشريط', '#3F3A60'), announcementColor('announcementTextColor', 'لون كتابة الشريط', '#FAEAB1'), announcementPreview(), field('heroTitle', 'عنوان الهيرو الظاهر للعميل', lines: 3), DropdownButtonFormField<String>(initialValue: str(settings['heroMode']).isEmpty ? 'images' : str(settings['heroMode']), decoration: const InputDecoration(labelText: 'نوع الهيرو'), items: const [DropdownMenuItem(value: 'images', child: Text('صور سلايدر')), DropdownMenuItem(value: 'video', child: Text('فيديو'))], onChanged: busy ? null : (value) => settings['heroMode'] = value), const SizedBox(height: 16), field('heroInterval', 'مدة الصورة بالثواني (2–60)', number: true), HeroVideo(api: widget.api, enabled: !busy, initial: str(settings['heroVideo']), onChanged: (value) => settings['heroVideo'] = value, onBusy: (value) { if (mounted) setState(() => busy = value); }), const Text('استخدم ملف MP4 أو WebM مباشر، وليس رابط مشاركة Facebook أو YouTube.'), const SizedBox(height: 16), ProductImages(api: widget.api, enabled: !busy, initial: (settings['heroImages'] as List).map(str).toList(), onChanged: (images) => settings['heroImages'] = images, onBusy: (value) { if (mounted) setState(() => busy = value); })]),
     section('ريفيوهات البلوجرز', [SwitchListTile(title: const Text('إظهار القسم'), value: settings['bloggerReviewsEnabled'] == true, onChanged: busy ? null : (value) => setState(() => settings['bloggerReviewsEnabled'] = value)), field('bloggerReviewsTitle', 'عنوان القسم'), reviewVideos()]),
     section('تقييمات العملاء', [SwitchListTile(title: const Text('إظهار القسم'), value: settings['customerReviewsEnabled'] == true, onChanged: busy ? null : (value) => setState(() => settings['customerReviewsEnabled'] = value)), field('customerReviewsTitle', 'عنوان القسم'), ProductImages(api: widget.api, enabled: !busy, maxImages: 20, initial: (settings['customerReviewImages'] as List? ?? []).map(str).toList(), onChanged: (images) => settings['customerReviewImages'] = images, onBusy: (value) { if (mounted) setState(() => busy = value); })]),

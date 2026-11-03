@@ -13,6 +13,7 @@ import 'products.dart';
 import 'recipes.dart';
 import 'ui.dart';
 import 'storefront.dart';
+import 'traffic.dart';
 import 'coupons.dart';
 import 'customers.dart';
 
@@ -264,12 +265,12 @@ class _ErpHomeState extends State<ErpHome> {
   Widget build(BuildContext context) {
     const titles = ['الرئيسية', 'الطلبات', 'المخزون', 'المنتجات', 'المصروفات',
       'المرتجعات', 'الوصفات', 'الاستهلاك', 'التقارير', 'الإعدادات',
-      'المواد الخام', 'الموردون', 'إدارة الموقع', 'العملاء', 'الكوبونات'];
+      'المواد الخام', 'الموردون', 'إدارة الموقع', 'العملاء', 'الكوبونات', 'زيارات الموقع'];
     const icons = [Icons.dashboard_outlined, Icons.receipt_long_outlined,
       Icons.warehouse_outlined, Icons.inventory_2_outlined, Icons.payments_outlined,
       Icons.undo_outlined, Icons.science_outlined, Icons.trending_down_outlined,
       Icons.bar_chart_outlined, Icons.settings_outlined,
-      Icons.grain_outlined, Icons.local_shipping_outlined, Icons.storefront_outlined, Icons.people_outline, Icons.local_offer_outlined];
+      Icons.grain_outlined, Icons.local_shipping_outlined, Icons.storefront_outlined, Icons.people_outline, Icons.local_offer_outlined, Icons.insights_outlined];
     return FutureBuilder<dynamic>(future: account, builder: (context, snapshot) {
       if (!snapshot.hasData) return Scaffold(body: snapshot.hasError
         ? Column(mainAxisSize: MainAxisSize.min, children: [Text('${snapshot.error}'),
@@ -282,7 +283,7 @@ class _ErpHomeState extends State<ErpHome> {
       final manager = role == 'OWNER' || role == 'MANAGER';
       final owner = role == 'OWNER';
       final visible = [0, 1, 2, if (manager) 3, if (manager) 4, if (manager) 5,
-        if (manager) 6, 7, if (manager) 8, 9, 10, 11, if (manager) 12, if (manager) 13, if (manager) 14];
+        if (manager) 6, 7, if (manager) 8, 9, 10, 11, if (manager) 12, if (manager) 13, if (manager) 14, if (manager) 15];
       Widget body = switch (selected) {
         0 => _Dashboard(api: widget.api, user: user, onSelect: switchTo,
           manager: manager),
@@ -301,6 +302,7 @@ class _ErpHomeState extends State<ErpHome> {
         12 => StorefrontPage(api: widget.api),
         13 => CustomersPage(api: widget.api),
         14 => CouponsPage(api: widget.api),
+        15 => TrafficPage(api: widget.api),
         _ => SuppliersPage(api: widget.api, canWrite: manager),
       };
       return Scaffold(
@@ -614,7 +616,7 @@ class _GroupedDrawerMenuState extends State<_GroupedDrawerMenu> {
     ('الطلبات والمرتجعات', Icons.receipt_long_outlined, [1, 5]),
     ('العملاء والموردون', Icons.people_outline, [13, 11]),
     ('المالية والتقارير', Icons.account_balance_wallet_outlined, [4, 8]),
-    ('الإدارة والإعدادات', Icons.settings_outlined, [12, 14, 9]),
+    ('الإدارة والإعدادات', Icons.settings_outlined, [12, 15, 14, 9]),
   ];
   int? expanded;
   @override

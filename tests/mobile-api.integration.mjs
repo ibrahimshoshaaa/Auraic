@@ -54,6 +54,29 @@ test('mobile login, tenant access, and revocable logout through real HTTP routes
       const me = await fetch(`${url}/api/mobile/me`, { headers });
       assert.equal(me.status, 200);
       assert.equal((await me.json()).data.store.name, store.name);
+      // Mobile bearer sessions use the same tenant-scoped traffic report as the web dashboard.
+      await db.storeVisit.createMany({ data: [
+        { id: `traffic-a-${store.id}`, storeId: store.id, session: 'own-session', path: '/' },
+        { id: `traffic-b-${store.id}`, storeId: store.id, session: 'own-session', path: '/checkout' },
+        { id: `traffic-foreign-${store.id}`, storeId: otherStore.id, session: 'other-session', path: '/samples' },
+      ] });
+      const trafficResponse = await fetch(`${url}/api/reports/traffic?days=1&storeId=${otherStore.id}`, { headers });
+      assert.equal(trafficResponse.status, 200);
+      const traffic = (await trafficResponse.json()).data;
+      assert.equal(traffic.visits, 1); assert.equal(traffic.views, 2);
+      assert.equal(traffic.pages.some(page => page.path === '/samples'), false);
+      assert.equal((await fetch(`${url}/api/reports/traffic?days=1`)).status, 401);
+      const storefrontUrl = `${url}/api/admin/storefront`;
+      const initialShop = (await (await fetch(storefrontUrl, { headers })).json()).data.settings;
+      const savePixels = value => fetch(storefrontUrl, { method: 'PUT', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify({kind:'settings',data:value}) });
+      assert.equal((await savePixels({metaPixelId:'<script>'})).status, 422);
+      assert.equal((await savePixels({metaPixelId:' 1931487371567376 ', tiktokPixelId:'C123456789ABCDEFGHIJK'})).status, 200);
+      const savedPixels = (await (await fetch(storefrontUrl, { headers })).json()).data.settings;
+      assert.equal(savedPixels.metaPixelId, '1931487371567376');
+      assert.equal(savedPixels.tiktokPixelId, 'C123456789ABCDEFGHIJK');
+      assert.equal(savedPixels.heroTitle, initialShop.heroTitle);
+      assert.equal((await savePixels({metaPixelId:'',tiktokPixelId:''})).status, 200);
+      assert.equal((await (await fetch(storefrontUrl, { headers })).json()).data.settings.metaPixelId, '');
       // Both storefront and manual orders share the authenticated discount route.
       for (const prefix of ['manual_', 'web_']) {
         const order = await db.order.create({ data: { id: `${prefix}discount_${store.id}`, storeId: store.id, currency: 'EGP', occurredAt: new Date(), manualStatus: 'NEW', financialStatus: 'PARTIALLY_PAID', subtotal: 1040, shipping: 60, discount: 100, couponCode: prefix === 'web_' ? 'FRIEND' : null, total: 1000, netSales: 940, depositAmount: 150,
