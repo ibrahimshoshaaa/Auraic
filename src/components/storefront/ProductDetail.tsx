@@ -29,8 +29,12 @@ export function ProductDetail({ product, enabled }: { product: ShopProduct; enab
     setPhoto(current => (current + direction + imageCount) % imageCount);
   }
   const disabled = !enabled || !cart.ready || (cart.lines.length >= 20 && !cart.lines.some(item => item.variantId === variant.id));
-  function add() { cart.add({ variantId: variant.id, productId: product.id, name: product.name, size: variant.title, image: images[0], quantity }); setAdded(true); trackShopEvent("AddToCart", { content_ids: [product.id], content_type: "product", value: variant.price * quantity, currency: "EGP" }); }
-  useEffect(() => { trackShopEvent("ViewContent", { content_ids: [product.id], content_type: "product", value: variant.price, currency: "EGP" }); }, [product.id, variant.id, variant.price]);
+  function add() { cart.add({ variantId: variant.id, productId: product.id, name: product.name, size: variant.title, image: images[0], quantity }); setAdded(true); trackShopEvent("AddToCart", { items: [{ id: variant.id, price: variant.price, quantity: Math.min(quantity, 20 - (cart.lines.find(line => line.variantId === variant.id)?.quantity || 0)) }] }); }
+  useEffect(() => {
+    const view = () => trackShopEvent("ViewContent", { items: [{ id: variant.id, price: variant.price, quantity: 1 }] });
+    let active = true; queueMicrotask(() => { if (active) view(); }); window.addEventListener("auraic:marketing-ready", view);
+    return () => { active = false; window.removeEventListener("auraic:marketing-ready", view); };
+  }, [variant.id, variant.price]);
   const label = !enabled ? "Orders paused" : added ? "✓ Added to bag" : "Add to bag";
   return <div className="shop-detail shop-fragrance-detail">
     <section className="shop-gallery" aria-label={`${product.name} photos`}>

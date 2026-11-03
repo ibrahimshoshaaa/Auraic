@@ -24,7 +24,7 @@ const nav = [
   { label: "زيارة المتجر", href: "/", mark: "↗" },
 ];
 
-export function NavLinks({ compact = false, canCreateOrder = false, canReadCustomers = false, canManageCoupons = false }: { compact?: boolean; canCreateOrder?: boolean; canReadCustomers?: boolean; canManageCoupons?: boolean }) {
+export function NavLinks({ compact = false, canCreateOrder = false, canReadCustomers = false, canManageCoupons = false, canReadReports = false }: { compact?: boolean; canCreateOrder?: boolean; canReadCustomers?: boolean; canManageCoupons?: boolean; canReadReports?: boolean }) {
   const pathname = usePathname();
   if (compact) {
     const tabs = [nav[0], nav[1],
@@ -45,6 +45,7 @@ export function NavLinks({ compact = false, canCreateOrder = false, canReadCusto
     </>;
   }
   return <GroupedNav key={pathname} pathname={pathname} items={nav.filter(item =>
+    (item.href !== "/dashboard/traffic" || canReadReports) &&
     (item.href !== "/dashboard/customers" || canReadCustomers) &&
     (item.href !== "/dashboard/coupons" || canManageCoupons))} />;
 }

@@ -23,7 +23,6 @@ export function Checkout({ products, settings, checkout = false }: { products: S
   }
   const [paymentOptions, setPaymentOptions] = useState<{ instapay: boolean; wallet: boolean; address: string; number: string; accountName: string; walletAccountName: string; depositAmount: number } | null>(null);
   useEffect(() => { if (!checkout) return; void fetch("/api/storefront/payment-options").then(r => { if (!r.ok) throw new Error("Payment settings unavailable"); return r.json(); }).then(setPaymentOptions).catch(() => setPaymentOptions(null)); }, [checkout]);
-  useEffect(() => { if (checkout) trackShopEvent("InitiateCheckout", { currency: "EGP" }); }, [checkout]);
   const [summaryOpen, setSummaryOpen] = useState(false);
   useEffect(() => { setSummaryOpen(window.matchMedia("(min-width: 761px)").matches); }, []);
   const [busy, setBusy] = useState(false); const [error, setError] = useState("");
@@ -54,6 +53,13 @@ export function Checkout({ products, settings, checkout = false }: { products: S
     return () => controller.abort();
   }, [appliedCode, quotedSignature, signature]);
   const catalog = new Map(products.flatMap(product => product.variants.map(variant => [variant.id, { ...variant, product }] as const)));
+  const trackingItems = JSON.stringify(lines.flatMap(line => { const item = catalog.get(line.variantId); return item ? [{ id: line.variantId, quantity: line.quantity, price: item.price }] : []; }));
+  useEffect(() => {
+    if (!checkout || !ready || trackingItems === "[]") return;
+    const begin = () => trackShopEvent("InitiateCheckout", { items: JSON.parse(trackingItems) });
+    let active = true; queueMicrotask(() => { if (active) begin(); }); window.addEventListener("auraic:marketing-ready", begin);
+    return () => { active = false; window.removeEventListener("auraic:marketing-ready", begin); };
+  }, [checkout, ready, trackingItems]);
   const missing = lines.some(line => !catalog.has(line.variantId));
   const baseTotals = checkoutTotals(lines.map(line => ({ quantity: line.quantity, price: catalog.get(line.variantId)?.price || 0 })), shippingFeeFor(settings, governorate), settings.freeShippingFrom);
   const totals = activeQuote || quote || { ...baseTotals, discountCents: 0 };
@@ -89,10 +95,7 @@ export function Checkout({ products, settings, checkout = false }: { products: S
         items: lines.map(line => ({ variantId: line.variantId, quantity: line.quantity })),
       }) });
       const body = await response.json(); if (!response.ok) throw new Error(response.status === 409 ? body.error || "Your bag or its prices have changed. Review your bag before continuing." : response.status === 422 ? "Please check your delivery details and try again." : "Unable to place your order. Please try again.");
-      // Deduplicate successful retries using the server-confirmed order number.
-      let sent = false;
-      try { const key = `auraic-purchase:${body.data.orderNumber}`; sent = sessionStorage.getItem(key) === "1"; sessionStorage.setItem(key, "1"); } catch { /* order submission remains independent of analytics storage */ }
-      if (!sent) trackShopEvent("Purchase", { value: Number(body.data.total), currency: "EGP" });
+      trackShopEvent("Purchase", { orderId: String(body.data.orderNumber), value: Number(body.data.total), items: lines.flatMap(line => { const item = catalog.get(line.variantId); return item ? [{ id: line.variantId, quantity: line.quantity, price: item.price }] : []; }) });
       setResult(body.data); clear(); requestId.current = null;
     } catch (failure) { setError(failure instanceof Error ? failure.message : "We could not place your order. Please try again."); }
     finally { setBusy(false); }
