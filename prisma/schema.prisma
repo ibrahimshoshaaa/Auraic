@@ -34,6 +34,7 @@ model Store {
   createdAt                  DateTime            @default(now())
   updatedAt                  DateTime            @updatedAt
 
+  traffic                    StoreVisit[]
   users                      User[]
   mobileSessions             MobileSession[]
   settings                   Setting[]
@@ -563,4 +564,15 @@ model PushDelivery {
   session MobileSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   @@unique([orderId, sessionId])
   @@index([finishedAt, nextAttemptAt])
+}
+
+model StoreVisit {
+  id String @id
+  storeId String
+  session String
+  path String
+  createdAt DateTime @default(now())
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  @@index([storeId, createdAt])
+  @@index([storeId, session])
 }

@@ -2,6 +2,8 @@ import { z } from "zod";
 
 const image = z.string().url().max(2000).refine(value => value.startsWith("https://"), "استخدم رابط صورة HTTPS");
 export const shopSettingsSchema = z.object({
+  metaPixelId: z.string().trim().regex(/^$|^\d{5,30}$/).default(""),
+  tiktokPixelId: z.string().trim().regex(/^$|^[A-Za-z0-9]{10,40}$/).default(""),
   enabled: z.boolean(),
   announcement: z.string().trim().max(160),
   announcements: z.array(z.string().trim().min(1).max(160)).max(10).default([]),
@@ -47,6 +49,7 @@ export type ShopSettings = z.infer<typeof shopSettingsSchema>;
 export const defaultShopSettings: ShopSettings = {
   bloggerReviewsEnabled: false, bloggerReviewsTitle: "See Auraic in real life", bloggerReviewVideos: [], customerReviewsEnabled: false, customerReviewsTitle: "Customer Reviews", customerReviewImages: [],
   announcements: [], announcementInterval: 5, announcementBackground: "#3F3A60", announcementTextColor: "#FAEAB1",
+  metaPixelId: "", tiktokPixelId: "",
   enabled: false, announcement: "DESIGNED TO BE FELT, NOT JUST SMELLED",
   heroTitle: "Discover Auraic.\nFind your\nfragrance.", heroSubtitle: "Find the fragrance that feels like you.",
   menCollectionLabel: "SHOP FOR MEN", womenCollectionLabel: "SHOP FOR WOMEN",

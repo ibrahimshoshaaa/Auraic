@@ -1,4 +1,5 @@
 "use client";
+import { trackShopEvent } from "@/lib/storefront/tracking";
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -52,6 +53,13 @@ export function Checkout({ products, settings, checkout = false }: { products: S
     return () => controller.abort();
   }, [appliedCode, quotedSignature, signature]);
   const catalog = new Map(products.flatMap(product => product.variants.map(variant => [variant.id, { ...variant, product }] as const)));
+  const trackingItems = JSON.stringify(lines.flatMap(line => { const item = catalog.get(line.variantId); return item ? [{ id: line.variantId, quantity: line.quantity, price: item.price }] : []; }));
+  useEffect(() => {
+    if (!checkout || !ready || trackingItems === "[]") return;
+    const begin = () => trackShopEvent("InitiateCheckout", { items: JSON.parse(trackingItems) });
+    let active = true; queueMicrotask(() => { if (active) begin(); }); window.addEventListener("auraic:marketing-ready", begin);
+    return () => { active = false; window.removeEventListener("auraic:marketing-ready", begin); };
+  }, [checkout, ready, trackingItems]);
   const missing = lines.some(line => !catalog.has(line.variantId));
   const baseTotals = checkoutTotals(lines.map(line => ({ quantity: line.quantity, price: catalog.get(line.variantId)?.price || 0 })), shippingFeeFor(settings, governorate), settings.freeShippingFrom);
   const totals = activeQuote || quote || { ...baseTotals, discountCents: 0 };
@@ -87,6 +95,7 @@ export function Checkout({ products, settings, checkout = false }: { products: S
         items: lines.map(line => ({ variantId: line.variantId, quantity: line.quantity })),
       }) });
       const body = await response.json(); if (!response.ok) throw new Error(response.status === 409 ? body.error || "Your bag or its prices have changed. Review your bag before continuing." : response.status === 422 ? "Please check your delivery details and try again." : "Unable to place your order. Please try again.");
+      trackShopEvent("Purchase", { orderId: String(body.data.orderNumber), value: Number(body.data.total), items: lines.flatMap(line => { const item = catalog.get(line.variantId); return item ? [{ id: line.variantId, quantity: line.quantity, price: item.price }] : []; }) });
       setResult(body.data); clear(); requestId.current = null;
     } catch (failure) { setError(failure instanceof Error ? failure.message : "We could not place your order. Please try again."); }
     finally { setBusy(false); }

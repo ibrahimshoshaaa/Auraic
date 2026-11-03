@@ -1,3 +1,4 @@
+import { Marketing } from "@/components/storefront/Marketing";
 import { BagDrawer } from "@/components/storefront/Bag";
 import { getPublicProducts } from "@/services/storefront/catalog";
 import { ShopNavigation } from "@/components/storefront/ShopNavigation";
@@ -11,5 +12,5 @@ export const dynamic = "force-dynamic";
 export default async function ShopLayout({ children }: { children: ReactNode }) {
   const shop = await getPublicShop();
   const settings = shop?.settings || defaultShopSettings;
-  return <div className="auraic-shop" lang="en" dir="ltr"><CartProvider><ShopNavigation><ShopHeader announcement={settings.announcement} announcements={settings.announcements} announcementInterval={settings.announcementInterval} announcementBackground={settings.announcementBackground} announcementTextColor={settings.announcementTextColor} menCategory={settings.menCollectionCategory} womenCategory={settings.womenCollectionCategory} />{!shop ? <main className="shop-coming-soon"><p className="shop-eyebrow">AURAIC</p><h1>The Auraic experience is coming soon</h1><p>We are preparing our store. See you soon.</p></main> : children}<ShopFooter settings={settings} /><BagDrawer products={shop ? await getPublicProducts(shop.id, "all") : []} settings={settings}/></ShopNavigation></CartProvider></div>;
+  return <div className="auraic-shop" lang="en" dir="ltr"><CartProvider><Marketing meta={settings.metaPixelId} tiktok={settings.tiktokPixelId}/><ShopNavigation><ShopHeader announcement={settings.announcement} announcements={settings.announcements} announcementInterval={settings.announcementInterval} announcementBackground={settings.announcementBackground} announcementTextColor={settings.announcementTextColor} menCategory={settings.menCollectionCategory} womenCategory={settings.womenCollectionCategory} />{!shop ? <main className="shop-coming-soon"><p className="shop-eyebrow">AURAIC</p><h1>The Auraic experience is coming soon</h1><p>We are preparing our store. See you soon.</p></main> : children}<ShopFooter settings={settings} /><BagDrawer products={shop ? await getPublicProducts(shop.id, "all") : []} settings={settings}/></ShopNavigation></CartProvider></div>;
 }
