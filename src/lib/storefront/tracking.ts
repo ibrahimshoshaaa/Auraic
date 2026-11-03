@@ -11,6 +11,23 @@ let lastView = "";
 let lastCheckout = "";
 const initializedMeta = new Set<string>();
 const initializedTikTok = new Set<string>();
+let debugEnabled = false;
+const debugEvents: { event: string; status: string; at: string }[] = [];
+const failedScripts = new Set<string>();
+export function setMarketingDebug(enabled: boolean) { debugEnabled = enabled; }
+function debugEvent(event: string, status: string) {
+  if (!debugEnabled) return;
+  debugEvents.unshift({ event, status, at: new Date().toLocaleTimeString("ar-EG") });
+  debugEvents.splice(12);
+}
+export function getMarketingDiagnostics() {
+  const w = window as TrackingWindow;
+  const requests = performance.getEntriesByType("resource").flatMap(entry => {
+    try { const url = new URL(entry.name); return /(^|\.)facebook\.com$/.test(url.hostname) && url.pathname.replace(/\/$/, "") === "/tr" ? [{ pixel: url.searchParams.get("id"), event: url.searchParams.get("ev") }] : []; } catch { return []; }
+  }).slice(-8).reverse();
+  return { allowed, meta: config.meta, scriptFailed: failedScripts.has("auraic-meta-sdk"), sdkReady: typeof w.fbq?.callMethod === "function", scriptPresent: !!document.getElementById("auraic-meta-sdk"), events: [...debugEvents], requests };
+}
+
 
 export function pixelPayload(data: TrackingData) {
   const items = (data.items || []).filter(i => /^[A-Za-z0-9_-]{1,100}$/.test(i.id) && Number.isFinite(i.price) && i.price >= 0 && Number.isInteger(i.quantity) && i.quantity > 0 && i.quantity <= 20).slice(0, 20);
@@ -23,7 +40,7 @@ export function pixelPayload(data: TrackingData) {
 }
 function script(src: string, id: string) {
   if (document.getElementById(id)) return;
-  const element = document.createElement("script"); element.id = id; element.async = true; element.src = src; document.head.appendChild(element);
+  const element = document.createElement("script"); element.id = id; element.async = true; element.src = src; element.onerror = () => { failedScripts.add(id); }; document.head.appendChild(element);
 }
 function deferTikTok(queue: TikTokQueue, name: string) {
   queue[name] = (...args: unknown[]) => queue.push([name, ...args]);
@@ -75,21 +92,22 @@ export function disableMarketing() {
   try { (w.ttq?.revokeConsent as (() => void) | undefined)?.(); } catch { /* SDK errors never affect shopping. */ }
 }
 export function trackPageView() {
-  if (!allowed) return;
+  if (!allowed) { debugEvent("PageView", "لم يُرسل: لا توجد موافقة"); return; }
   lastView = ""; lastCheckout = "";
   const w = window as TrackingWindow;
-  try { if (config.meta) w.fbq?.("trackSingle", config.meta, "PageView"); } catch { /* best effort */ }
+  try { if (config.meta) { w.fbq?.("trackSingle", config.meta, "PageView"); debugEvent("PageView", w.fbq?.callMethod ? "استُدعي سكربت ميتا" : "في انتظار تحميل سكربت ميتا"); } } catch { debugEvent("Meta", "فشل استدعاء سكربت ميتا"); }
   try { if (config.tiktok) { const instance = (w.ttq?.instance as ((id: string) => TikTokQueue) | undefined)?.(config.tiktok); (instance?.page as (() => void) | undefined)?.(); } } catch { /* best effort */ }
 }
 export function trackShopEvent(event: ShopEvent, data: TrackingData = {}) {
-  if (typeof window === "undefined" || !allowed) return;
+  if (typeof window === "undefined") return;
+  if (!allowed) { debugEvent(event, "لم يُرسل: لا توجد موافقة"); return; }
   if (event === "AddToCart" && !data.items?.some(i => i.quantity > 0)) return;
   if (event === "ViewContent") { const key = JSON.stringify(data.items); if (lastView === key) return; lastView = key || "view"; }
   if (event === "InitiateCheckout") { const key = JSON.stringify(data.items); if (lastCheckout === key) return; lastCheckout = key || "checkout"; }
   if (event === "Purchase" && data.orderId) {
-    try { const key = `auraic-purchase:${config.meta}:${config.tiktok}:${data.orderId}`; if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, "1"); } catch { /* storage may be disabled */ }
+    try { const key = `auraic-purchase:${config.meta}:${config.tiktok}:${data.orderId}`; if (sessionStorage.getItem(key)) { debugEvent(event, "لم يتكرر: الطلب مسجل في هذه الجلسة"); return; } sessionStorage.setItem(key, "1"); } catch { /* storage may be disabled */ }
   }
   const w = window as TrackingWindow; const payload = pixelPayload(data);
-  try { if (config.meta) w.fbq?.("trackSingle", config.meta, event, payload.meta); } catch { /* best effort */ }
+  try { if (config.meta) { w.fbq?.("trackSingle", config.meta, event, payload.meta); debugEvent(event, w.fbq?.callMethod ? "استُدعي سكربت ميتا" : "في انتظار تحميل سكربت ميتا"); } } catch { debugEvent("Meta", "فشل استدعاء سكربت ميتا"); }
   try { if (config.tiktok) { const instance = (w.ttq?.instance as ((id: string) => TikTokQueue) | undefined)?.(config.tiktok); (instance?.track as ((...args: unknown[]) => void) | undefined)?.(event, payload.tiktok); } } catch { /* best effort */ }
 }

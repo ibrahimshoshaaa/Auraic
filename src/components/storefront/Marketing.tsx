@@ -1,5 +1,6 @@
 "use client";
 import "./marketing.css";
+import { PixelDiagnostics } from "./PixelDiagnostics";
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { disableMarketing, enableMarketing, trackPageView } from "@/lib/storefront/tracking";
@@ -32,9 +33,8 @@ export function Marketing({ meta, tiktok }: { meta: string; tiktok: string }) {
     window.dispatchEvent(new Event("auraic:marketing-ready"));
   }, [path, consent, meta, tiktok]);
   function choose(value: "yes" | "no") { try { localStorage.setItem("auraic-marketing", value); } catch { /* session-only consent */ } setConsent(value); setBannerOpen(false); }
-  if (!(meta || tiktok) || !bannerOpen) return null;
-  return <aside className="shop-cookie-banner" aria-label="Advertising cookies">
+  return <><PixelDiagnostics meta={meta}/>{(meta || tiktok) && bannerOpen ? <aside className="shop-cookie-banner" aria-label="Advertising cookies">
     <div><h2>Cookie preferences</h2><p>Allow advertising cookies to help us measure our campaigns? You can change your choice anytime using Cookie preferences in the footer.</p></div>
     <div className="shop-cookie-actions"><button type="button" onClick={() => choose("yes")}>Allow</button><button type="button" onClick={() => choose("no")}>Decline</button></div>
-  </aside>;
+  </aside> : null}</>;
 }

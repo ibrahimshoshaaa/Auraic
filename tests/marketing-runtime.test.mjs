@@ -35,3 +35,25 @@ test('payload is an allowlist and excludes checkout contact details', () => {
  const {api}=runtime(); const p=api.pixelPayload({ value:10, email:'private@example.com', phone:'secret', items:[{id:'v1',quantity:1,price:10}] });
  assert.equal(JSON.stringify(p).includes('private'),false); assert.equal(JSON.stringify(p).includes('secret'),false);
 });
+test('opt-in diagnostics distinguish blocked, queued and SDK calls without retaining customer payloads', () => {
+ const {api,context,scripts}=runtime();
+ context.URL=URL;
+ context.performance={getEntriesByType:()=>[{name:'https://www.facebook.com/tr/?id=1234567890&ev=PageView&private=ignored'},{name:'https://example.com/other'}]};
+ api.trackShopEvent('Purchase',{orderId:'private-order'});
+ assert.equal(api.getMarketingDiagnostics().events.length,0);
+ api.setMarketingDebug(true);
+ api.trackShopEvent('Purchase',{orderId:'private-order'});
+ assert.match(api.getMarketingDiagnostics().events[0].status,/لا توجد موافقة/);
+ api.enableMarketing('1234567890',''); api.trackPageView();
+ assert.equal(api.getMarketingDiagnostics().sdkReady,false);
+ assert.match(api.getMarketingDiagnostics().events[0].status,/انتظار/);
+ context.window.fbq.callMethod=()=>{};
+ api.trackShopEvent('Purchase',{orderId:'private-order',value:20,phone:'private-phone'});
+ const report=api.getMarketingDiagnostics();
+ assert.equal(report.sdkReady,true); assert.match(report.events[0].status,/استُدعي/);
+ assert.deepEqual(JSON.parse(JSON.stringify(report.requests)),[{pixel:'1234567890',event:'PageView'}]);
+ assert.equal(JSON.stringify(report).includes('private-'),false);
+ scripts[0].onerror(); assert.equal(api.getMarketingDiagnostics().scriptFailed,true);
+ api.setMarketingDebug(false); const count=api.getMarketingDiagnostics().events.length;
+ api.trackPageView(); assert.equal(api.getMarketingDiagnostics().events.length,count);
+});
