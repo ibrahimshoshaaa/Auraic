@@ -1,4 +1,5 @@
 import Link from "next/link";
+import styles from "./traffic.module.css";
 import { requireAuth } from "@/lib/auth-helpers";
 import { can } from "@/lib/rbac";
 import { db } from "@/lib/db";
@@ -8,5 +9,17 @@ export default async function Traffic({ searchParams }: { searchParams: Promise<
  const where = { storeId: session.storeId, createdAt: { gte: new Date(Date.now()-days*86400000) } };
  let views = 0; let visits = 0; let pages: { path: string; _count: { _all: number } }[] = []; let unavailable = false;
  try { [views, visits, pages] = await Promise.all([db.storeVisit.count({ where }), db.$queryRaw<{ total: bigint }[]>`SELECT COUNT(DISTINCT "session") AS total FROM "StoreVisit" WHERE "storeId" = ${session.storeId} AND "createdAt" >= ${where.createdAt.gte}`.then(rows => Number(rows[0].total)), db.storeVisit.groupBy({ by: ["path"], where, _count: { _all: true }, orderBy: { _count: { path: "desc" } }, take: 15 })]); } catch { unavailable = true; }
- return <main className="mx-auto max-w-5xl space-y-6 p-6" dir="rtl"><h1 className="text-3xl font-bold">زيارات الموقع</h1><p>إحصائيات تقريبية من بدء تفعيل الميزة. الزيارة جلسة متصفح؛ فتح تبويب جديد قد يبدأ زيارة أخرى، وليست عدد أشخاص فريدين. آخر 90 يومًا محفوظة.</p><nav className="flex gap-3" aria-label="الفترة">{[1,7,30,90].map(n => <Link key={n} className="rounded border p-3" aria-current={n===days ? "page" : undefined} href={`?days=${n}`}>آخر {n} يوم</Link>)}</nav>{unavailable ? <p role="alert">الإحصائيات غير جاهزة. تأكد من تطبيق ترحيل قاعدة البيانات.</p> : <><div className="grid gap-4 sm:grid-cols-2"><div className="rounded-xl border p-5">الزيارات<strong className="block text-3xl">{visits}</strong></div><div className="rounded-xl border p-5">مشاهدات الصفحات<strong className="block text-3xl">{views}</strong></div></div><h2 className="text-xl font-bold">الصفحات الأكثر مشاهدة</h2><table className="w-full text-right"><thead><tr><th>الصفحة</th><th>المشاهدات</th></tr></thead><tbody>{pages.map(p => <tr key={p.path}><td dir="ltr">{p.path}</td><td>{p._count._all}</td></tr>)}</tbody></table>{!views && <p>لا توجد زيارات مسجلة في هذه الفترة بعد.</p>}</>}<p>قد تؤثر أدوات الحظر أو تعطيل JavaScript على الأرقام. لوحة الإدارة لا تدخل ضمن العد.</p></main>;
+ const format = (value: number) => value.toLocaleString("ar-EG");
+ const titles: Record<string, string> = { "/": "الرئيسية", "/products": "المنتجات", "/samples": "العينات", "/cart": "سلة التسوق", "/checkout": "إتمام الطلب", "/favorites": "المفضلة", "/contact": "تواصل معنا", "/shipping": "سياسة الشحن", "/returns": "سياسة الاسترجاع", "/policies": "السياسات" };
+ return <main className={styles.page} dir="rtl">
+  <header className={styles.header}><span className={styles.eyebrow}>إحصائيات المتجر</span><h1>زيارات الموقع</h1><p>تابع حركة متجرك والصفحات التي يهتم بها زوارك.</p></header>
+  <nav className={styles.periods} aria-label="الفترة الزمنية">{[[1,"٢٤ ساعة"],[7,"٧ أيام"],[30,"٣٠ يومًا"],[90,"٩٠ يومًا"]].map(([n,label]) => <Link key={n} aria-current={n===days ? "page" : undefined} href={`?days=${n}`}>{label}</Link>)}</nav>
+  {unavailable ? <div className={styles.empty} role="alert"><h2>الإحصائيات غير متاحة الآن</h2><p>جرّب إعادة تحميل الصفحة بعد قليل.</p></div> : <>
+   <section className={styles.metrics} aria-label="ملخص الزيارات"><article className={styles.metric}><span>الزيارات</span><strong>{format(visits)}</strong><small>جلسات التصفح</small></article><article className={styles.metric}><span>مشاهدات الصفحات</span><strong>{format(views)}</strong><small>إجمالي الصفحات المفتوحة</small></article></section>
+   <section className={styles.panel}><div className={styles.panelHeading}><h2>الصفحات الأكثر مشاهدة</h2><span>آخر {format(days)} يوم</span></div>
+    {pages.length ? <ol className={styles.pages}>{pages.map((p,index) => <li key={p.path}><span className={styles.rank}>{format(index+1)}</span><div className={styles.pageInfo}><div className={styles.pageTop}><strong>{titles[p.path] || (p.path.startsWith("/products/") ? "صفحة منتج" : "صفحة المتجر")}</strong><span>{format(p._count._all)} <small>مشاهدة</small></span></div><span className={styles.path} dir="ltr">{p.path}</span><div className={styles.track}><span style={{width:`${Math.max(2, p._count._all/Math.max(views,1)*100)}%`}} /></div></div></li>)}</ol> : <div className={styles.empty}><h3>أول زيارة تبدأ من هنا</h3><p>ستظهر الأرقام تلقائيًا عندما يزور أحد متجرك.</p></div>}
+   </section>
+  </>}
+  <details className={styles.notes}><summary>كيف تُحسب الزيارات؟</summary><p>الأرقام تقريبية وتبدأ من تفعيل الميزة. الزيارة جلسة تصفح؛ فتح تبويب جديد قد يُحسب زيارة أخرى، وليست عدد أشخاص فريدين. تُحفظ بيانات آخر ٩٠ يومًا. قد تؤثر أدوات الحظر أو تعطيل JavaScript على الأرقام، ولا تُحسب صفحات لوحة الإدارة.</p></details>
+ </main>;
 }
