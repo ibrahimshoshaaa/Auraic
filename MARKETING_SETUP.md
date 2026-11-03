@@ -14,3 +14,6 @@ The Neon test branch remains available for inspection. No real Pixel IDs have be
 
 
 Traffic report details: hourly (24-hour filter) or Cairo-calendar daily charts, per-period sessions/views, pages per session, sessions reaching checkout, last-15-minute activity, single-page sessions and page-level session counts/share/last seen. Product names are resolved within the signed-in store. Comparisons use equal rolling windows and remain unavailable until a complete prior window exists after the migration timestamp and within 90-day retention. Opening checkout is not an order or a purchase conversion. Daily session totals can exceed period sessions when the same session spans days. Device, country, referrer and duration are not collected. No schema changes are needed for these report additions.
+
+
+The Flutter admin app exposes Website visits from its navigation and Storefront management, plus owner-only Meta/TikTok Pixel ID settings. These configure website tracking; no advertising SDK is added to the admin app. GET /api/reports/traffic accepts mobile bearer sessions or web sessions, requires reports.read, binds the store server-side and disables caching. The native report shares the web report service; API date labels and chart buckets use Africa/Cairo. A signed Android rebuild is needed to see the native screens.
