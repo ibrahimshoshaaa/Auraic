@@ -3,5 +3,6 @@ function route(role='OWNER') {const calls=[];const compiled={exports:{}};const l
 test('export endpoint checks permissions and binds dates and store on server',async()=>{
  for(const role of ['OWNER','MANAGER']){const r=route(role);const response=await r.get(new next.NextRequest('https://example.test/api/reports/export?format=pdf&period=custom&from=2026-10-01&to=2026-10-31&storeId=foreign'));assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'private, no-store');assert.equal(response.headers.get('content-type'),'application/pdf');assert.deepEqual(r.calls,[['own',{period:'custom',from:'2026-10-01',to:'2026-10-31'}]]);}
  for(const [role,status] of [['EMPLOYEE',403],['NONE',401]]){const r=route(role);assert.equal((await r.get(new next.NextRequest('https://example.test/api/reports/export?format=pdf'))).status,status);assert.equal(r.calls.length,0);}
+ const pinned=route();await pinned.get(new next.NextRequest('https://example.test/api/reports/export?format=pdf&period=7d&from=2026-10-01&to=2026-10-07'));assert.equal(pinned.calls[0][1].period,'custom');assert.equal(pinned.calls[0][1].to,'2026-10-07');
  const r=route();assert.equal((await r.get(new next.NextRequest('https://example.test/api/reports/export?format=csv'))).status,422);assert.equal(r.calls.length,0);
 });
