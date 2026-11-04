@@ -23,7 +23,7 @@ const createSchema = z.object({
 export async function GET() {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "materials.read")) {
+    if (!can(session, "materials.read")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const storeId = getStoreId(session);
@@ -37,7 +37,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "materials.write")) {
+    if (!can(session, "materials.write")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const storeId = getStoreId(session);

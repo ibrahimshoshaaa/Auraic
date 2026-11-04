@@ -1,3 +1,4 @@
+import { can } from "@/lib/rbac";
 import { NextRequest, NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 import { requireAuth } from "@/lib/auth-helpers";
@@ -6,7 +7,7 @@ import { db } from "@/lib/db";
 export const runtime = "nodejs";
 export async function GET(request: NextRequest) {
   const session = await requireAuth();
-  if (!["OWNER", "MANAGER"].includes(session.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!can(session, "payments.read")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const orderId = request.nextUrl.searchParams.get("orderId") || "";
   if (!/^web_[0-9a-f-]{36}$/i.test(orderId)) return NextResponse.json({ error: "Invalid order" }, { status: 422 });
   const order = await db.order.findFirst({ where: { id: orderId, storeId: session.storeId }, select: { id: true } });

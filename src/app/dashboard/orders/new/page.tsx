@@ -7,7 +7,7 @@ import { activeProductStatus } from "@/lib/active-product";
 
 export default async function NewManualSalePage() {
   const session = await requireAuth();
-  if (!can(session.role, "orders.write")) throw new Error("Forbidden");
+  if (!can(session, "orders.write")) throw new Error("Forbidden");
   const variants = await db.productVariant.findMany({
     where: { storeId: session.storeId, active: true, product: activeProductStatus },
     select: { id: true, title: true, price: true, product: { select: { title: true } } },

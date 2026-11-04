@@ -100,7 +100,7 @@ class _ProductDetailState extends State<ProductDetail> {
           if (v['costing'] is Map && (v['costing'] as Map)['estimatedCost'] != null)
             ListTile(title: const Text('تكلفة الوصفة للقطعة'),
               trailing: Text((v['costing'] as Map)['complete'] == true ? '${(v['costing'] as Map)['estimatedCost']} EGP' : 'غير مكتملة')),
-          if (v['costing'] is Map && (v['costing'] as Map)['complete'] == true)
+          if (widget.api.can('profits.read') && v['costing'] is Map && (v['costing'] as Map)['complete'] == true)
             ListTile(title: const Text('الربح المتوقع قبل التشغيل'), trailing: Text('${(v['costing'] as Map)['estimatedMargin']} EGP')),
           if (v['recipes'] is List && (v['recipes'] as List).isNotEmpty) ...[
             const Align(alignment: AlignmentDirectional.centerStart,
@@ -113,7 +113,7 @@ class _ProductDetailState extends State<ProductDetail> {
                   ListTile(dense: true,
                     title: Text(str((item['material'] as Map?)?['name'])),
                     trailing: Text('${str(item['quantity'])} ${str(item['unit'])}')),
-              if (widget.canWrite) SizedBox(width: double.infinity,
+              if (widget.api.can('recipes.write')) SizedBox(width: double.infinity,
                 child: OutlinedButton.icon(onPressed: () async {
                   final saved = await openPage<bool>(context, RecipeForm(
                     api: widget.api, recipeId: str(recipe['id'])));
@@ -123,7 +123,7 @@ class _ProductDetailState extends State<ProductDetail> {
               const SizedBox(height: 8),
             ],
           ],
-          if (widget.canWrite && (v['recipes'] is! List || (v['recipes'] as List).isEmpty))
+          if (widget.api.can('recipes.write') && (v['recipes'] is! List || (v['recipes'] as List).isEmpty))
             SizedBox(width: double.infinity, child: OutlinedButton.icon(
               icon: const Icon(Icons.add), label: const Text('إضافة وصفة لهذا الحجم'),
               onPressed: () async { final saved = await openPage<bool>(context,

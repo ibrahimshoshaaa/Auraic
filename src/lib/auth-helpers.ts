@@ -1,10 +1,11 @@
+import { accessKey, parsePermissions } from "@/lib/permissions";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import type { Role } from "@prisma/client";
 import { headers } from "next/headers";
 import { hashMobileToken, parseMobileAuthorization } from "@/lib/mobile-token";
 
-export type AppSession = { userId: string; storeId: string; role: Role };
+export type AppSession = { userId: string; storeId: string; role: Role; permissions?: readonly string[] };
 
 /** Authoritative authorization: never trust a client header or a role stored in a JWT. */
 export async function requireAuth(): Promise<AppSession> {
@@ -29,7 +30,8 @@ export async function requireAuth(): Promise<AppSession> {
   const user = await db.user.findUnique({ where: { id: userId }, select: { id: true, storeId: true, role: true, status: true, store: { select: { status: true } } } });
   if (!user || user.status !== "ACTIVE" || user.store.status !== "ACTIVE" ||
     (mobileStoreId && mobileStoreId !== user.storeId)) throw new Error("UNAUTHORIZED");
-  return { userId: user.id, storeId: user.storeId, role: user.role };
+  const policy = user.role === "OWNER" ? null : await db.setting.findUnique({ where: { storeId_key: { storeId: user.storeId, key: accessKey(user.id) } }, select: { value: true } });
+  return { userId: user.id, storeId: user.storeId, role: user.role, ...(policy ? { permissions: parsePermissions(policy.value) } : {}) };
 }
 
 export function getStoreId(session: AppSession): string { return session.storeId; }

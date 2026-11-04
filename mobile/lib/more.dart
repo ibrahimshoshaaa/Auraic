@@ -61,7 +61,7 @@ class _ReportsPageState extends State<ReportsPage> {
       final range = json(data['range']);
       return Column(children: [
         const SizedBox(height: 12),
-        ReportExportButtons(api: widget.api, period: str(range['period']), from: str(range['from']), to: str(range['to']), enabled: snapshot.connectionState == ConnectionState.done && !snapshot.hasError),
+        if (widget.api.can('reports.export')) ReportExportButtons(api: widget.api, period: str(range['period']), from: str(range['from']), to: str(range['to']), enabled: snapshot.connectionState == ConnectionState.done && !snapshot.hasError),
         const SizedBox(height: 12),
         Row(children: [Expanded(child: kpi('إجمالي المبيعات', sales['total'] ?? (num.tryParse('${sales['gross']}') ?? 0) - (num.tryParse('${sales['discounts']}') ?? 0) - (num.tryParse('${sales['shipping']}') ?? 0), Icons.trending_up)),
           const SizedBox(width: 10), Expanded(child: kpi('صافي المبيعات', sales['net'], Icons.show_chart))]),
@@ -76,24 +76,24 @@ class _ReportsPageState extends State<ReportsPage> {
           line('الشحن (منفصل)', sales['shipping']), line('المبيعات قبل الخصم وبدون الشحن', (num.tryParse('${sales['gross']}') ?? 0) - (num.tryParse('${sales['shipping']}') ?? 0)), line('الخصومات', sales['discounts']), line('المسترد', sales['refunded']),
           line('الديبوزت', cash['deposits']),
         ]),
-        section('الربح وROAS', [
-          line('صافي الربح بعد تكلفة الوصفة', json(data['profit'])['profit'] ?? 'غير مكتمل'),
-          line('تكلفة الوصفات', json(data['profit'])['recipeCost']),
-          line('نسبة الربح', json(data['profit'])['margin'] == null ? '—' : '${json(data['profit'])['margin']}%'),
-          line('مصاريف السوشيال', json(data['roas'])['spend']),
-          line('ROAS', json(data['roas'])['ratio'] == null ? '—' : '${json(data['roas'])['ratio']}×'),
+        if (data['profit'] != null || data['roas'] != null) section('الربح وROAS', [
+          if (data['profit'] != null) line('صافي الربح بعد تكلفة الوصفة', json(data['profit'])['profit'] ?? 'غير مكتمل'),
+          if (data['profit'] != null) line('تكلفة الوصفات', json(data['profit'])['recipeCost']),
+          if (data['profit'] != null) line('نسبة الربح', json(data['profit'])['margin'] == null ? '—' : '${json(data['profit'])['margin']}%'),
+          if (data['roas'] != null) line('مصاريف السوشيال', json(data['roas'])['spend']),
+          if (data['roas'] != null) line('ROAS', json(data['roas'])['ratio'] == null ? '—' : '${json(data['roas'])['ratio']}×'),
         ]),
         section('المنتجات', [for (final product in (data['products'] as List).map(json))
           ListTile(title: Text('${product['product']} · ${product['variant']}'),
             subtitle: Text('الوحدات: ${product['units']}'), trailing: Text(statistic(product['net'])))]),
         section('المرتجعات', [line('عدد المرتجعات', returns['count']),
-          line('قيمتها', returns['value']), line('تكلفتها', returns['costs'])]),
-        section('المصروفات', [line('إجمالي المصروفات', expenses['total']),
+          line('قيمتها', returns['value']), if (returns['costs'] != null) line('تكلفتها', returns['costs'])]),
+        if (data['expenses'] != null) section('المصروفات', [line('إجمالي المصروفات', expenses['total']),
           for (final category in (expenses['byCategory'] as List).map(json))
             line(str(category['category'] ?? category['name']), category['amount'])]),
-        section('استهلاك الخامات', [for (final material in (data['consumption'] as List).map(json))
+        if (data['consumption'] != null) section('استهلاك الخامات', [for (final material in (data['consumption'] as List).map(json))
           line(str(material['name']), '${material['consumed']} ${material['unit']}')]),
-        section('المخزون الحالي', [for (final material in (data['inventory'] as List).map(json))
+        if (data['inventory'] != null) section('المخزون الحالي', [for (final material in (data['inventory'] as List).map(json))
           line(str(material['name']), '${material['stock']} ${material['unit']}')]),
       ]);
     }),
@@ -171,7 +171,7 @@ class _SettingsPageState extends State<SettingsPage> {
         field('اسم المتجر', name),
         ListTile(title: const Text('العملة'), subtitle: Text(str(store['currency']))),
         ListTile(title: const Text('المنطقة الزمنية'), subtitle: Text(str(store['timezone']))),
-        field('تكلفة المرتجع الافتراضية (EGP)', amount, type: TextInputType.number),
+        if (widget.api.can('costs.read')) field('تكلفة المرتجع الافتراضية (EGP)', amount, type: TextInputType.number),
         SwitchListTile(title: const Text('إظهار التكلفة التقديرية'),
           value: costing, onChanged: widget.isOwner ? (value) => setState(() => costing = value) : null),
         const Divider(height: 32),

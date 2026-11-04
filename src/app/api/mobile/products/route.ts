@@ -11,7 +11,7 @@ const schema = z.object({ title: z.string().trim().min(1).max(200),
 export async function POST(request: NextRequest) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "products.write")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!can(session, "products.write")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     const input = schema.parse(await request.json());
     const product = await db.$transaction(async tx => {
       const created = await tx.product.create({ data: { storeId: session.storeId, title: input.title,

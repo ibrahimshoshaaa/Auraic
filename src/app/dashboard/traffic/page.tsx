@@ -14,7 +14,7 @@ function Change({ current, previous, comparable }: { current: number; previous: 
   return <small className={change.kind === "up" || change.kind === "new" ? styles.up : change.kind === "down" ? styles.down : styles.pending}>{change.kind === "new" ? "نشاط جديد؛ الفترة السابقة بلا زيارات" : change.kind === "flat" ? "بدون تغيير عن الفترة السابقة" : `${change.kind === "up" ? "↑ زيادة" : "↓ انخفاض"} ${number(change.percent ?? 0, 1)}٪ عن الفترة السابقة`}</small>;
 }
 export default async function Traffic({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
-  const session = await requireAuth(); if (!can(session.role, "reports.read")) throw new Error("Forbidden");
+  const session = await requireAuth(); if (!can(session, "traffic.read")) throw new Error("Forbidden");
   const query = await searchParams;
   let report: Awaited<ReturnType<typeof getTrafficReport>> | null = null;
   try { report = await getTrafficReport(session.storeId, query.days); } catch { /* Report failures never affect the storefront. */ }

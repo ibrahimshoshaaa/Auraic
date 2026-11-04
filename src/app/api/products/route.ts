@@ -1,3 +1,4 @@
+import { productForAccess } from "@/lib/access-data";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { listProducts, createProduct } from "@/services/product.service";
@@ -12,7 +13,7 @@ const createSchema = z.object({
 export async function GET(req: NextRequest) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "products.read")) {
+    if (!can(session, "products.read")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
       search: searchParams.get("search") ?? undefined,
     });
 
-    return NextResponse.json({ data: products });
+    return NextResponse.json({ data: products.map(product => productForAccess(product, session)) });
   } catch (err) {
     return handleError(err);
   }
@@ -32,7 +33,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "products.write")) {
+    if (!can(session, "products.write")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

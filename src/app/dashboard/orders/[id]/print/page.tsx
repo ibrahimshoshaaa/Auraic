@@ -5,7 +5,7 @@ import { db } from '@/lib/db';
 import { ShippingLabel } from '@/components/orders/ShippingLabel';
 export default async function PrintOrder({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth();
-  if (!can(session.role, 'orders.read')) notFound();
+  if (!can(session, 'orders.read')) notFound();
   const { id } = await params;
   const order = await db.order.findFirst({ where: { id, storeId: session.storeId }, include: { items: true } });
   if (!order) notFound();

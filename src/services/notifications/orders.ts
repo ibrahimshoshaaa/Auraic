@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { accessKey, parsePermissions } from "@/lib/permissions";
 import { can } from "@/lib/rbac";
 import { pushConfigured, sendPush } from "./fcm";
 
@@ -8,8 +9,10 @@ export async function queueOrderPush(tx: Prisma.TransactionClient, storeId: stri
   const sessions = await tx.mobileSession.findMany({ where: {
     storeId, revokedAt: null, expiresAt: { gt: new Date() }, pushToken: { not: null },
     user: { status: "ACTIVE", storeId, store: { status: "ACTIVE" } },
-  }, select: { id: true, pushToken: true, user: { select: { role: true } } } });
-  const recipients = sessions.filter(session => can(session.user.role, "orders.read"));
+  }, select: { id: true, userId: true, pushToken: true, user: { select: { role: true } } } });
+  const policies = await tx.setting.findMany({ where: { storeId, key: { in: sessions.map(session => accessKey(session.userId)) } }, select: { key: true, value: true } });
+  const policyMap = new Map(policies.map(p => [p.key, parsePermissions(p.value)]));
+  const recipients = sessions.filter(session => can({ role: session.user.role, permissions: policyMap.get(accessKey(session.userId)) }, "orders.read"));
   if (recipients.length) await tx.pushDelivery.createMany({
     data: recipients.map(session => ({ orderId, sessionId: session.id, token: session.pushToken! })),
     skipDuplicates: true,
@@ -32,11 +35,12 @@ export async function deliverOrderPushes(orderId?: string) {
       const session = await db.mobileSession.findUnique({ where: { id: delivery.sessionId },
         include: { user: { include: { store: true } } } });
       const order = await db.order.findUnique({ where: { id: delivery.orderId } });
+      const policy = session ? await db.setting.findUnique({ where: { storeId_key: { storeId: session.storeId, key: accessKey(session.userId) } }, select: { value: true } }) : null;
       // Re-check access immediately before sending, including logout/token rotation.
       if (!session || session.revokedAt || session.expiresAt <= new Date() ||
           session.pushToken !== delivery.token || session.user.status !== "ACTIVE" ||
           session.user.store.status !== "ACTIVE" || session.storeId !== session.user.storeId ||
-          !can(session.user.role, "orders.read") || !order || order.storeId !== session.storeId ||
+          !can({ role: session.user.role, ...(policy ? { permissions: parsePermissions(policy.value) } : {}) }, "orders.read") || !order || order.storeId !== session.storeId ||
           Date.now() - delivery.createdAt.getTime() > 86400000) {
         await db.pushDelivery.update({ where: { id: delivery.id }, data: { finishedAt: new Date() } });
         continue;

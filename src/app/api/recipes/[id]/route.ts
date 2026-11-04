@@ -1,3 +1,4 @@
+import { recipeForAccess } from "@/lib/access-data";
 import { NextRequest, NextResponse } from "next/server";
 import { getRecipe, getRecipeVersionCost, currentVersionOf } from "@/services/recipe.service";
 import { requireAuth, getStoreId } from "@/lib/auth-helpers";
@@ -9,7 +10,7 @@ export async function GET(
 ) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "recipes.read")) {
+    if (!can(session, "recipes.read")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const storeId = getStoreId(session);
@@ -24,7 +25,7 @@ export async function GET(
     const cost = current ? await getRecipeVersionCost(storeId, current.id) : null;
 
     return NextResponse.json({
-      data: { ...recipe, currentVersionId: current?.id ?? null, cost },
+      data: { ...recipeForAccess(recipe, session), currentVersionId: current?.id ?? null, cost: can(session, "costs.read") ? cost : undefined },
     });
   } catch (err) {
     if (err instanceof Error && err.message === "UNAUTHORIZED") {

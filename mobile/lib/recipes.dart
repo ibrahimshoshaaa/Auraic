@@ -43,7 +43,7 @@ class _RecipeDetailState extends State<RecipeDetail> {
       return ListView(padding: const EdgeInsets.all(16), children: [
         PageIntro(title: str(recipe['name']), subtitle: 'النسخ ومكونات التصنيع', icon: Icons.science_outlined),
         const SizedBox(height: 12),
-        ListTile(title: Text(str(recipe['name'])), subtitle: Text('التكلفة ${str(recipe['cost'])} EGP')),
+        if (recipe['cost'] != null) ListTile(title: Text(str(recipe['name'])), subtitle: Text('التكلفة ${str(recipe['cost'])} EGP')),
         for (final v in versions) Card(child: ExpansionTile(
           title: Text('النسخة v${v['version']} ${v['isCurrent'] == true ? '· الحالية' : ''}'),
           children: [

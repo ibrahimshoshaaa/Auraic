@@ -10,12 +10,13 @@ async function currentSession(request: NextRequest) {
   const token = parseMobileAuthorization(request.headers.get("authorization"));
   if (!token) throw new Error("UNAUTHORIZED");
   const auth = await requireAuth();
-  if (!can(auth.role, "orders.read")) throw new Error("UNAUTHORIZED");
+  if (!can(auth, "orders.read")) throw new Error("FORBIDDEN");
   return db.mobileSession.findFirstOrThrow({ where: { tokenHash: hashMobileToken(token),
     userId: auth.userId, storeId: auth.storeId, revokedAt: null, expiresAt: { gt: new Date() } } });
 }
 
 function failure(error: unknown) {
+  if (error instanceof Error && error.message === "FORBIDDEN") return NextResponse.json({ error: "غير مسموح بإشعارات الطلبات" }, { status: 403 });
   return NextResponse.json({ error: error instanceof Error && error.message === "UNAUTHORIZED"
     ? "سجّل الدخول أولًا" : "تعذر تحديث إعدادات الإشعارات" }, {
     status: error instanceof Error && error.message === "UNAUTHORIZED" ? 401 : 500,

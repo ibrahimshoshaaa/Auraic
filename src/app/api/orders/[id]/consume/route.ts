@@ -14,7 +14,7 @@ export async function POST(
 ) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "consumption.write")) {
+    if (!can(session, "consumption.write")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const storeId = getStoreId(session);

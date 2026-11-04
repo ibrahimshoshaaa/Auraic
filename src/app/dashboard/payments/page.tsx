@@ -3,13 +3,14 @@ import { useEffect, useState } from "react";
 type Payment = { id: string; orderNumber: string | null; customerRef: string | null; customerPhone: string | null; method: string; plan: string; reference: string; senderPhone: string | null; requestedAmount: number; total: number; depositAmount: number; review: string; hasReceipt: boolean };
 type Refund = { id: string; orderNumber: string | null; customerRef: string | null; customerPhone: string | null; amount: number };
 export default function PaymentsPage() {
+  const [canWrite, setCanWrite] = useState(false);
   const [refunds, setRefunds] = useState<Refund[]>([]);
   const [refundRefs, setRefundRefs] = useState<Record<string, string>>({});
   const [payments, setPayments] = useState<Payment[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   async function refresh() {
-    try { const response = await fetch("/api/payments/review", { cache: "no-store" }); const body = await response.json(); if (!response.ok) throw new Error(body.error || "Unable to load"); setPayments(body.data);
+    try { const response = await fetch("/api/payments/review", { cache: "no-store" }); const body = await response.json(); if (!response.ok) throw new Error(body.error || "Unable to load"); setPayments(body.data); setCanWrite(body.canWrite === true);
       const refundResponse = await fetch("/api/payments/refunds", { cache: "no-store" });
       const refundBody = await refundResponse.json();
       if (!refundResponse.ok) throw new Error(refundBody.error || "Unable to load refunds");
@@ -58,7 +59,7 @@ export default function PaymentsPage() {
       <p>المطلوب تحويله: <strong>{p.requestedAmount} EGP</strong> · إجمالي الطلب: {p.total} EGP</p>
       <p>{p.senderPhone ? "رقم الهاتف المحوّل منه" : "مرجع التحويل"}: <span dir="ltr">{p.senderPhone || p.reference}</span> · هاتف العميل: {p.customerPhone}</p>
       {p.hasReceipt && <button type="button" onClick={() => void openReceipt(p.id)} className="rounded-lg border px-4 py-2">عرض صورة الإيصال</button>}
-      {p.review === "PENDING" && <div className="flex gap-3"><button disabled={busy === p.id} onClick={() => void review(p.id, "APPROVED")} className="rounded-lg bg-emerald-700 px-4 py-2 text-white">تأكيد وصول المبلغ</button><button disabled={busy === p.id} onClick={() => void review(p.id, "REJECTED")} className="rounded-lg border px-4 py-2">رفض</button></div>}
+      {p.review === "PENDING" && <div className="flex gap-3"><button disabled={!canWrite || busy === p.id} onClick={() => void review(p.id, "APPROVED")} className="rounded-lg bg-emerald-700 px-4 py-2 text-white">تأكيد وصول المبلغ</button><button disabled={!canWrite || busy === p.id} onClick={() => void review(p.id, "REJECTED")} className="rounded-lg border px-4 py-2">رفض</button></div>}
     </article>)}
     <section className="space-y-3 pt-6">
       <h2 className="text-xl font-bold">مبالغ المرتجعات المنتظرة</h2>
@@ -70,7 +71,7 @@ export default function PaymentsPage() {
         <label className="block">مرجع عملية رد المبلغ
           <input className="mt-1 block w-full rounded-lg border p-2" value={refundRefs[refund.id] || ""} onChange={event => setRefundRefs(previous => ({ ...previous, [refund.id]: event.target.value }))} placeholder="رقم العملية" />
         </label>
-        <button disabled={busy === refund.id || refund.amount <= 0} onClick={() => void confirmRefund(refund.id)} className="rounded-lg bg-emerald-700 px-4 py-2 text-white disabled:opacity-50">تأكيد إرسال المبلغ للعميل</button>
+        <button disabled={!canWrite || busy === refund.id || refund.amount <= 0} onClick={() => void confirmRefund(refund.id)} className="rounded-lg bg-emerald-700 px-4 py-2 text-white disabled:opacity-50">تأكيد إرسال المبلغ للعميل</button>
       </article>)}
     </section>
   </main>;

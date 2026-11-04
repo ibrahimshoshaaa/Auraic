@@ -22,6 +22,7 @@ const settingsSchema = z.object({
 
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ saved?: string; error?: string }> }) {
   const session = await requireAuth();
+  if (!can(session, "settings.read")) throw new Error("Forbidden");
   const [store, returnCost, costingEnabled, paymentValues, materialTypes] = await Promise.all([
     db.store.findUniqueOrThrow({ where: { id: session.storeId }, select: { name: true, currency: true, timezone: true, createdAt: true } }),
     getSetting(session.storeId, "defaultReturnCost"),
@@ -34,7 +35,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   async function save(form: FormData) {
     "use server";
     const actor = await requireAuth();
-    if (actor.role !== "OWNER") throw new Error("Forbidden");
+    if (!can(actor, "settings.write")) throw new Error("Forbidden");
     const parsed = settingsSchema.safeParse({
       name: form.get("name"),
       defaultReturnCost: form.get("defaultReturnCost"),
@@ -72,38 +73,38 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <h2 className="text-lg font-semibold">بيانات المتجر</h2>
           <p className="mt-1 text-sm text-slate-500">الاسم الظاهر في لوحة التحكم.</p>
           <div className="mt-6 grid gap-5 sm:grid-cols-2">
-            <label className="block text-sm font-medium">اسم المتجر<input name="name" required minLength={2} maxLength={80} defaultValue={store.name} disabled={session.role !== "OWNER"} className="mt-2 block w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#96723c] disabled:bg-slate-50" /></label>
+            <label className="block text-sm font-medium">اسم المتجر<input name="name" required minLength={2} maxLength={80} defaultValue={store.name} disabled={!can(session, "settings.write")} className="mt-2 block w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#96723c] disabled:bg-slate-50" /></label>
             <div className="grid grid-cols-2 gap-3 text-sm"><div className="rounded-xl bg-slate-50 p-4"><span className="text-slate-500">العملة</span><strong className="mt-2 block">{store.currency}</strong></div><div className="rounded-xl bg-slate-50 p-4"><span className="text-slate-500">المنطقة الزمنية</span><strong className="mt-2 block text-xs">{store.timezone}</strong></div></div>
           </div>
         </section>
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
           <h2 className="text-lg font-semibold">التكاليف</h2>
           <div className="mt-6 grid gap-6 sm:grid-cols-2">
-            <label className="block text-sm font-medium">تكلفة المرتجع الافتراضية ({store.currency})<input name="defaultReturnCost" required type="number" min="0" max="1000000" step="0.01" defaultValue={returnCost} disabled={session.role !== "OWNER"} className="mt-2 block w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#96723c] disabled:bg-slate-50" /><span className="mt-2 block text-xs font-normal text-slate-500">تُسجّل هذه التكلفة ضمن مصروفات المرتجع عند المعالجة.</span></label>
-            <label aria-label="إظهار التكلفة التقديرية" className="flex items-start gap-3 rounded-xl bg-slate-50 p-4 text-sm"><input name="costingEnabled" type="checkbox" defaultChecked={costingEnabled === "true"} disabled={session.role !== "OWNER"} className="mt-1 size-4 accent-[#191735]" /><span><strong className="block">إظهار التكلفة التقديرية</strong><span className="mt-1 block leading-6 text-slate-500">تعرض تقدير تكلفة الوصفات وهوامش الربح عند توفر أسعار المواد.</span></span></label>
+            {can(session, "costs.read") && <label className="block text-sm font-medium">تكلفة المرتجع الافتراضية ({store.currency})<input name="defaultReturnCost" required type="number" min="0" max="1000000" step="0.01" defaultValue={returnCost} disabled={!can(session, "settings.write")} className="mt-2 block w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#96723c] disabled:bg-slate-50" /><span className="mt-2 block text-xs font-normal text-slate-500">تُسجّل هذه التكلفة ضمن مصروفات المرتجع عند المعالجة.</span></label>}
+            <label aria-label="إظهار التكلفة التقديرية" className="flex items-start gap-3 rounded-xl bg-slate-50 p-4 text-sm"><input name="costingEnabled" type="checkbox" defaultChecked={costingEnabled === "true"} disabled={!can(session, "settings.write")} className="mt-1 size-4 accent-[#191735]" /><span><strong className="block">إظهار التكلفة التقديرية</strong><span className="mt-1 block leading-6 text-slate-500">تعرض تقدير تكلفة الوصفات وهوامش الربح عند توفر أسعار المواد.</span></span></label>
           </div>
         </section>
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
           <h2 className="text-lg font-semibold">طرق الدفع الإلكتروني</h2>
           <p className="mt-1 text-sm text-slate-500">التحويلات تتطلب مراجعة يدوية قبل اعتبارها مدفوعة.</p>
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <label className="flex gap-2"><input type="checkbox" name="paymentInstaPayEnabled" defaultChecked={paymentValues[0] === "true"} disabled={session.role !== "OWNER"}/> تفعيل InstaPay</label>
-            <label className="flex gap-2"><input type="checkbox" name="paymentWalletEnabled" defaultChecked={paymentValues[1] === "true"} disabled={session.role !== "OWNER"}/> تفعيل المحفظة الإلكترونية</label>
-            <label>رقم InstaPay<input name="paymentInstaPayAddress" inputMode="numeric" pattern="01[0125][0-9]{8}" placeholder="01xxxxxxxxx" defaultValue={paymentValues[2]} maxLength={120} disabled={session.role !== "OWNER"} className="mt-2 block w-full rounded-xl border p-3"/></label>
-            <label>اسم صاحب حساب InstaPay (يظهر للعميل كإرشاد)<input name="paymentInstaPayAccountName" defaultValue={paymentValues[5]} maxLength={100} placeholder="اسم المستلم كما يظهر عند التحويل" disabled={session.role !== "OWNER"} className="mt-2 block w-full rounded-xl border p-3"/></label>
-            <label>رقم المحفظة<input name="paymentWalletNumber" defaultValue={paymentValues[3]} pattern="01[0125][0-9]{8}" disabled={session.role !== "OWNER"} className="mt-2 block w-full rounded-xl border p-3"/></label>
-            <label>اسم صاحب المحفظة (يظهر للعميل كإرشاد)<input name="paymentWalletAccountName" defaultValue={paymentValues[6]} maxLength={100} placeholder="اسم المستلم كما يظهر عند التحويل" disabled={session.role !== "OWNER"} className="mt-2 block w-full rounded-xl border p-3"/></label>
-            <label>مبلغ المقدم الثابت (جنيه)<input name="paymentDepositAmount" type="number" min="1" max="1000000" required defaultValue={paymentValues[4]} disabled={session.role !== "OWNER"} className="mt-2 block w-full rounded-xl border p-3"/></label>
+            <label className="flex gap-2"><input type="checkbox" name="paymentInstaPayEnabled" defaultChecked={paymentValues[0] === "true"} disabled={!can(session, "settings.write")}/> تفعيل InstaPay</label>
+            <label className="flex gap-2"><input type="checkbox" name="paymentWalletEnabled" defaultChecked={paymentValues[1] === "true"} disabled={!can(session, "settings.write")}/> تفعيل المحفظة الإلكترونية</label>
+            <label>رقم InstaPay<input name="paymentInstaPayAddress" inputMode="numeric" pattern="01[0125][0-9]{8}" placeholder="01xxxxxxxxx" defaultValue={paymentValues[2]} maxLength={120} disabled={!can(session, "settings.write")} className="mt-2 block w-full rounded-xl border p-3"/></label>
+            <label>اسم صاحب حساب InstaPay (يظهر للعميل كإرشاد)<input name="paymentInstaPayAccountName" defaultValue={paymentValues[5]} maxLength={100} placeholder="اسم المستلم كما يظهر عند التحويل" disabled={!can(session, "settings.write")} className="mt-2 block w-full rounded-xl border p-3"/></label>
+            <label>رقم المحفظة<input name="paymentWalletNumber" defaultValue={paymentValues[3]} pattern="01[0125][0-9]{8}" disabled={!can(session, "settings.write")} className="mt-2 block w-full rounded-xl border p-3"/></label>
+            <label>اسم صاحب المحفظة (يظهر للعميل كإرشاد)<input name="paymentWalletAccountName" defaultValue={paymentValues[6]} maxLength={100} placeholder="اسم المستلم كما يظهر عند التحويل" disabled={!can(session, "settings.write")} className="mt-2 block w-full rounded-xl border p-3"/></label>
+            <label>مبلغ المقدم الثابت (جنيه)<input name="paymentDepositAmount" type="number" min="1" max="1000000" required defaultValue={paymentValues[4]} disabled={!can(session, "settings.write")} className="mt-2 block w-full rounded-xl border p-3"/></label>
           </div>
         </section>
-        {session.role === "OWNER" ? <button type="submit" className="rounded-xl bg-[#191735] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#302d58]">حفظ التغييرات</button> : <p className="text-sm text-slate-500">تعديل هذه الإعدادات متاح لمالك المتجر فقط.</p>}
+        {can(session, "settings.write") ? <button type="submit" className="rounded-xl bg-[#191735] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#302d58]">حفظ التغييرات</button> : <p className="text-sm text-slate-500">تعديل هذه الإعدادات متاح لمالك المتجر فقط.</p>}
       </form>
 
       <section className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-7">
-        <div><h2 className="text-lg font-semibold">الحساب والأمان</h2><p className="mt-1 text-sm text-slate-500">غيّر كلمة المرور{session.role === "OWNER" ? " أو أضف أدمن آخر بنفس الصلاحيات" : ""}.</p></div>
+        <div><h2 className="text-lg font-semibold">الحساب والأمان</h2><p className="mt-1 text-sm text-slate-500">غيّر كلمة المرور{can(session, "settings.write") ? " أو أضف أدمن آخر بنفس الصلاحيات" : ""}.</p></div>
         <Link href="/dashboard/account" className="inline-flex shrink-0 items-center justify-center rounded-xl bg-[#191735] px-5 py-3 text-sm font-semibold text-white">إدارة الحساب ←</Link>
       </section>
-      {can(session.role, "materials.write") && <MaterialTypesSettings initialTypes={materialTypes} />}
+      {can(session, "materials.write") && <MaterialTypesSettings initialTypes={materialTypes} />}
     </main>
   );
 }

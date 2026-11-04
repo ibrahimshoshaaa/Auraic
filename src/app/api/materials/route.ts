@@ -1,3 +1,4 @@
+import { materialForAccess } from "@/lib/access-data";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { listMaterials, createMaterial } from "@/services/material.service";
@@ -20,7 +21,7 @@ const createSchema = z.object({
 export async function GET(req: NextRequest) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "materials.read")) {
+    if (!can(session, "materials.read")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest) {
         : true,
     });
 
-    return NextResponse.json({ data: materials });
+    return NextResponse.json({ data: materials.map(material => materialForAccess(material, session)) });
   } catch (err) {
     return handleError(err);
   }
@@ -44,7 +45,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "materials.write")) {
+    if (!can(session, "materials.write")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

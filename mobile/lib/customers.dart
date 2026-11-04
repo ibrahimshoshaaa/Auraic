@@ -124,7 +124,7 @@ class _CustomerDetailsPageState extends State<CustomerDetailsPage> {
             ],
             if (address.isNotEmpty) OutlinedButton(onPressed: () => copy(address), child: const Text('نسخ العنوان')),
           ]),
-          if (phone.isNotEmpty && address.isNotEmpty) FilledButton.icon(onPressed: () async {
+          if (widget.api.can('orders.write') && phone.isNotEmpty && address.isNotEmpty) FilledButton.icon(onPressed: () async {
             await openPage(context, NewOrderPage(api: widget.api, customer: c)); if (mounted) reload();
           }, icon: const Icon(Icons.add), label: const Text('طلب جديد للعميل')),
         ]))),
@@ -146,8 +146,8 @@ class _CustomerDetailsPageState extends State<CustomerDetailsPage> {
           children: [
             ListTile(title: Text(paymentStages[o['financialStatus']] ?? 'دفع غير محدد'), subtitle: Text(str(o['customerAddress']))),
             for (final item in (o['items'] as List).map(json)) ListTile(title: Text(str(item['title'])), trailing: Text('× ${item['quantity']}')),
-            for (final r in (o['returns'] as List).map(json)) ListTile(leading: const Icon(Icons.undo), title: Text('مرتجع ${r['totalAmount'] ?? 0} ${o['currency']}'), subtitle: Text('تكلفة المرتجع ${r['returnCost']} ${o['currency']}')),
-            TextButton(onPressed: () => openPage(context, Scaffold(appBar: AppBar(title: const Text('تفاصيل الطلب')), body: OrdersPage(api: widget.api, canWrite: true, orderId: str(o['id'])))), child: const Text('فتح الطلب وإدارته')),
+            for (final r in (o['returns'] as List).map(json)) ListTile(leading: const Icon(Icons.undo), title: Text('مرتجع ${r['totalAmount'] ?? 0} ${o['currency']}'), subtitle: widget.api.can('costs.read') ? Text('تكلفة المرتجع ${r['returnCost']} ${o['currency']}') : null),
+            if (widget.api.can('orders.read')) TextButton(onPressed: () => openPage(context, Scaffold(appBar: AppBar(title: const Text('تفاصيل الطلب')), body: OrdersPage(api: widget.api, canWrite: widget.api.can('orders.write'), orderId: str(o['id'])))), child: const Text('فتح الطلب وإدارته')),
           ]))),
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           TextButton(onPressed: page <= 1 ? null : () { page--; reload(); }, child: const Text('السابق')),

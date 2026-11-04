@@ -1,10 +1,11 @@
+import { can } from "@/lib/rbac";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-helpers";
 
 export async function GET() {
   const session = await requireAuth();
-  if (!["OWNER", "MANAGER"].includes(session.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!can(session, "payments.read")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const orders = await db.order.findMany({
     where: { storeId: session.storeId, manualStatus: "RETURNED", financialStatus: "REFUND_PENDING" },
     select: { id: true, orderNumber: true, customerRef: true, customerPhone: true, depositAmount: true, total: true },

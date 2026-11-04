@@ -9,7 +9,7 @@ export async function GET(
 ) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "expenses.read")) {
+    if (!can(session, "expenses.read")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const { id } = await params;

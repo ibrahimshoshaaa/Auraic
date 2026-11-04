@@ -44,17 +44,17 @@ class _StorefrontPageState extends State<StorefrontPage> {
       }, icon: const Icon(Icons.open_in_new), label: const Text('معاينة المتجر')),), IconButton(onPressed: reload, tooltip: 'تحديث بيانات الموقع', icon: const Icon(Icons.refresh))]),
       const SizedBox(height: 16),
       if (data['linked'] != true) Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [const Text('اضبط STOREFRONT_STORE_ID في Vercel على:'), SelectableText(str(data['storeId']))]))),
-      Card(child: ListTile(leading: const Icon(Icons.insights_outlined), title: const Text('زيارات الموقع'), subtitle: const Text('حركة الزوار والصفحات وخطوات التسوق'), trailing: const Icon(Icons.chevron_left), onTap: () => openPage(context, Scaffold(appBar: AppBar(title: const Text('زيارات الموقع')), body: TrafficPage(api: widget.api))))),
+      if (widget.api.can('traffic.read')) Card(child: ListTile(leading: const Icon(Icons.insights_outlined), title: const Text('زيارات الموقع'), subtitle: const Text('حركة الزوار والصفحات وخطوات التسوق'), trailing: const Icon(Icons.chevron_left), onTap: () => openPage(context, Scaffold(appBar: AppBar(title: const Text('زيارات الموقع')), body: TrafficPage(api: widget.api))))),
       const SizedBox(height: 16),
       if (data['owner'] == true) StorefrontSettings(key: ValueKey(result), api: widget.api, initial: json(data['settings'])),
       const SizedBox(height: 20),
-      FilledButton.icon(onPressed: () async { final saved = await openPage<bool>(context, ProductManagePage(api: widget.api)); if (saved == true) reload(); }, icon: const Icon(Icons.add), label: const Text('إضافة عطر وأحجامه')),
+      if (widget.api.can('products.write')) FilledButton.icon(onPressed: () async { final saved = await openPage<bool>(context, ProductManagePage(api: widget.api)); if (saved == true) reload(); }, icon: const Icon(Icons.add), label: const Text('إضافة عطر وأحجامه')),
       const SizedBox(height: 16),
       const Text('منتجات المتجر', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
       const SizedBox(height: 14),
       AdminProductGrid(children: [for (final product in (data['products'] as List).map(json))
-        AdminProductCard(product: product, actionLabel: 'تعديل المنتج',
-          onTap: () async { final saved = await openPage<bool>(context,
+        AdminProductCard(product: product, actionLabel: widget.api.can('products.write') ? 'تعديل المنتج' : 'عرض المنتج',
+          onTap: () async { if (!widget.api.can('products.write')) return; final saved = await openPage<bool>(context,
             ProductManagePage(api: widget.api, productId: str(product['id'])));
             if (saved == true) reload(); })]),
     ]);
@@ -214,6 +214,7 @@ class _ProductManagePageState extends State<ProductManagePage> {
     setState(() { step++; error = ''; });
   }
   Widget costPreview(Json variant, List<Json> available) {
+    if (!widget.api.can('costs.read')) return const SizedBox.shrink();
     double total = 0;
     bool complete = (variant['materials'] as List).isNotEmpty;
     for (final line in (variant['materials'] as List).map(json)) {
@@ -225,7 +226,7 @@ class _ProductManagePageState extends State<ProductManagePage> {
     final price = double.tryParse(str(variant['price'])) ?? 0;
     return Container(width: double.infinity, padding: const EdgeInsets.all(16), margin: const EdgeInsets.only(top: 12), decoration: BoxDecoration(color: const Color(0xfff5f3eb), borderRadius: BorderRadius.circular(14)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(complete ? 'تكلفة الوصفة للقطعة: ${total.toStringAsFixed(2)} جنيه' : 'أكمل كميات وتكاليف الخامات في المخزون'),
-      if (complete && price > 0) Text('الربح المتوقع: ${(price-total).toStringAsFixed(2)} جنيه · ${((price-total)/price*100).toStringAsFixed(2)}٪'),
+      if (widget.api.can('profits.read') && complete && price > 0) Text('الربح المتوقع: ${(price-total).toStringAsFixed(2)} جنيه · ${((price-total)/price*100).toStringAsFixed(2)}٪'),
       const SizedBox(height: 8), const Text('قبل المصروفات التشغيلية، حسب تكلفة الخامات الحالية. للإدارة فقط.', style: TextStyle(fontSize: 12, color: appMuted)),
     ]));
   }

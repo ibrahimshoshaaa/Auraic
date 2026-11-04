@@ -20,7 +20,7 @@ const schema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "products.write") || !can(session.role, "recipes.write")) return NextResponse.json({ error: "غير مسموح بإضافة منتجات" }, { status: 403 });
+    if (!can(session, "products.write") || !can(session, "recipes.write")) return NextResponse.json({ error: "غير مسموح بإضافة منتجات" }, { status: 403 });
     const input = schema.parse(await req.json());
     const productId = `simple_${input.requestId}`;
     const existing = await db.product.findUnique({ where: { id: productId }, select: { id: true, storeId: true } });

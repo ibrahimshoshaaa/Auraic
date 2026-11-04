@@ -280,31 +280,32 @@ class _ErpHomeState extends State<ErpHome> {
         : const PageSkeleton());
       final user = json(snapshot.data['data']);
       final role = str(user['role']);
-      final manager = role == 'OWNER' || role == 'MANAGER';
+      final manager = widget.api.can('orders.write');
       final owner = role == 'OWNER';
-      final visible = [0, 1, 2, if (manager) 3, if (manager) 4, if (manager) 5,
-        if (manager) 6, 7, if (manager) 8, 9, 10, 11, if (manager) 12, if (manager) 13, if (manager) 14, if (manager) 15];
+      const pagePermissions = ['dashboard.read', 'orders.read', 'inventory.read', 'products.read', 'expenses.read', 'returns.read', 'recipes.read', 'consumption.read', 'reports.read', 'settings.read', 'materials.read', 'materials.read', 'storefront.read', 'customers.read', 'coupons.read', 'traffic.read'];
+      final visible = [for (var i = 0; i < pagePermissions.length; i++) if (widget.api.can(pagePermissions[i])) i];
       Widget body = switch (selected) {
         0 => _Dashboard(api: widget.api, user: user, onSelect: switchTo,
           manager: manager),
-        1 => OrdersPage(api: widget.api, canWrite: manager, orderId: notificationOrderId),
-        2 => InventoryPage(api: widget.api, canWrite: manager),
-        3 => ProductsPage(api: widget.api, canWrite: manager),
-        4 => ExpensesPage(api: widget.api, canWrite: manager),
-        5 => ReturnsPage(api: widget.api, canWrite: manager),
-        6 => RecipesPage(api: widget.api, canWrite: manager),
+        1 => OrdersPage(api: widget.api, canWrite: widget.api.can('orders.write'), orderId: notificationOrderId),
+        2 => InventoryPage(api: widget.api, canWrite: widget.api.can('inventory.write')),
+        3 => ProductsPage(api: widget.api, canWrite: widget.api.can('products.write')),
+        4 => ExpensesPage(api: widget.api, canWrite: widget.api.can('expenses.write')),
+        5 => ReturnsPage(api: widget.api, canWrite: widget.api.can('returns.write')),
+        6 => RecipesPage(api: widget.api, canWrite: widget.api.can('recipes.write')),
         7 => ConsumptionPage(api: widget.api),
         8 => ReportsPage(api: widget.api),
-        9 => SettingsPage(api: widget.api, isOwner: owner,
+        9 => SettingsPage(api: widget.api, isOwner: widget.api.can('settings.write'),
           onAccount: () => openPage(context, AccountPage(api: widget.api,
             isOwner: owner, onPasswordChanged: widget.onLogout))),
-        10 => MaterialsPage(api: widget.api, canWrite: manager),
+        10 => MaterialsPage(api: widget.api, canWrite: widget.api.can('materials.write')),
         12 => StorefrontPage(api: widget.api),
         13 => CustomersPage(api: widget.api),
         14 => CouponsPage(api: widget.api),
         15 => TrafficPage(api: widget.api),
-        _ => SuppliersPage(api: widget.api, canWrite: manager),
+        _ => SuppliersPage(api: widget.api, canWrite: widget.api.can('materials.write')),
       };
+      if (!visible.contains(selected)) body = const Center(child: Padding(padding: EdgeInsets.all(24), child: Text('افتح الأقسام المتاحة لحسابك من القائمة. لو لم تظهر أقسام، اطلب من الأدمن تحديد صلاحياتك.', textAlign: TextAlign.center)));
       return Scaffold(
         key: scaffoldKey,
         onDrawerChanged: (open) { if (open) setState(() => drawerEpoch++); },
@@ -316,7 +317,7 @@ class _ErpHomeState extends State<ErpHome> {
             if (selected == 0) const Text('لوحة التحكم',
               style: TextStyle(fontSize: 11, color: Color(0xffc8dce6))),
           ]),
-          actions: [if (manager) IconButton(tooltip: 'التقارير',
+          actions: [if (widget.api.can('reports.read')) IconButton(tooltip: 'التقارير',
             onPressed: () => switchTo(8),
             icon: const Icon(Icons.analytics_outlined))],
         ),
@@ -371,7 +372,8 @@ class _ErpHomeState extends State<ErpHome> {
               scaffoldKey.currentState?.openDrawer();
               return;
             }
-            switchTo(index == 3 ? 2 : index);
+            final target = index == 3 ? 2 : index;
+            if (visible.contains(target)) { switchTo(target); } else { scaffoldKey.currentState?.openDrawer(); }
           },
           destinations: [
             const NavigationDestination(icon: Icon(Icons.home_outlined),
@@ -477,24 +479,24 @@ class _DashboardState extends State<_Dashboard> {
       final roas = json(data['roas']);
       final name = str(widget.user['name']).trim();
       final quick = <(String, IconData, VoidCallback)>[
-        if (widget.manager) ('منتج جديد', Icons.add_box_outlined,
+        if (widget.api.can('products.write') && widget.api.can('recipes.write')) ('منتج جديد', Icons.add_box_outlined,
           () => addAndRefresh(ProductManagePage(api: widget.api))),
-        if (widget.manager) ('إضافة مخزون', Icons.add_home_work_outlined,
+        if (widget.api.can('materials.write') && widget.api.can('inventory.write') && widget.api.can('expenses.write')) ('إضافة مخزون', Icons.add_home_work_outlined,
           () => addAndRefresh(StockForm(api: widget.api))),
-        if (widget.manager) ('إضافة مصروف', Icons.add_card_outlined,
+        if (widget.api.can('expenses.write')) ('إضافة مصروف', Icons.add_card_outlined,
           () => addAndRefresh(ExpenseForm(api: widget.api))),
-        ('الطلبات', Icons.receipt_long_outlined, () => widget.onSelect(1)),
-        ('المخزون', Icons.warehouse_outlined, () => widget.onSelect(2)),
-        if (widget.manager) ('المرتجعات', Icons.assignment_return_outlined,
+        if (widget.api.can('orders.read')) ('الطلبات', Icons.receipt_long_outlined, () => widget.onSelect(1)),
+        if (widget.api.can('inventory.read')) ('المخزون', Icons.warehouse_outlined, () => widget.onSelect(2)),
+        if (widget.api.can('returns.read')) ('المرتجعات', Icons.assignment_return_outlined,
           () => widget.onSelect(5)),
       ];
       final metrics = <(String, dynamic, IconData, bool)>[
-        ('صافي الربح', profit['profit'] ?? 'غير مكتمل', Icons.show_chart, profit['profit'] != null),
-        ('نسبة الربح', profit['margin'] == null ? '—' : '${profit['margin']}%', Icons.percent, false),
-        ('الطلبات', sales['orders'], Icons.receipt_long_outlined, false),
+        if (data['profit'] != null) ('صافي الربح', profit['profit'] ?? 'غير مكتمل', Icons.show_chart, profit['profit'] != null),
+        if (data['profit'] != null) ('نسبة الربح', profit['margin'] == null ? '—' : '${profit['margin']}%', Icons.percent, false),
+        if (widget.api.can('orders.read')) ('الطلبات', sales['orders'], Icons.receipt_long_outlined, false),
         ('الوحدات المباعة', sales['units'], Icons.inventory_2_outlined, false),
         ('المرتجعات', returns['count'], Icons.assignment_return_outlined, false),
-        ('المصروفات', expenses['total'], Icons.account_balance_wallet_outlined, true),
+        if (data['expenses'] != null) ('المصروفات', expenses['total'], Icons.account_balance_wallet_outlined, true),
         ('الدفعات المستلمة', cash['received'], Icons.payments_outlined, true),
       ];
       return RefreshIndicator(onRefresh: () async {
@@ -557,9 +559,9 @@ class _DashboardState extends State<_Dashboard> {
           ]);
         }),
         const SizedBox(height: 12),
-        const Text('صافي الربح = سعر البيع بعد الخصم والاسترداد − تكلفة الوصفة، قبل المصروفات التشغيلية.', style: TextStyle(fontSize: 12, color: Color(0xff718079))),
+        if (data['profit'] != null) const Text('صافي الربح = سعر البيع بعد الخصم والاسترداد − تكلفة الوصفة، قبل المصروفات التشغيلية.', style: TextStyle(fontSize: 12, color: Color(0xff718079))),
         if (profit['incomplete'] == true || profit['estimated'] == true) Padding(padding: const EdgeInsets.symmetric(vertical: 12), child: Text(profit['incomplete'] == true ? '${profit['missingLines']} بند بدون تكلفة وصفة مكتملة. راجع تكلفة الخامات والاستهلاك.' : 'بعض المبيعات القديمة تكلفتها تقديرية. الطلبات الجديدة تحفظ تكلفة الخامات وقت التجهيز.', style: const TextStyle(color: Color(0xff956528), fontSize: 12))),
-        Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        if (data['roas'] != null) Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           const Text('ROAS · عائد مصاريف السوشيال ميديا', style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           Text(roas['ratio'] == null ? '—' : '${roas['ratio']}×', textDirection: TextDirection.ltr, style: const TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Color(0xff191735))),
@@ -567,7 +569,7 @@ class _DashboardState extends State<_Dashboard> {
           const SizedBox(height: 8),
           const Text('إجمالي مبيعات الفترة ÷ مجموع مصاريف السوشيال لنفس الفترة. يعتمد على كل مبيعات المتجر.', style: TextStyle(fontSize: 12, color: Color(0xff718079))),
           if (roas['ratio'] == null) const Text('سجّل مصاريف سوشيال في الفترة لعرض النسبة.', style: TextStyle(fontSize: 12)),
-          if (widget.manager) TextButton(onPressed: () => addAndRefresh(ExpenseForm(api: widget.api)), child: const Text('تسجيل مصروف سوشيال')),
+          if (widget.api.can('expenses.write')) TextButton(onPressed: () => addAndRefresh(ExpenseForm(api: widget.api)), child: const Text('تسجيل مصروف سوشيال')),
         ]))),
         const SizedBox(height: 22),
         const Text('عمليات سريعة', style: TextStyle(fontSize: 17,
@@ -588,7 +590,7 @@ class _DashboardState extends State<_Dashboard> {
           ]);
         }),
         const SizedBox(height: 20),
-        if (widget.manager) TextButton.icon(onPressed: () => widget.onSelect(8),
+        if (widget.api.can('reports.read')) TextButton.icon(onPressed: () => widget.onSelect(8),
           icon: const Icon(Icons.analytics_outlined),
           label: const Text('عرض التقارير التفصيلية')),
       ]));

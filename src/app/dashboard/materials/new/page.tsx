@@ -6,7 +6,7 @@ import { NewMaterialForm } from "@/components/materials/NewMaterialForm";
 
 async function getDevStoreId() {
   const session = await requireAuth();
-  if (!can(session.role, "materials.read")) throw new Error("Forbidden");
+  if (!can(session, "materials.write")) throw new Error("Forbidden");
   return session.storeId;
 }
 

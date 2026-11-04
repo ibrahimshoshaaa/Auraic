@@ -11,7 +11,7 @@ import { can } from "@/lib/rbac";
 export async function GET(req: NextRequest) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "consumption.read")) {
+    if (!can(session, "consumption.read")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

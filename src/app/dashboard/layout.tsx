@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { signOut } from "@/auth";
 import { requireAuth } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
-import { can } from "@/lib/rbac";
+import { effectivePermissions } from "@/lib/rbac";
 import Image from "next/image";
 import auraicIcon from "../../../mobile/assets/auraic-icon.jpg";
 import { MenuBackdrop } from "@/components/MenuBackdrop";
@@ -28,7 +28,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
           <p className="flex items-center gap-3 text-lg font-bold tracking-tight"><Image src={auraicIcon} alt="" className="size-10 rounded-xl object-cover" />Auraic</p>
           <p className="mt-2 truncate text-xs text-slate-400">{storeName}</p>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto"><NavLinks canReadReports={can(session.role, "reports.read")} canReadCustomers={can(session.role, "customers.read")} canManageCoupons={can(session.role, "products.write")} /></div>
+        <div className="min-h-0 flex-1 overflow-y-auto"><NavLinks permissions={effectivePermissions(session)} /></div>
         <form action={logout} className="shrink-0 border-t border-white/10 p-3">
           <button type="submit" className="w-full rounded-xl px-4 py-3 text-right text-sm text-slate-300 transition hover:bg-white/10 hover:text-white">تسجيل الخروج ←</button>
         </form>
@@ -42,7 +42,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
           </summary>
           <MenuBackdrop />
           <div className="absolute right-0 top-full z-10 flex max-h-[calc(100dvh-9rem)] w-[min(22rem,88vw)] flex-col overflow-hidden rounded-bl-2xl border-t border-white/10 bg-[#191735] shadow-2xl">
-            <div className="min-h-0 overflow-y-auto"><NavLinks canReadReports={can(session.role, "reports.read")} canReadCustomers={can(session.role, "customers.read")} canManageCoupons={can(session.role, "products.write")} /></div>
+            <div className="min-h-0 overflow-y-auto"><NavLinks permissions={effectivePermissions(session)} /></div>
             <form action={logout} className="shrink-0 border-t border-white/10 p-3">
               <button type="submit" className="w-full rounded-xl px-4 py-3 text-right text-sm text-slate-300">تسجيل الخروج ←</button>
             </form>
@@ -52,7 +52,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
 
       <div className="min-w-0 lg:mr-64">{children}</div>
       <nav aria-label="التنقل السريع" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-[#e6e4ef] bg-white/95 px-1 pb-[env(safe-area-inset-bottom)] pt-1 shadow-[0_-8px_24px_#1917350a] backdrop-blur lg:hidden">
-        <NavLinks compact canCreateOrder={can(session.role, "orders.write")} />
+        <NavLinks compact permissions={effectivePermissions(session)} />
       </nav>
     </div>
   );

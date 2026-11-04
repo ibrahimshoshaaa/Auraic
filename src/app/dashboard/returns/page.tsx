@@ -6,7 +6,7 @@ import { ReturnProcessForm } from "@/components/finance/ReturnProcessForm";
 
 export default async function ReturnsPage() {
   const session = await requireAuth();
-  if (!can(session.role, "returns.read")) throw new Error("Forbidden");
+  if (!can(session, "returns.read")) throw new Error("Forbidden");
   const store = await db.store.findUnique({ where: { id: session.storeId } });
   const returns = store ? await listReturns(store.id) : [];
   return <main className="mx-auto max-w-6xl space-y-5 px-4 py-6 sm:px-8 sm:py-9">
@@ -15,7 +15,7 @@ export default async function ReturnsPage() {
     <div className="space-y-4">{returns.map(ret => <details key={ret.id} className="group rounded-2xl border border-[#e5e4ec] bg-white p-5 shadow-sm">
       <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 marker:hidden [&::-webkit-details-marker]:hidden"><div><h2 className="font-bold text-[#191735]">طلب #{ret.order.orderNumber ?? ret.orderId.slice(-8)}</h2><p className="mt-1 text-sm text-slate-500">{ret.order.customerRef || "عميل غير متاح"} · {ret.createdAt.toLocaleDateString("ar-EG")}</p></div><div className="flex items-center gap-3"><span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-800">{ret.processedAt ? "تمت المعالجة" : "بانتظار المعالجة"}</span><span aria-hidden="true" className="group-open:rotate-180">⌄</span></div></summary>
       <div className="mt-4 space-y-3 border-t border-[#e5e4ec] pt-4 text-sm text-slate-700"><p>المبلغ المرتجع: <strong>{Number(ret.totalAmount ?? 0)} {ret.order.currency}</strong></p><p>المنتجات: {ret.items.map(item => `${item.orderItem.title} × ${Number(item.quantity)}`).join("، ") || "غير متاحة"}</p>{ret.reason && <p>السبب: {ret.reason}</p>}
-        {ret.processedAt ? <p className="rounded-xl bg-[#f4f5fa] p-3">تكلفة الإرجاع المسجلة: {Number(ret.returnCost)} {store?.currency}</p> : ret.items.length && can(session.role, "returns.write") ? <ReturnProcessForm returnId={ret.id} items={ret.items.map(item => ({ id: item.id, title: item.orderItem.title, quantity: Number(item.quantity) }))} /> : <p>لا توجد بنود للمعالجة؛ راجع مزامنة الطلب.</p>}
+        {ret.processedAt ? can(session, "costs.read") ? <p className="rounded-xl bg-[#f4f5fa] p-3">تكلفة الإرجاع المسجلة: {Number(ret.returnCost)} {store?.currency}</p> : null : ret.items.length && can(session, "returns.write") ? <ReturnProcessForm returnId={ret.id} items={ret.items.map(item => ({ id: item.id, title: item.orderItem.title, quantity: Number(item.quantity) }))} /> : <p>لا توجد بنود للمعالجة؛ راجع مزامنة الطلب.</p>}
       </div>
     </details>)}</div>
     {!returns.length && <p className="rounded-2xl border border-dashed border-[#deddea] bg-white p-10 text-center text-sm text-slate-500">لا توجد مرتجعات بعد.</p>}

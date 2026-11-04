@@ -25,7 +25,7 @@ const manualLabels: Record<string, string> = {
 
 export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ page?: string; q?: string; manual?: string; attention?: string; orderId?: string }> }) {
   const session = await requireAuth();
-  if (!can(session.role, "orders.read")) throw new Error("Forbidden");
+  if (!can(session, "orders.read")) throw new Error("Forbidden");
   const params = await searchParams;
   const page = Math.max(1, Math.min(100000, Number.parseInt(params.page ?? "1", 10) || 1));
   const q = (params.q ?? "").trim().slice(0, 80);
@@ -51,7 +51,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
     <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-8 sm:py-9">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div><p className="text-sm font-semibold text-[#96723c]">المبيعات</p><h1 className="mt-1 text-3xl font-bold tracking-tight">الطلبات</h1><p className="mt-2 text-sm text-slate-500">تابع طلبات متجر Auraic ومبيعات المحل من مكان واحد.</p></div>
-        <div className="flex items-center gap-3">{["OWNER", "MANAGER"].includes(session.role) && <Link href="/dashboard/payments" className="rounded-xl border border-[#191735] px-4 py-3 text-sm font-semibold">مراجعة التحويلات</Link>}{can(session.role, "orders.write") && <Link href="/dashboard/orders/new" className="rounded-xl bg-[#191735] px-5 py-3 text-sm font-semibold text-white hover:bg-[#302d58]">+ تسجيل بيع يدوي</Link>}<span className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600">{count} طلب</span></div>
+        <div className="flex items-center gap-3">{can(session, "payments.read") && <Link href="/dashboard/payments" className="rounded-xl border border-[#191735] px-4 py-3 text-sm font-semibold">مراجعة التحويلات</Link>}{can(session, "orders.write") && <Link href="/dashboard/orders/new" className="rounded-xl bg-[#191735] px-5 py-3 text-sm font-semibold text-white hover:bg-[#302d58]">+ تسجيل بيع يدوي</Link>}<span className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600">{count} طلب</span></div>
       </header>
       {params.manual === "created" && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">تم تسجيل الطلب. تابع التجهيز والشحن والتسليم من هنا.</p>}
       {params.manual === "created" && params.attention && <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">لم يُخصم كل المخزون لهذا البيع. راجع <Link className="font-semibold underline" href={`/dashboard/consumption?orderId=${encodeURIComponent(params.attention)}`}>حالة الاستهلاك وسبب التعطّل</Link>.</p>}
@@ -78,14 +78,14 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                 <p className="text-sm text-slate-600">الإجمالي: <strong className="text-slate-900">{Number(order.total ?? 0).toFixed(2)} {order.currency}</strong> · صافي: {Number(order.netSales ?? 0).toFixed(2)} {order.currency}</p>
                 <p className="mb-2 text-xs font-semibold text-slate-500">بنود الطلب ({order.items.length})</p>
                 <div className="flex flex-wrap gap-2">{order.items.map(item => <span key={item.id} className="rounded-lg bg-slate-50 px-3 py-1.5 text-xs text-slate-700">{item.title} × {Number(item.quantity)} <span className="text-slate-400">· {item.consumptionStatus}</span></span>)}</div>
-                {can(session.role, "customers.read") && <Link href={`/dashboard/customers?q=${encodeURIComponent(normalizeCustomerPhone(order.customerPhone) || order.customerRef || "")}`} className="mr-3 inline-block text-sm font-medium text-[#514b8c] underline">ملف العميل</Link>}
+                {can(session, "customers.read") && <Link href={`/dashboard/customers?q=${encodeURIComponent(normalizeCustomerPhone(order.customerPhone) || order.customerRef || "")}`} className="mr-3 inline-block text-sm font-medium text-[#514b8c] underline">ملف العميل</Link>}
                 <Link href={`/dashboard/consumption?orderId=${order.id}`} className="mt-4 inline-block text-sm font-medium text-[#514b8c] hover:underline">عرض الاستهلاك ←</Link>
-                {order.manualStatus && can(session.role, "orders.write") && <ManualOrderActions showNext={false} orderId={order.id} status={order.manualStatus as ManualOrderStatus} canReturn={false} />}
+                {order.manualStatus && can(session, "orders.write") && <ManualOrderActions showNext={false} orderId={order.id} status={order.manualStatus as ManualOrderStatus} canReturn={false} />}
               </div>
             </details>
             {(returnWarnings.get(order.id)?.count ?? 0) > 0 && <ReturnWarning orderId={order.id} count={returnWarnings.get(order.id)!.count} />}
-            {can(session.role, "orders.write") && ["NEW", "PREPARED", "SHIPPING"].includes(order.manualStatus ?? "") && ["PENDING", "PARTIALLY_PAID"].includes(order.financialStatus ?? "") && <div className="px-4 pb-4 sm:px-5"><OrderDiscount key={order.updatedAt.toISOString()} orderId={order.id} amount={Number(order.adminDiscount)} total={Number(order.total)} deposit={Number(order.depositAmount)} updatedAt={order.updatedAt.toISOString()} /></div>}
-            {order.manualStatus && can(session.role, "orders.write") && !["DELIVERED", "RETURNED"].includes(order.manualStatus) && <div className="px-4 pb-4 sm:px-5"><ManualOrderActions quick orderId={order.id} status={order.manualStatus as ManualOrderStatus} canReturn={["returns.write", "expenses.write", "inventory.write"].every(permission => can(session.role, permission))} /></div>}
+            {can(session, "orders.write") && ["NEW", "PREPARED", "SHIPPING"].includes(order.manualStatus ?? "") && ["PENDING", "PARTIALLY_PAID"].includes(order.financialStatus ?? "") && <div className="px-4 pb-4 sm:px-5"><OrderDiscount key={order.updatedAt.toISOString()} orderId={order.id} amount={Number(order.adminDiscount)} total={Number(order.total)} deposit={Number(order.depositAmount)} updatedAt={order.updatedAt.toISOString()} /></div>}
+            {order.manualStatus && can(session, "orders.write") && !["DELIVERED", "RETURNED"].includes(order.manualStatus) && <div className="px-4 pb-4 sm:px-5"><ManualOrderActions quick orderId={order.id} status={order.manualStatus as ManualOrderStatus} canReturn={["returns.write", "expenses.write", "inventory.write"].every(permission => can(session, permission))} /></div>}
             </article>
           ))}
         </div>

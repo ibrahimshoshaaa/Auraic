@@ -1,3 +1,4 @@
+import { can } from "@/lib/rbac";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-helpers";
@@ -10,7 +11,7 @@ function metadata(value: unknown): Record<string, unknown> {
 }
 export async function GET() {
   const session = await requireAuth();
-  if (!["OWNER", "MANAGER"].includes(session.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!can(session, "payments.read")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const logs = await db.auditLog.findMany({ where: { storeId: session.storeId, entity: "Order", action: "CREATE", entityId: { not: null } }, orderBy: { createdAt: "desc" }, take: 2000 });
   const transferLogs = logs.filter(log => ["INSTAPAY", "WALLET"].includes(String(metadata(log.metadata).payment)));
   const ids = transferLogs.map(log => log.entityId).filter((id): id is string => !!id);
@@ -21,7 +22,7 @@ export async function GET() {
   const byId = new Map(orders.map(order => [order.id, order]));
   const reviewById = new Map<string, string>();
   for (const log of reviews) if (log.entityId && !reviewById.has(log.entityId)) reviewById.set(log.entityId, String(metadata(log.metadata).decision || ""));
-  return NextResponse.json({ data: transferLogs.flatMap(log => {
+  return NextResponse.json({ canWrite: can(session, "payments.write"), data: transferLogs.flatMap(log => {
     const order = byId.get(log.entityId || ""); if (!order) return [];
     const meta = metadata(log.metadata);
     return [{ ...order, total: Number(order.total), depositAmount: Number(order.depositAmount), method: meta.payment, plan: meta.paymentPlan, reference: meta.transferReference, senderPhone: typeof meta.senderPhone === "string" ? meta.senderPhone : null, hasReceipt: typeof meta.receiptId === "string" && meta.receiptId.startsWith(`auraic/payment-receipts/${session.storeId}/`), requestedAmount: Number(meta.requestedCents || 0) / 100, review: reviewById.get(order.id) || "PENDING" }];
@@ -29,7 +30,7 @@ export async function GET() {
 }
 export async function POST(request: NextRequest) {
   const session = await requireAuth();
-  if (!["OWNER", "MANAGER"].includes(session.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!can(session, "payments.write")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const parsed = decisionSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid request" }, { status: 422 });
   const { orderId, decision } = parsed.data;

@@ -14,7 +14,7 @@ const adjustSchema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "inventory.write")) {
+    if (!can(session, "inventory.write")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

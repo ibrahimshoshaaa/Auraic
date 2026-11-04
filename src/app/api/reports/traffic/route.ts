@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   const headers = { "Cache-Control": "private, no-store" };
   try {
     const session = await requireAuth();
-    if (!can(session.role, "reports.read")) return NextResponse.json({ error: "غير مسموح بعرض إحصائيات الزيارات" }, { status: 403, headers });
+    if (!can(session, "traffic.read")) return NextResponse.json({ error: "غير مسموح بعرض إحصائيات الزيارات" }, { status: 403, headers });
     const days = request.nextUrl.searchParams.get("days") ?? "7";
     if (!["1", "7", "30", "90"].includes(days)) return NextResponse.json({ error: "اختر فترة 1 أو 7 أو 30 أو 90 يومًا" }, { status: 422, headers });
     const report = await getTrafficReport(session.storeId, days);

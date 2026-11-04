@@ -10,7 +10,7 @@ import { RetryOrderConsumptionButton } from "@/components/consumption/RetryOrder
 
 async function getDevStoreId() {
   const session = await requireAuth();
-  if (!can(session.role, "consumption.read")) throw new Error("Forbidden");
+  if (!can(session, "consumption.read")) throw new Error("Forbidden");
   return session.storeId;
 }
 
@@ -21,6 +21,7 @@ const statusLabels: Record<string, string> = {
 };
 
 async function AttentionSection({ storeId }: { storeId: string }) {
+  const session = await requireAuth();
   const items = await listOrderItemsNeedingAttention(storeId);
   if (items.length === 0) return null;
 
@@ -55,7 +56,7 @@ async function AttentionSection({ storeId }: { storeId: string }) {
                 </p>
               )}
             </div>
-            <RetryOrderConsumptionButton orderId={item.order.id} />
+            {can(session, "consumption.write") && <RetryOrderConsumptionButton orderId={item.order.id} />}
           </div>
         ))}
       </div>

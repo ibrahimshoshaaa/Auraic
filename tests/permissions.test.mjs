@@ -1,0 +1,67 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+import ts from 'typescript';
+import { reportFixture } from './fixtures/report-export.mjs';
+const nativeRequire = createRequire(import.meta.url);
+const modules = new Map();
+function load(file) {
+  file = path.resolve(file); if (modules.has(file)) return modules.get(file);
+  const compiled = { exports: {} };
+  new Function('require','module','exports',ts.transpileModule(readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(name => name.startsWith('.') ? load(path.resolve(path.dirname(file), name + '.ts')) : nativeRequire(name), compiled, compiled.exports);
+  modules.set(file,compiled.exports); return compiled.exports;
+}
+const policy = load('src/lib/permissions.ts');
+const { can, effectivePermissions } = load('src/lib/rbac.ts');
+const { reportForAccess, productForAccess, recipeForAccess } = load('src/lib/access-data.ts');
+const { reportExportData } = load('src/lib/reports/export-data.ts');
+const custom = permissions => ({role:'EMPLOYEE',permissions});
+const wire = value => JSON.parse(JSON.stringify(value));
+test('custom accounts have explicit, validated capabilities and no role fallback', () => {
+  const empty = custom([]);
+  for (const permission of policy.permissionNames) assert.equal(can(empty, permission),false);
+  assert.equal(can(custom(['products.read']), 'products.read'),true);
+  assert.equal(can(custom(['products.read']), 'recipes.read'),false);
+  assert.equal(can({role:'OWNER',permissions:[]}, 'users.manage'),true);
+  assert.ok(effectivePermissions('MANAGER').includes('traffic.read'));
+  for (const value of [['*'],['users.manage'],['products.read','products.read'],['profits.read'],['consumption.read'],['products.write'],{},null]) assert.equal(policy.validatePermissions(value),false);
+  assert.deepEqual(policy.parsePermissions('bad-json'),[]);
+  assert.deepEqual(policy.parsePermissions('["*"]'),[]);
+  const write = policy.selectedPermissions([], 'products.write', true);
+  assert.equal(policy.validatePermissions(write),true);
+  assert.ok(write.includes('recipes.read')); assert.ok(write.includes('materials.read')); assert.ok(!write.includes('costs.read'));
+  const removed = policy.selectedPermissions(write,'recipes.read',false);
+  assert.ok(!removed.includes('products.write')); assert.ok(removed.includes('products.read'));
+});
+test('product and recipe reads cannot leak formulas, ingredient costs, or margins through nested JSON', () => {
+  const product = { id:'p',variants:[{ id:'v',price:300,recipes:[{versions:[{items:[{quantity:5,material:{name:'secret oil',defaultCost:27,metadata:{cost:27}}}]}]}],currentRecipe:{name:'secret'},costing:{estimatedCost:135,estimatedMargin:165,complete:true}}]};
+  const read = wire(productForAccess(product,custom(['products.read'])));
+  assert.equal(read.variants[0].price,300);
+  for(const key of ['recipes','currentRecipe','costing']) assert.ok(!(key in read.variants[0]));
+  const formulas = wire(productForAccess(product,custom(['products.read','recipes.read'])));
+  assert.equal(formulas.variants[0].recipes[0].versions[0].items[0].quantity,5);
+  assert.ok(!('defaultCost' in formulas.variants[0].recipes[0].versions[0].items[0].material));
+  const costs = wire(productForAccess(product,custom(['products.read','costs.read'])));
+  assert.equal(costs.variants[0].costing.estimatedCost,135); assert.ok(!('estimatedMargin' in costs.variants[0].costing));
+  const recipe = wire(recipeForAccess(product.variants[0].recipes[0],custom(['recipes.read'])));
+  assert.ok(!('defaultCost' in recipe.versions[0].items[0].material));
+  assert.equal(product.variants[0].recipes[0].versions[0].items[0].material.defaultCost,27,'projection must not mutate source');
+});
+test('dashboard/report payloads and both export formats obey the same data boundaries', () => {
+  const report = reportFixture(); const actor = custom(['dashboard.read','reports.read','reports.export']);
+  const result = wire(reportForAccess(report,actor));
+  assert.equal(result.sales.orders,2);
+  for (const key of ['profit','profitability','roas','expenses','inventory','consumption','lowStock']) assert.ok(!(key in result),key);
+  assert.ok(!('costs' in result.returns)); assert.ok(!('estimatedCost' in result.products[0]));
+  const tables = reportExportData(report,actor).tables;
+  assert.ok(tables.some(t=>t.name==='المبيعات اليومية'));
+  for(const name of ['استهلاك المواد','حركة المخزون','المخزون الحالي','تفاصيل المصروفات','فئات المصروفات']) assert.ok(!tables.some(t=>t.name===name));
+  const all = JSON.stringify(tables);
+  assert.ok(!all.includes('تكلفة تقديرية')); assert.ok(!all.includes('700')); assert.ok(!all.includes('هامش الربح'));
+  const costsOnly = reportExportData(report,custom(['reports.read','costs.read','materials.read','inventory.read'])).tables;
+  assert.ok(costsOnly.find(t=>t.name==='أداء المنتجات').columns.includes('تكلفة تقديرية'));
+  assert.ok(!costsOnly.find(t=>t.name==='الملخص').rows.some(([label]) => String(label).includes('الربح')));
+  assert.deepEqual(reportExportData(report,{role:'OWNER'}).tables,reportExportData(report).tables);
+});
