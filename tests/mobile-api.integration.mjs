@@ -54,6 +54,27 @@ test('mobile login, tenant access, and revocable logout through real HTTP routes
       const me = await fetch(`${url}/api/mobile/me`, { headers });
       assert.equal(me.status, 200);
       assert.equal((await me.json()).data.store.name, store.name);
+      // Report exports use bearer auth, preserve filters and never cross tenant scope.
+      const ExcelJS = (await import('exceljs')).default;
+      const reportQuery = 'period=custom&from=2026-10-01&to=2026-10-31';
+      const exported = await fetch(`${url}/api/reports/export?format=xlsx&${reportQuery}&storeId=${otherStore.id}`, { headers });
+      assert.equal(exported.status,200); assert.equal(exported.headers.get('cache-control'),'private, no-store');
+      const workbook = new ExcelJS.Workbook(); await workbook.xlsx.load(Buffer.from(await exported.arrayBuffer()));
+      assert.match(workbook.getWorksheet('الملخص').getCell('A2').value,/2026-10-01.*2026-10-31/);
+      const pdfExport = await fetch(`${url}/api/reports/export?format=pdf&${reportQuery}`, { headers });
+      assert.equal(pdfExport.status,200); assert.equal(Buffer.from(await pdfExport.arrayBuffer()).subarray(0,4).toString(),'%PDF');
+      assert.equal((await fetch(`${url}/api/reports/export?format=xlsx`)).status,401);
+      assert.equal((await fetch(`${url}/api/reports/export?format=csv`,{headers})).status,422);
+      assert.equal((await fetch(`${url}/api/reports/export?format=pdf&period=custom&from=bad&to=bad`,{headers})).status,422);
+      const returned = await db.order.create({data:{storeId:store.id,customerPhone:'+20 1012345678',manualStatus:'RETURNED',currency:'EGP',occurredAt:new Date('2026-10-01'),total:100}});
+      const foreignReturn = await db.order.create({data:{storeId:otherStore.id,customerPhone:'01012345678',manualStatus:'RETURNED',currency:'EGP',occurredAt:new Date('2026-10-01'),total:999}});
+      const newOrder = await db.order.create({data:{storeId:store.id,customerPhone:'٠١٠١٢٣٤٥٦٧٨',manualStatus:'NEW',currency:'EGP',occurredAt:new Date('2026-11-01'),total:100}});
+      const warned = (await (await fetch(`${url}/api/mobile/orders?orderId=${newOrder.id}`,{headers})).json()).data[0];
+      assert.equal(warned.returnHistory.count,1); assert.equal(warned.returnHistory.orders[0].id,returned.id);
+      const history = await fetch(`${url}/api/orders/${newOrder.id}/return-history`,{headers}); assert.equal(history.status,200);assert.equal((await history.json()).data.length,1);
+      assert.equal((await fetch(`${url}/api/orders/${foreignReturn.id}/return-history`,{headers})).status,404);
+      assert.equal((await fetch(`${url}/api/orders/${newOrder.id}/return-history`)).status,401);
+      await db.order.deleteMany({where:{id:{in:[returned.id,foreignReturn.id,newOrder.id]}}});
       // Mobile bearer sessions use the same tenant-scoped traffic report as the web dashboard.
       await db.storeVisit.createMany({ data: [
         { id: `traffic-a-${store.id}`, storeId: store.id, session: 'own-session', path: '/' },

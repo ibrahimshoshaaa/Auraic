@@ -1,3 +1,4 @@
+import { ReportExports } from "@/components/reports/ReportExports";
 import { requireAuth } from "@/lib/auth-helpers";
 import { can } from "@/lib/rbac";
 import { getBusinessReport } from "@/services/report.service";
@@ -24,6 +25,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   return <main className="mx-auto max-w-7xl min-w-0 space-y-6 p-4 md:p-8">
     <header><h1 className="text-2xl font-bold">التقارير</h1><p className="text-sm text-gray-600">{r.range.from} إلى {r.range.to} · {r.range.timeZone}</p></header>
     <RangeFilter base="/dashboard/reports" period={r.range.period} from={query.from} to={query.to} />
+    <ReportExports period={r.range.period} from={r.range.from} to={r.range.to} />
     {r.notes.excludedDifferentCurrencyOrders > 0 && <p className="rounded bg-amber-50 p-3 text-sm">المبيعات لا تشمل {r.notes.excludedDifferentCurrencyOrders} طلب بعملة غير {r.currency}.</p>}
 
     <section className={card}><h2 className="mb-4 text-lg font-semibold">المبيعات</h2><dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">{sales.map(([label, value]) => <div key={label} className="min-w-0 rounded-xl bg-slate-50 p-3"><dt className="text-slate-500">{label}</dt><dd className="mt-1 break-words font-semibold">{value}</dd></div>)}</dl><div className="mt-5"><SalesBars days={r.salesByDay} currency={r.currency} /></div><p className="mt-3 text-xs text-gray-500">مبالغ الاسترداد في تقرير المبيعات محسوبة بتاريخ الطلب الأصلي.</p></section>

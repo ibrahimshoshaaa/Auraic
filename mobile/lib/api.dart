@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -31,6 +32,23 @@ class ErpApi {
   Future<dynamic> patch(String path, Map<String, dynamic> body) =>
       _request('PATCH', path, body: body);
   Future<dynamic> delete(String path) => _request('DELETE', path);
+
+  Future<Uint8List> download(String path) async {
+    if (!path.startsWith('/api/reports/export?')) throw const ApiException('مسار التصدير غير صحيح', 422);
+    final token = await _storage.read(key: _tokenKey);
+    final response = await _client.get(Uri.parse('$_baseUrl$path'), headers: {
+      if (token != null) 'Authorization': 'Bearer $token',
+    }).timeout(const Duration(seconds: 90));
+    if (response.statusCode >= 400) {
+      if (response.statusCode == 401 && token != null) await _storage.delete(key: _tokenKey);
+      String message = 'تعذر تصدير التقرير';
+      try { final data = jsonDecode(utf8.decode(response.bodyBytes)); if (data is Map) message = data['error']?.toString() ?? message; } catch (_) { /* Keep controlled error for non-JSON responses. */ }
+      throw ApiException(message, response.statusCode);
+    }
+    final type = response.headers['content-type'] ?? '';
+    if (!type.contains('application/pdf') && !type.contains('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) throw const ApiException('رد التصدير ليس ملفًا صالحًا', 502);
+    return response.bodyBytes;
+  }
 
   Future<String> uploadProductImage(List<int> bytes, String filename) async {
     if (bytes.length > 3 * 1024 * 1024) throw const ApiException('اختر صورة حتى 3 ميجابايت', 422);
