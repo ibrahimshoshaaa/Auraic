@@ -1,3 +1,5 @@
+import { getReturnWarnings } from "@/services/return-history.service";
+import { ReturnWarning } from "@/components/orders/ReturnWarning";
 import { OrderDiscount } from "@/components/orders/OrderDiscount";
 import { orderWhatsAppUrl } from "@/lib/order-whatsapp";
 import { ShopIcon } from "@/components/storefront/ShopIcon";
@@ -39,6 +41,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
     }),
     db.order.count({ where }),
   ]);
+  const returnWarnings = await getReturnWarnings(session.storeId, orders);
   const noteLogs = await db.auditLog.findMany({ where: { storeId: session.storeId, entity: "Order", action: "CREATE", entityId: { in: orders.map(order => order.id) } }, select: { entityId: true, metadata: true } });
   const orderNotes = new Map(noteLogs.flatMap(log => { const meta = log.metadata; if (!meta || typeof meta !== "object" || Array.isArray(meta) || typeof meta.note !== "string" || !meta.note) return []; return [[log.entityId, meta.note] as const]; }));
   const hasMore = page * PAGE_SIZE < count;
@@ -80,6 +83,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                 {order.manualStatus && can(session.role, "orders.write") && <ManualOrderActions showNext={false} orderId={order.id} status={order.manualStatus as ManualOrderStatus} canReturn={false} />}
               </div>
             </details>
+            {(returnWarnings.get(order.id)?.count ?? 0) > 0 && <ReturnWarning orderId={order.id} count={returnWarnings.get(order.id)!.count} />}
             {can(session.role, "orders.write") && ["NEW", "PREPARED", "SHIPPING"].includes(order.manualStatus ?? "") && ["PENDING", "PARTIALLY_PAID"].includes(order.financialStatus ?? "") && <div className="px-4 pb-4 sm:px-5"><OrderDiscount key={order.updatedAt.toISOString()} orderId={order.id} amount={Number(order.adminDiscount)} total={Number(order.total)} deposit={Number(order.depositAmount)} updatedAt={order.updatedAt.toISOString()} /></div>}
             {order.manualStatus && can(session.role, "orders.write") && !["DELIVERED", "RETURNED"].includes(order.manualStatus) && <div className="px-4 pb-4 sm:px-5"><ManualOrderActions quick orderId={order.id} status={order.manualStatus as ManualOrderStatus} canReturn={["returns.write", "expenses.write", "inventory.write"].every(permission => can(session.role, permission))} /></div>}
             </article>

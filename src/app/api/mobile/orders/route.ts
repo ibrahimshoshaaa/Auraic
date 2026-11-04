@@ -1,3 +1,4 @@
+import { getReturnWarnings } from "@/services/return-history.service";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { can } from "@/lib/rbac";
@@ -10,7 +11,7 @@ export async function GET(request: NextRequest) {
     const page = Math.max(1, Math.min(100000, Number(request.nextUrl.searchParams.get("page")) || 1));
     const search = (request.nextUrl.searchParams.get("search") ?? "").trim().slice(0, 100);
     const orderId = request.nextUrl.searchParams.get("orderId");
-    const where = { storeId: session.storeId, ...(orderId ? { id: orderId } : {}), ...(search ? { OR: [{ orderNumber: { contains: search, mode: "insensitive" as const } }, { customerRef: { contains: search, mode: "insensitive" as const } }] } : {}) };
+    const where = { storeId: session.storeId, ...(orderId ? { id: orderId } : {}), ...(search ? { OR: [{ orderNumber: { contains: search, mode: "insensitive" as const } }, { customerRef: { contains: search, mode: "insensitive" as const } }, { customerPhone: { contains: search } }] } : {}) };
     const [orders, count] = await Promise.all([
       db.order.findMany({ where, orderBy: [{ occurredAt: "desc" }, { id: "desc" }], skip: (page - 1) * 25, take: 25, select: {
         id: true, orderNumber: true, occurredAt: true, financialStatus: true, fulfillmentStatus: true, manualStatus: true,
@@ -19,10 +20,11 @@ export async function GET(request: NextRequest) {
       } }),
       db.order.count({ where }),
     ]);
+    const returnWarnings = await getReturnWarnings(session.storeId, orders);
     const noteLogs = await db.auditLog.findMany({ where: { storeId: session.storeId, entity: "Order", action: "CREATE", entityId: { in: orders.map(order => order.id) } }, select: { entityId: true, metadata: true } });
     const notes = new Map(noteLogs.flatMap(log => { const meta = log.metadata; return meta && typeof meta === "object" && !Array.isArray(meta) && typeof meta.note === "string" ? [[log.entityId, meta.note] as const] : []; }));
     const paymentById = new Map(noteLogs.flatMap(log => { const meta = log.metadata; if (!meta || typeof meta !== "object" || Array.isArray(meta) || !["INSTAPAY", "WALLET"].includes(String(meta.payment))) return []; return [[log.entityId, { method: meta.payment, plan: meta.paymentPlan, requestedAmount: Number(meta.requestedCents || 0) / 100 }] as const]; }));
-    return NextResponse.json({ data: orders.map(order => ({ ...order, paymentTransfer: paymentById.get(order.id) || null, customerNote: notes.get(order.id) || "" })), page, count, hasMore: page * 25 < count }, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ data: orders.map(order => ({ ...order, returnHistory: returnWarnings.get(order.id) || {count:0,orders:[]}, paymentTransfer: paymentById.get(order.id) || null, customerNote: notes.get(order.id) || "" })), page, count, hasMore: page * 25 < count }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof Error && error.message === "UNAUTHORIZED") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     throw error;

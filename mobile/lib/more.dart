@@ -1,3 +1,4 @@
+import 'report_exports.dart';
 import 'package:flutter/material.dart';
 
 import 'api.dart';
@@ -57,7 +58,10 @@ class _ReportsPageState extends State<ReportsPage> {
             Text(label, style: const TextStyle(fontSize: 12, color: appMuted)),
             const SizedBox(height: 5), Text(statistic(value), textDirection: TextDirection.ltr,
               style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: appInk))])));
+      final range = json(data['range']);
       return Column(children: [
+        const SizedBox(height: 12),
+        ReportExportButtons(api: widget.api, period: str(range['period']), from: str(range['from']), to: str(range['to']), enabled: snapshot.connectionState == ConnectionState.done && !snapshot.hasError),
         const SizedBox(height: 12),
         Row(children: [Expanded(child: kpi('إجمالي المبيعات', sales['total'] ?? (num.tryParse('${sales['gross']}') ?? 0) - (num.tryParse('${sales['discounts']}') ?? 0) - (num.tryParse('${sales['shipping']}') ?? 0), Icons.trending_up)),
           const SizedBox(width: 10), Expanded(child: kpi('صافي المبيعات', sales['net'], Icons.show_chart))]),

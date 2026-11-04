@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  outputFileTracingIncludes: { "/api/reports/export": ["./public/fonts/Amiri-Regular.ttf"] },
   poweredByHeader: false,
   async headers() {
     return [{ source: "/:path*", headers: [

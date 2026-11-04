@@ -1,3 +1,4 @@
+import 'return_warning.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -57,7 +58,7 @@ class _OrdersPageState extends State<OrdersPage> {
       ],
       TextField(controller: search, textInputAction: TextInputAction.search,
         onSubmitted: (_) { page = 1; reload(); },
-        decoration: InputDecoration(hintText: 'ابحث برقم الطلب أو اسم العميل',
+        decoration: InputDecoration(hintText: 'ابحث برقم الطلب أو اسم العميل أو الهاتف',
           prefixIcon: const Icon(Icons.search),
           suffixIcon: IconButton(tooltip: 'بحث',
             onPressed: () { page = 1; reload(); }, icon: const Icon(Icons.arrow_back)))),
@@ -107,6 +108,8 @@ class _OrdersPageState extends State<OrdersPage> {
                 color: badgeText, fontWeight: FontWeight.w700))),
           ]),
           const SizedBox(height: 12),
+          if (o['returnHistory'] is Map && (num.tryParse('${o['returnHistory']['count']}') ?? 0) > 0)
+            ReturnWarning(api: widget.api, orderId: str(o['id']), count: (o['returnHistory']['count'] as num).toInt(), onOpenOrder: (id) => openPage(context, Scaffold(appBar: AppBar(title: const Text('تفاصيل الطلب المرتجع')), body: OrdersPage(api: widget.api, canWrite: widget.canWrite, orderId: id)))),
           Text(customer.isEmpty ? 'عميل غير محدد' : customer,
               maxLines: 1, overflow: TextOverflow.ellipsis,
               style: const TextStyle(color: Color(0xff65747d), fontSize: 14)),
