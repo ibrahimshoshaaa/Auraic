@@ -7,14 +7,14 @@ import { isCostingEnabled } from "@/lib/settings";
 
 async function getDevStoreId() {
   const session = await requireAuth();
-  if (!can(session.role, "recipes.read")) throw new Error("Forbidden");
+  if (!can(session, "recipes.read")) throw new Error("Forbidden");
   return session.storeId;
 }
 
 async function RecipesTable({ storeId }: { storeId: string }) {
   const [recipes, costingEnabled] = await Promise.all([
     listRecipes(storeId),
-    isCostingEnabled(storeId),
+    isCostingEnabled(storeId).then(async enabled => enabled && can(await requireAuth(), "costs.read")),
   ]);
 
   if (recipes.length === 0) {

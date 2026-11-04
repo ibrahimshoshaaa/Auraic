@@ -190,7 +190,7 @@ class _MaterialDetailState extends State<MaterialDetail> {
   final reason = TextEditingController();
   late Future<Json> material = fetchMaterial();
   Future<Json> fetchMaterial() async => json((await widget.api.get('/api/materials/${widget.material['id']}'))['data']);
-  late Future<dynamic> transactions = widget.api.get('/api/inventory/transactions?materialId=${Uri.encodeComponent(str(widget.material['id']))}');
+  late Future<dynamic> transactions = widget.api.can('consumption.read') ? widget.api.get('/api/inventory/transactions?materialId=${Uri.encodeComponent(str(widget.material['id']))}') : Future.value({'data': []});
   @override
   void dispose() { qty.dispose(); reason.dispose(); super.dispose(); }
 
@@ -233,7 +233,7 @@ class _MaterialDetailState extends State<MaterialDetail> {
               Text('${str((current['balance'] as Map?)?['quantity'])} ${str(current['unit'])}',
                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
             ])))),
-          Expanded(child: Card(child: Padding(padding: const EdgeInsets.all(16),
+          if (widget.api.can('costs.read')) Expanded(child: Card(child: Padding(padding: const EdgeInsets.all(16),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const Text('تكلفة الوحدة', style: TextStyle(color: appMuted)),
               const SizedBox(height: 12),
@@ -251,8 +251,8 @@ class _MaterialDetailState extends State<MaterialDetail> {
           Expanded(child: FilledButton(onPressed: () => adjust(true), child: const Text('إضافة'))),
         ]),
       ],
-      const SizedBox(height: 20), const FormSection(title: 'حركة المخزون'),
-      FutureBuilder<dynamic>(future: transactions, builder: (context, snapshot) {
+      if (widget.api.can('consumption.read')) const FormSection(title: 'حركة المخزون'),
+      if (widget.api.can('consumption.read')) FutureBuilder<dynamic>(future: transactions, builder: (context, snapshot) {
         if (!snapshot.hasData) return snapshot.hasError
           ? TextButton(onPressed: () => setState(() => transactions = widget.api.get('/api/inventory/transactions?materialId=${Uri.encodeComponent(str(widget.material['id']))}')),
               child: const Text('تعذر تحميل الحركة · إعادة المحاولة'))

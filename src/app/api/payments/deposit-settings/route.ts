@@ -1,3 +1,4 @@
+import { can } from "@/lib/rbac";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
@@ -6,12 +7,12 @@ import { z } from "zod";
 
 export async function GET() {
   const session = await requireAuth();
-  if (!["OWNER", "MANAGER"].includes(session.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  return NextResponse.json({ data: { depositAmount: Number(await getSetting(session.storeId, "paymentDepositAmount")), canEdit: session.role === "OWNER" } }, { headers: { "Cache-Control": "no-store" } });
+  if (!can(session, "payments.read")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  return NextResponse.json({ data: { depositAmount: Number(await getSetting(session.storeId, "paymentDepositAmount")), canEdit: can(session, "settings.write") } }, { headers: { "Cache-Control": "no-store" } });
 }
 export async function PUT(request: NextRequest) {
   const session = await requireAuth();
-  if (session.role !== "OWNER") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!can(session, "settings.write")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const parsed = z.object({ depositAmount: z.number().int().min(1).max(1000000) }).safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid deposit amount" }, { status: 422 });
   const value = String(parsed.data.depositAmount);

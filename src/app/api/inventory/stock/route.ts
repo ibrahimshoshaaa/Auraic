@@ -24,7 +24,7 @@ const schema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const session = await requireAuth();
-    if (!["materials.write", "inventory.write", "expenses.write"].every((permission) => can(session.role, permission))) {
+    if (!["materials.write", "inventory.write", "expenses.write"].every((permission) => can(session, permission))) {
       return NextResponse.json({ error: "غير مسموح بتسجيل مشتريات المخزون" }, { status: 403 });
     }
     const data = schema.parse(await req.json());

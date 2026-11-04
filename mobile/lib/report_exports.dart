@@ -40,7 +40,7 @@ class _ReportExportButtonsState extends State<ReportExportButtons> {
     Wrap(spacing: 8, runSpacing: 8, children: [for (final format in ['pdf', 'xlsx']) OutlinedButton.icon(
       onPressed: !widget.enabled || busy.isNotEmpty ? null : () => export(format), icon: Icon(format == 'pdf' ? Icons.picture_as_pdf_outlined : Icons.table_view_outlined),
       label: Text(busy == format ? 'جارٍ تجهيز الملف…' : format == 'pdf' ? 'تصدير PDF' : 'تصدير Excel'))]),
-    const Text('كل أقسام التقرير للفترة المختارة. احفظ الملف أو شاركه من قائمة المشاركة.', style: TextStyle(fontSize: 11)),
+    const Text('أقسام التقرير المسموح بها لحسابك للفترة المختارة. احفظ الملف أو شاركه من قائمة المشاركة.', style: TextStyle(fontSize: 11)),
     if (error.isNotEmpty) Text(error, style: const TextStyle(color: Colors.red)),
   ]);
 }

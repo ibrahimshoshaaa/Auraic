@@ -81,7 +81,7 @@ class _PaymentReviewsPageState extends State<PaymentReviewsPage> {
   }
   @override
   Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('مراجعة التحويلات'),
-    actions: [IconButton(tooltip: "تعديل المقدم الثابت", onPressed: editDeposit, icon: const Icon(Icons.payments_outlined)), IconButton(onPressed: refresh, icon: const Icon(Icons.refresh))]),
+    actions: [if (widget.api.can('settings.write')) IconButton(tooltip: "تعديل المقدم الثابت", onPressed: editDeposit, icon: const Icon(Icons.payments_outlined)), IconButton(onPressed: refresh, icon: const Icon(Icons.refresh))]),
     body: FutureBuilder<dynamic>(future: result, builder: (context, snapshot) {
       if (snapshot.hasError) return Center(child: Text('تعذر تحميل التحويلات: ' + snapshot.error.toString()));
       if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
@@ -98,7 +98,7 @@ class _PaymentReviewsPageState extends State<PaymentReviewsPage> {
             Text('المبلغ: ' + p['requestedAmount'].toString() + ' EGP'),
             Text(p['senderPhone'] != null ? 'رقم الهاتف المحوّل منه: ' + p['senderPhone'].toString() : 'مرجع التحويل: ' + p['reference'].toString()),
             if (p['hasReceipt'] == true) TextButton.icon(onPressed: () => openReceipt(p['id'].toString()), icon: const Icon(Icons.receipt_long), label: const Text('عرض صورة الإيصال')),
-            if (p['review'] == 'PENDING') Row(children: [
+            if (widget.api.can('payments.write') && p['review'] == 'PENDING') Row(children: [
               FilledButton(onPressed: () => decide(p['id'].toString(), 'APPROVED'), child: const Text('تأكيد الوصول')),
               const SizedBox(width: 8),
               OutlinedButton(onPressed: () => decide(p['id'].toString(), 'REJECTED'), child: const Text('رفض')),
@@ -117,7 +117,7 @@ class _PaymentReviewsPageState extends State<PaymentReviewsPage> {
             title: Text('طلب ' + refund['orderNumber'].toString() + ' — ' + refund['customerRef'].toString()),
             subtitle: Text('المبلغ: ' + refund['amount'].toString() + ' EGP'),
             trailing: TextButton(
-              onPressed: (num.tryParse(refund['amount'].toString()) ?? 0) > 0
+              onPressed: widget.api.can('payments.write') && (num.tryParse(refund['amount'].toString()) ?? 0) > 0
                 ? () => confirmRefund(refund['id'].toString()) : null,
               child: const Text('تأكيد الرد'),
             ),

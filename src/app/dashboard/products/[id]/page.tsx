@@ -7,7 +7,7 @@ import { ArchiveProductButton } from "@/components/products/ArchiveProductButton
 
 async function getDevStoreId() {
   const session = await requireAuth();
-  if (!can(session.role, "products.read")) throw new Error("Forbidden");
+  if (!can(session, "products.read")) throw new Error("Forbidden");
   return session.storeId;
 }
 
@@ -36,14 +36,14 @@ export default async function ProductDetailPage({
         <div className="mt-2 flex items-center gap-2">
           <h1 className="text-3xl font-bold text-[#191735]">{product.title}</h1>
         </div>
-        {can(session.role, "products.write") && <div className="mt-4"><Link href={`/dashboard/products/${product.id}/edit`} className="ml-3 inline-block rounded-xl bg-[#191735] px-4 py-2.5 text-sm font-semibold text-white">تعديل المنتج والأحجام</Link><ArchiveProductButton productId={product.id} /></div>}
+        {can(session, "products.write") && <div className="mt-4"><Link href={`/dashboard/products/${product.id}/edit`} className="ml-3 inline-block rounded-xl bg-[#191735] px-4 py-2.5 text-sm font-semibold text-white">تعديل المنتج والأحجام</Link><ArchiveProductButton productId={product.id} /></div>}
       </div>
 
       <div className="space-y-4">
         <div className="rounded-2xl border border-[#e5e4ec] bg-white p-5 shadow-sm sm:p-6">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="font-semibold">المتغيرات (الأحجام)</h2>
-            {can(session.role, "products.write") && <Link href={`/dashboard/products/${product.id}/edit`} className="rounded-lg border px-3 py-2 text-sm">إدارة الأحجام والأسعار</Link>}
+            {can(session, "products.write") && <Link href={`/dashboard/products/${product.id}/edit`} className="rounded-lg border px-3 py-2 text-sm">إدارة الأحجام والأسعار</Link>}
           </div>
 
           {product.variants.length === 0 ? (
@@ -64,7 +64,7 @@ export default async function ProductDetailPage({
                       </div>
                     </div>
 
-                    {v.currentRecipe ? (
+                    {can(session, "recipes.read") && (v.currentRecipe ? (
                       <Link
                         href={`/dashboard/recipes/${v.currentRecipe.id}`}
                         className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs text-gray-600 hover:border-[var(--accent)] hover:text-[var(--accent)]"
@@ -78,10 +78,10 @@ export default async function ProductDetailPage({
                       >
                         + إنشاء وصفة
                       </Link>
-                    )}
+                    ))}
                   </div>
 
-                  {v.costing && (
+                  {can(session, "costs.read") && v.costing && (
                     <div className="mt-3 flex gap-6 border-t border-[var(--border)] pt-3 text-sm">
                       <div>
                         <span className="text-gray-500">تكلفة الوصفة: </span>
@@ -92,12 +92,12 @@ export default async function ProductDetailPage({
                           <span className="mr-1 text-xs text-amber-600">(غير مكتملة)</span>
                         )}
                       </div>
-                      <div>
+                      {can(session, "profits.read") && <div>
                         <span className="text-gray-500">الربح المتوقع قبل التشغيل: </span>
                         <span className="font-mono font-semibold">
                           {v.costing.complete ? `${v.costing.estimatedMargin.toFixed(2)} EGP` : "أكمل تكاليف الخامات"}
                         </span>
-                      </div>
+                      </div>}
                     </div>
                   )}
                 </div>

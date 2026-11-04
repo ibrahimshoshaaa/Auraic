@@ -61,7 +61,7 @@ test('refund confirmation is available in both admin clients and requires transa
   const webPayments = readFileSync(new URL('../src/app/dashboard/payments/page.tsx', import.meta.url), 'utf8');
   const flutterPayments = readFileSync(new URL('../mobile/lib/payment_reviews.dart', import.meta.url), 'utf8');
   assert.match(refundList, /financialStatus: "REFUND_PENDING"/);
-  assert.match(refundList, /\["OWNER", "MANAGER"\]/);
+  assert.match(refundList, /can\(session, "payments.read"\)/);
   assert.match(refundConfirm, /reference: z\.string\(\)\.trim\(\)\.min\(3\)/);
   assert.match(webPayments, /\/api\/payments\/refund-confirm/);
   assert.match(flutterPayments, /\/api\/payments\/refund-confirm/);

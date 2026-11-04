@@ -21,6 +21,8 @@ class ErpApi {
   static const _tokenKey = 'erp_mobile_session';
   final http.Client _client;
 
+  Set<String> _permissions = {};
+  bool can(String permission) => _permissions.contains('*') || _permissions.contains(permission);
   Future<bool> get hasSession async => (await _storage.read(key: _tokenKey)) != null;
 
   Future<dynamic> get(String path) => _request('GET', path);
@@ -90,6 +92,7 @@ class ErpApi {
     try {
       await post('/api/mobile/auth/logout', {});
     } finally {
+      _permissions = {};
       await _storage.delete(key: _tokenKey);
     }
   }
@@ -129,6 +132,9 @@ class ErpApi {
       throw ApiException(
           decoded is Map ? (decoded['error']?.toString() ?? 'حدث خطأ') : 'حدث خطأ',
           response.statusCode);
+    }
+    if (path == '/api/mobile/me' && decoded is Map && decoded['data'] is Map) {
+      _permissions = ((decoded['data']['permissions'] as List?) ?? []).map((p) => p.toString()).toSet();
     }
     return decoded;
   }

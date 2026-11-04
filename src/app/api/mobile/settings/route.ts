@@ -1,3 +1,4 @@
+import { can } from "@/lib/rbac";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -15,6 +16,7 @@ const schema = z.object({ name: z.string().trim().min(2).max(80),
 export async function GET() {
   try {
     const session = await requireAuth();
+    if (!can(session, "settings.read")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     const [store, returnCost, costingEnabled, paymentValues] = await Promise.all([
       db.store.findUniqueOrThrow({ where: { id: session.storeId },
         select: { name: true, currency: true, timezone: true } }),
@@ -22,7 +24,7 @@ export async function GET() {
       getSetting(session.storeId, "costingEnabled"),
       Promise.all((["paymentInstaPayEnabled", "paymentWalletEnabled", "paymentInstaPayAddress", "paymentWalletNumber", "paymentDepositAmount", "paymentInstaPayAccountName", "paymentWalletAccountName"] as const).map(key => getSetting(session.storeId, key))),
     ]);
-    return NextResponse.json({ data: { ...store, defaultReturnCost: Number(returnCost),
+    return NextResponse.json({ data: { ...store, defaultReturnCost: can(session, "costs.read") ? Number(returnCost) : undefined,
       costingEnabled: costingEnabled === "true",
       paymentInstaPayEnabled: paymentValues[0] === "true", paymentWalletEnabled: paymentValues[1] === "true",
       paymentInstaPayAddress: paymentValues[2], paymentWalletNumber: paymentValues[3], paymentDepositAmount: Number(paymentValues[4]), paymentInstaPayAccountName: paymentValues[5], paymentWalletAccountName: paymentValues[6] } }, { headers: { "Cache-Control": "no-store" } });
@@ -32,7 +34,7 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   try {
     const session = await requireAuth();
-    if (session.role !== "OWNER") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!can(session, "settings.write")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     const input = schema.parse(await request.json());
     if ((input.paymentInstaPayEnabled && !input.paymentInstaPayAddress) || (input.paymentWalletEnabled && !input.paymentWalletNumber))
       return NextResponse.json({ error: "بيانات طريقة الدفع المفعلة مطلوبة" }, { status: 422 });

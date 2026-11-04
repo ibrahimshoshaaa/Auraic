@@ -5,7 +5,7 @@ import ts from 'typescript';
 import {readFileSync} from 'node:fs';
 import * as next from 'next/server.js';
 function route({role='OWNER',unauthorized=false,offline=false}={}) {
- const calls=[];const context={exports:{},Date,Intl,Error,console:{error(){}},require:name=>name==='next/server'?next:name==='@/lib/auth-helpers'?{requireAuth:async()=>{if(unauthorized)throw Error('UNAUTHORIZED');return {storeId:'own-store',role};}}:name==='@/lib/rbac'?{can:role=>['OWNER','MANAGER'].includes(role)}:{getTrafficReport:async(...args)=>{calls.push(args);if(offline)throw Error('offline');return {range:{from:new Date('2026-11-01'),to:new Date('2026-11-03')},collectionStarted:null,lastVisit:null,pages:[{path:'/',lastSeen:new Date('2026-11-02')}],visits:3,views:4};}}};
+ const calls=[];const context={exports:{},Date,Intl,Error,console:{error(){}},require:name=>name==='next/server'?next:name==='@/lib/auth-helpers'?{requireAuth:async()=>{if(unauthorized)throw Error('UNAUTHORIZED');return {storeId:'own-store',role};}}:name==='@/lib/rbac'?{can:actor=>['OWNER','MANAGER'].includes(actor.role)}:{getTrafficReport:async(...args)=>{calls.push(args);if(offline)throw Error('offline');return {range:{from:new Date('2026-11-01'),to:new Date('2026-11-03')},collectionStarted:null,lastVisit:null,pages:[{path:'/',lastSeen:new Date('2026-11-02')}],visits:3,views:4};}}};
  vm.runInNewContext(ts.transpileModule(readFileSync('src/app/api/reports/traffic/route.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,context);
  return {get:context.exports.GET,calls};
 }

@@ -8,7 +8,7 @@ import { ExpenseForms } from "@/components/finance/ExpenseForms";
 
 export default async function ExpensesPage({ searchParams }: { searchParams: Promise<{ category?: string; add?: string }> }) {
   const session = await requireAuth();
-  if (!can(session.role, "expenses.read")) throw new Error("Forbidden");
+  if (!can(session, "expenses.read")) throw new Error("Forbidden");
   const store = await db.store.findUnique({ where: { id: session.storeId } });
   const [expenses, categories] = store ? await Promise.all([
     listExpenses(store.id),
@@ -28,7 +28,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   return <main className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-8 sm:py-9">
     <header className="flex flex-wrap items-start justify-between gap-4">
       <div><p className="text-sm font-semibold text-[#96723c]">المالية والمخزون</p><h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">المصروفات</h1><p className="mt-2 text-sm text-slate-500">تابع مصروفات المتجر ومشتريات الخامات المسجلة تلقائيًا عند إضافة المخزون.</p></div>
-      {can(session.role, "expenses.write") && <ExpenseForms categories={categories} currency={currency} initialOpen={add === "1"} />}
+      {can(session, "expenses.write") && <ExpenseForms categories={categories} currency={currency} initialOpen={add === "1"} />}
     </header>
     <section className="rounded-3xl bg-[#191735] p-6 text-white shadow-sm">
       <p className="text-sm text-[#d9d6ed]">إجمالي المصروفات</p><strong className="mt-3 block text-3xl font-bold" dir="ltr">{formatAmount(selectedCategory ? filteredTotal : total)}</strong><p className="mt-3 text-sm text-[#d9d6ed]">{visibleExpenses.length} مصروف {selectedCategory ? "في الفئة المحددة" : "مسجل"}</p>

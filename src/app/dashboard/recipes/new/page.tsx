@@ -7,7 +7,7 @@ import { CreateRecipeForm } from "@/components/recipes/CreateRecipeForm";
 
 async function getDevStoreId() {
   const session = await requireAuth();
-  if (!can(session.role, "recipes.read")) throw new Error("Forbidden");
+  if (!can(session, "recipes.write")) throw new Error("Forbidden");
   return session.storeId;
 }
 
@@ -49,8 +49,8 @@ export default async function NewRecipePage({
 
       <div className="mx-auto max-w-2xl rounded-xl border border-[var(--border)] bg-white p-6">
         <CreateRecipeForm
-          variants={unmappedVariants}
-          materials={materials}
+          variants={unmappedVariants.map(v => ({ id: v.id, title: v.title, sku: v.sku, product: { title: v.product.title } }))}
+          materials={materials.map(m => ({ id: m.id, name: m.name, unit: m.unit }))}
           preselectedVariantId={preselectedVariantId}
         />
       </div>

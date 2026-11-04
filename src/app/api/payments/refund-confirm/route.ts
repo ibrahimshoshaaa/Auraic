@@ -1,3 +1,4 @@
+import { can } from "@/lib/rbac";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-helpers";
@@ -8,7 +9,7 @@ const schema = z.object({ orderId: z.string().min(1), reference: z.string().trim
 
 export async function POST(request: NextRequest) {
   const session = await requireAuth();
-  if (!["OWNER", "MANAGER"].includes(session.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!can(session, "payments.write")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Order ID and refund reference are required" }, { status: 422 });
   const { orderId, reference } = parsed.data;

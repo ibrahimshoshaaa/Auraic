@@ -10,7 +10,7 @@ const schema = z.object({ amount: z.number().finite().nonnegative().max(1000000)
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "orders.write")) return NextResponse.json({ error: "غير مسموح بتعديل الطلب" }, { status: 403 });
+    if (!can(session, "orders.write")) return NextResponse.json({ error: "غير مسموح بتعديل الطلب" }, { status: 403 });
     const input = schema.parse(await request.json());
     const { id } = await params;
     const result = await db.$transaction(async tx => {

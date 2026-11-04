@@ -9,9 +9,9 @@ const schema = z.object({ status: z.enum(manualOrderStatuses) });
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "orders.write")) return NextResponse.json({ error: "غير مسموح بتعديل الطلب" }, { status: 403 });
+    if (!can(session, "orders.write")) return NextResponse.json({ error: "غير مسموح بتعديل الطلب" }, { status: 403 });
     const { status } = schema.parse(await request.json());
-    if (status === "RETURNED" && !["returns.write", "expenses.write", "inventory.write"].every(permission => can(session.role, permission))) {
+    if (status === "RETURNED" && !["returns.write", "expenses.write", "inventory.write"].every(permission => can(session, permission))) {
       return NextResponse.json({ error: "غير مسموح بمعالجة المرتجع" }, { status: 403 });
     }
     const { id } = await params;

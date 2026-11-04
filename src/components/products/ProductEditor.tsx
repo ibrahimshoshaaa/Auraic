@@ -15,7 +15,7 @@ function StepIcon({ index, done }: { index: number; done: boolean }) {
 }
 const input = "mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-[#a58a55]";
 const blankVariant = (): EditorVariant => ({ clientId: crypto.randomUUID(), title: "", price: "", compareAtPrice: "", materials: [] });
-export function ProductEditor({ materials, initial, sample = false }: { materials: EditorMaterial[]; initial?: EditorProduct; sample?: boolean }) {
+export function ProductEditor({ materials, initial, sample = false, canReadCosts = false, canReadProfits = false }: { canReadCosts?: boolean; canReadProfits?: boolean; materials: EditorMaterial[]; initial?: EditorProduct; sample?: boolean }) {
   const router = useRouter(); const form = useRef<HTMLFormElement>(null); const requestId = useRef<string | null>(null);
   const [step, setStep] = useState(0); const [busy, setBusy] = useState(false); const [error, setError] = useState("");
   const [title, setTitle] = useState(initial?.title || ""); const [sampleType, setSampleType] = useState(initial ? isSample(initial.category) : sample); const [category, setCategory] = useState(initial ? { men: "Men", women: "Women", unisex: "Unisex" }[productAudience(initial.category)] : "Unisex");
@@ -27,12 +27,13 @@ export function ProductEditor({ materials, initial, sample = false }: { material
   function toggleOffers(value: boolean) { setOffers(value); if (!value) setVariants(current => current.map(v => ({ ...v, compareAtPrice: "" }))); }
   const steps = ["بيانات العطر", "الصور", "الأحجام والوصفات", "الوصف والنشر", "المعاينة والتأكيد"];
   function costing(v: EditorVariant) {
+    if (!canReadCosts) return null;
     let cost = 0; const complete = v.materials.length > 0 && v.materials.every(line => {
       const material = materials.find(item => item.id === line.materialId);
       if (!material || material.defaultCost === null || !(Number(line.quantity) > 0)) return false;
       cost += material.defaultCost * Number(line.quantity); return true;
     });
-    return <div className="mt-4 rounded-xl bg-[#f5f3eb] p-4 text-sm"><p>تكلفة الوصفة لقطعة: <b>{complete ? `${cost.toFixed(2)} جنيه` : "أكمل كميات وتكاليف الخامات في المخزون"}</b></p>{complete && Number(v.price) > 0 && <p className="mt-2">الربح المتوقع: <b>{(Number(v.price) - cost).toFixed(2)} جنيه</b> · نسبة الربح: {((Number(v.price) - cost) / Number(v.price) * 100).toFixed(2)}٪</p>}<p className="mt-2 text-xs text-slate-500">قبل المصروفات التشغيلية، حسب تكلفة الخامات الحالية. يظهر للإدارة فقط.</p></div>;
+    return <div className="mt-4 rounded-xl bg-[#f5f3eb] p-4 text-sm"><p>تكلفة الوصفة لقطعة: <b>{complete ? `${cost.toFixed(2)} جنيه` : "أكمل كميات وتكاليف الخامات في المخزون"}</b></p>{canReadProfits && complete && Number(v.price) > 0 && <p className="mt-2">الربح المتوقع: <b>{(Number(v.price) - cost).toFixed(2)} جنيه</b> · نسبة الربح: {((Number(v.price) - cost) / Number(v.price) * 100).toFixed(2)}٪</p>}<p className="mt-2 text-xs text-slate-500">قبل المصروفات التشغيلية، حسب تكلفة الخامات الحالية. يظهر للإدارة فقط.</p></div>;
   }
   function update(index: number, changes: Partial<EditorVariant>) { setVariants(current => current.map((variant, i) => i === index ? { ...variant, ...changes } : variant)); }
   function next() {

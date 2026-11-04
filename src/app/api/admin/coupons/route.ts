@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-helpers";
 import { can } from "@/lib/rbac";
 import { couponSchema } from "@/lib/storefront/coupons";
-async function authorized() { const session = await requireAuth(); if (!can(session.role, "products.write")) throw new Error("FORBIDDEN"); return session; }
+async function authorized(permission = "coupons.write") { const session = await requireAuth(); if (!can(session, permission)) throw new Error("FORBIDDEN"); return session; }
 function failure(error: unknown) {
   if (error instanceof Error && error.message === "UNAUTHORIZED") return NextResponse.json({ error: "سجّل الدخول أولًا" }, { status: 401 });
   if (error instanceof Error && error.message === "FORBIDDEN") return NextResponse.json({ error: "غير مسموح" }, { status: 403 });
@@ -12,7 +12,7 @@ function failure(error: unknown) {
   console.error("Coupon management failed", error); return NextResponse.json({ error: "تعذر حفظ الكوبون" }, { status: 500 });
 }
 export async function GET() { try {
-  const session = await authorized();
+  const session = await authorized("coupons.read");
   const [coupons, products] = await Promise.all([db.coupon.findMany({ where: { storeId: session.storeId }, orderBy: { createdAt: "desc" } }), db.product.findMany({ where: { storeId: session.storeId }, select: { id: true, title: true }, orderBy: { title: "asc" } })]);
   return NextResponse.json({ data: { coupons: coupons.map(c => ({ ...c, value: Number(c.value), minOrder: Number(c.minOrder), maxDiscount: c.maxDiscount === null ? null : Number(c.maxDiscount) })), products } }, { headers: { "Cache-Control": "no-store" } });
 } catch (error) { return failure(error); } }

@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 export async function POST(request: NextRequest) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "products.write")) return NextResponse.json({ error: "غير مسموح" }, { status: 403 });
+    if (!can(session, "storefront.write") && !can(session, "products.write")) return NextResponse.json({ error: "غير مسموح" }, { status: 403 });
     const cloud_name = process.env.CLOUDINARY_CLOUD_NAME, api_key = process.env.CLOUDINARY_API_KEY, api_secret = process.env.CLOUDINARY_API_SECRET;
     if (!cloud_name || !api_key || !api_secret) return NextResponse.json({ error: "اضبط بيانات Cloudinary في الاستضافة لتفعيل رفع الصور، أو استخدم رابط صورة HTTPS" }, { status: 503 });
     const data = await request.formData(); const file = data.get("file");

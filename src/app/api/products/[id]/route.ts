@@ -1,3 +1,4 @@
+import { productForAccess } from "@/lib/access-data";
 import { NextRequest, NextResponse } from "next/server";
 import { getProduct } from "@/services/product.service";
 import { requireAuth, getStoreId } from "@/lib/auth-helpers";
@@ -11,7 +12,7 @@ export async function GET(
 ) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "products.read")) {
+    if (!can(session, "products.read")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const storeId = getStoreId(session);
@@ -22,7 +23,7 @@ export async function GET(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ data: product });
+    return NextResponse.json({ data: productForAccess(product, session) });
   } catch (err) {
     if (err instanceof Error && err.message === "UNAUTHORIZED") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -40,7 +41,7 @@ export async function DELETE(
 ) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "products.write"))
+    if (!can(session, "products.write"))
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     const { id } = await params;
     const product = await db.product.findFirst({

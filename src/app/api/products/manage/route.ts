@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 async function save(request: NextRequest) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "products.write") || !can(session.role, "recipes.write")) return NextResponse.json({ error: "غير مسموح" }, { status: 403 });
+    if (!can(session, "products.write") || !can(session, "recipes.write")) return NextResponse.json({ error: "غير مسموح" }, { status: 403 });
     const parsed = productEditorSchema.safeParse(await request.json());
     if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message || "راجع بيانات المنتج", issues: parsed.error.issues }, { status: 422 });
     const data = await saveManagedProduct(session.storeId, session.userId, parsed.data);

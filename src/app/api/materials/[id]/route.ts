@@ -1,3 +1,4 @@
+import { materialForAccess } from "@/lib/access-data";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import {
@@ -28,7 +29,7 @@ export async function GET(
 ) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "materials.read")) {
+    if (!can(session, "materials.read")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const storeId = getStoreId(session);
@@ -40,7 +41,7 @@ export async function GET(
     }
 
     const history = await getMaterialHistory(storeId, id, 30);
-    return NextResponse.json({ data: { ...material, history } });
+    return NextResponse.json({ data: { ...materialForAccess(material, session), history: can(session, "consumption.read") ? history : undefined } });
   } catch (err) {
     return handleError(err);
   }
@@ -52,7 +53,7 @@ export async function PATCH(
 ) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "materials.write")) {
+    if (!can(session, "materials.write")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const storeId = getStoreId(session);

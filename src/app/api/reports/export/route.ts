@@ -9,11 +9,11 @@ export async function GET(req: NextRequest) {
   const headers={"Cache-Control":"private, no-store"};
   try {
     const session=await requireAuth();
-    if(!can(session.role,"reports.read"))return NextResponse.json({error:"غير مسموح بتصدير التقارير"},{status:403,headers});
+    if(!can(session,"reports.export"))return NextResponse.json({error:"غير مسموح بتصدير التقارير"},{status:403,headers});
     const q=req.nextUrl.searchParams;const format=q.get("format");
     if(format!=="pdf"&&format!=="xlsx")return NextResponse.json({error:"اختر PDF أو Excel"},{status:422,headers});
     const report=await getBusinessReport(session.storeId,{period:q.has("from")||q.has("to")?"custom":q.get("period")??undefined,from:q.get("from")??undefined,to:q.get("to")??undefined});
-    const bytes=format==="pdf"?await (await import("@/lib/reports/pdf")).reportPdf(report):await (await import("@/lib/reports/xlsx")).reportXlsx(report);
+    const bytes=format==="pdf"?await (await import("@/lib/reports/pdf")).reportPdf(report, session):await (await import("@/lib/reports/xlsx")).reportXlsx(report, session);
     return new Response(bytes,{headers:{...headers,"Content-Type":format==="pdf"?"application/pdf":"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","Content-Disposition":`attachment; filename="${exportFilename(report,format)}"`,"X-Content-Type-Options":"nosniff"}});
   } catch(error) {
     if(error instanceof Error&&error.message==="UNAUTHORIZED")return NextResponse.json({error:"سجّل الدخول أولًا"},{status:401,headers});

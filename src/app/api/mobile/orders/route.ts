@@ -7,7 +7,7 @@ import { requireAuth } from "@/lib/auth-helpers";
 export async function GET(request: NextRequest) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "orders.read")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!can(session, "orders.read")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     const page = Math.max(1, Math.min(100000, Number(request.nextUrl.searchParams.get("page")) || 1));
     const search = (request.nextUrl.searchParams.get("search") ?? "").trim().slice(0, 100);
     const orderId = request.nextUrl.searchParams.get("orderId");

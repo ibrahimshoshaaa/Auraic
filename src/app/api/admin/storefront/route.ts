@@ -11,17 +11,17 @@ import { revalidatePath } from "next/cache";
 export async function PUT(request: NextRequest) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "products.write")) return NextResponse.json({ error: "غير مسموح" }, { status: 403 });
+    if (!can(session, "storefront.write") && !can(session, "products.write")) return NextResponse.json({ error: "غير مسموح" }, { status: 403 });
     const body = await request.json();
     if (body.kind === "availability") {
-      if (session.role !== "OWNER") return NextResponse.json({ error: "غير مسموح" }, { status: 403 });
+      if (!can(session, "storefront.write")) return NextResponse.json({ error: "غير مسموح" }, { status: 403 });
       const parsed = z.object({ enabled: z.boolean() }).safeParse(body.data);
       if (!parsed.success) return NextResponse.json({ error: "راجع حالة استقبال الطلبات" }, { status: 422 });
       const current = await getShopSettings(session.storeId);
       const settings = { ...current, enabled: parsed.data.enabled };
       await db.setting.upsert({ where: { storeId_key: { storeId: session.storeId, key: "storefront" } }, create: { storeId: session.storeId, key: "storefront", value: JSON.stringify(settings) }, update: { value: JSON.stringify(settings) } });
     } else if (body.kind === "settings") {
-      if (session.role !== "OWNER") return NextResponse.json({ error: "إعدادات المتجر متاحة لمالك المتجر فقط" }, { status: 403 });
+      if (!can(session, "storefront.write")) return NextResponse.json({ error: "إعدادات المتجر متاحة لمالك المتجر فقط" }, { status: 403 });
       const current = await getShopSettings(session.storeId);
       const parsed = shopSettingsSchema.safeParse({ ...current, ...body.data });
       if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message }, { status: 422 });
@@ -50,9 +50,9 @@ export async function PUT(request: NextRequest) {
 export async function GET() {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "products.write")) return NextResponse.json({ error: "غير مسموح" }, { status: 403 });
+    if (!can(session, "storefront.read")) return NextResponse.json({ error: "غير مسموح" }, { status: 403 });
     const [settings, products] = await Promise.all([getShopSettings(session.storeId), db.product.findMany({ where: { storeId: session.storeId, ...activeProductStatus }, orderBy: { title: "asc" }, include: { variants: { where: { active: true }, include: { recipes: { where: { active: true }, include: { versions: { where: { isCurrent: true }, include: { items: true } } } } } } } })]);
-    return NextResponse.json({ data: { settings, products, owner: session.role === "OWNER", storeId: session.storeId, linked: process.env.STOREFRONT_STORE_ID === session.storeId } }, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ data: { settings, products: products.map(product => ({ ...product, ready: product.variants.some(v => Number(v.price) > 0 && v.recipes.some(r => r.versions.some(version => version.items.length > 0))), variants: product.variants.map(v => ({ id: v.id, title: v.title, price: v.price, compareAtPrice: v.compareAtPrice, active: v.active })) })), owner: can(session, "storefront.write"), storeId: session.storeId, linked: process.env.STOREFRONT_STORE_ID === session.storeId } }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof Error && error.message === "UNAUTHORIZED") return NextResponse.json({ error: "سجّل الدخول أولًا" }, { status: 401 });
     console.error(error); return NextResponse.json({ error: "تعذر تحميل إدارة الموقع" }, { status: 500 });

@@ -15,7 +15,7 @@ import type { RecipeItemRow } from "@/components/recipes/RecipeItemsFieldset";
 
 async function getDevStoreId() {
   const session = await requireAuth();
-  if (!can(session.role, "recipes.read")) throw new Error("Forbidden");
+  if (!can(session, "recipes.read")) throw new Error("Forbidden");
   return session.storeId;
 }
 
@@ -24,6 +24,7 @@ export default async function RecipeDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const session = await requireAuth();
   const { id } = await params;
   const storeId = await getDevStoreId();
   if (!storeId) notFound();
@@ -33,7 +34,7 @@ export default async function RecipeDetailPage({
 
   const [materials, costingEnabled] = await Promise.all([
     db.material.findMany({ where: { storeId, active: true }, orderBy: { name: "asc" } }),
-    isCostingEnabled(storeId),
+    isCostingEnabled(storeId).then(enabled => enabled && can(session, "costs.read")),
   ]);
 
   const current = currentVersionOf(recipe);
@@ -124,11 +125,11 @@ export default async function RecipeDetailPage({
         {/* New version form */}
         <div className="min-w-0 rounded-xl border border-[var(--border)] bg-white p-4 sm:p-6">
           <h2 className="mb-4 font-semibold">إنشاء نسخة جديدة</h2>
-          <NewVersionForm
+          {can(session, "recipes.write") && <NewVersionForm
             recipeId={recipe.id}
-            materials={materials}
+            materials={materials.map(m => ({ id: m.id, name: m.name, unit: m.unit, baseUnit: m.baseUnit }))}
             initialRows={initialRows}
-          />
+          />}
         </div>
       </div>
 
@@ -155,9 +156,7 @@ export default async function RecipeDetailPage({
                     {new Date(v.effectiveAt).toLocaleString("ar-EG")}
                   </span>
                 </div>
-                {!v.isCurrent && (
-                  <ActivateVersionButton recipeId={recipe.id} versionId={v.id} />
-                )}
+                {!v.isCurrent && can(session, "recipes.write") && <ActivateVersionButton recipeId={recipe.id} versionId={v.id} />}
               </div>
               <div className="mt-2 break-words text-xs text-gray-500">
                 {v.items.map((it) => `${it.material.name}: ${Number(it.quantity)} ${it.unit}`).join(" · ")}

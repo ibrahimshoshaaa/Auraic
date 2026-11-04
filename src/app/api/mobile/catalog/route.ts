@@ -7,7 +7,7 @@ import { activeProductStatus } from "@/lib/active-product";
 export async function GET() {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "orders.write") && !can(session.role, "recipes.read")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!can(session, "orders.write") && !can(session, "recipes.read")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     const variants = await db.productVariant.findMany({
       where: { storeId: session.storeId, active: true, product: activeProductStatus },
       select: { id: true, title: true, price: true, product: { select: { title: true } } },

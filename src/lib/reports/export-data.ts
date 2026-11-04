@@ -1,8 +1,9 @@
+import { can, type AccessPrincipal } from "../rbac";
 import type { getBusinessReport } from "@/services/report.service";
 export type BusinessReport = Awaited<ReturnType<typeof getBusinessReport>>;
 export type ExportCell = string | number | null;
 export type ExportTable = { name: string; columns: string[]; rows: ExportCell[][]; moneyColumns?: number[] };
-export function reportExportData(r: BusinessReport) {
+export function reportExportData(r: BusinessReport, actor?: AccessPrincipal) {
   const summary: ExportCell[][] = [
     ["العملة", r.currency], ["من", r.range.from], ["إلى", r.range.to], ["التوقيت", r.range.timeZone],
     ["إجمالي المبيعات بعد الخصم بدون الشحن", r.sales.total], ["الشحن", r.sales.shipping],
@@ -43,6 +44,30 @@ export function reportExportData(r: BusinessReport) {
     { name: "مخزون منخفض", columns:["المادة","الوحدة","الرصيد الحالي","الحد الأدنى"], rows:r.lowStock.map(x=>[x.name,x.unit,x.stock,x.reorderLevel]) },
     { name: "ملاحظات الحساب", columns:["التوضيح"], rows:notes.map(x=>[x]) },
   ];
-  return { tables, notes };
+  if (!actor) return { tables, notes }; // Existing internal callers; all authenticated exports pass the actor.
+  const allowed = (p: string) => can(actor, p);
+  const costs = allowed("costs.read"), profits = allowed("profits.read"), expenses = allowed("expenses.read");
+  tables[0].rows = summary.filter(([label]) => {
+    const name = String(label);
+    if (!profits && /الربح|لحساب الربح/.test(name)) return false;
+    if (!costs && /تكلف|تكاليف/.test(name)) return false;
+    if (!expenses && /المصروفات|ضمن المصروفات|ROAS|السوشيال/.test(name)) return false;
+    return true;
+  });
+  function removeColumn(table: ExportTable, index: number) {
+    table.columns.splice(index, 1); table.rows.forEach(row => row.splice(index, 1));
+    table.moneyColumns = table.moneyColumns?.filter(i => i !== index).map(i => i > index ? i - 1 : i);
+  }
+  if (!costs) { removeColumn(tables[2], 8); removeColumn(tables[8], 5); }
+  const filtered = tables.filter((_, index) => {
+    if ([5, 6].includes(index)) return expenses;
+    if ([7, 9].includes(index)) return allowed("consumption.read") && (index !== 9 || allowed("inventory.read"));
+    if ([8, 10].includes(index)) return allowed("inventory.read");
+    return true;
+  });
+  // Notes must not expose completeness or availability of restricted financial data.
+  const safeNotes = notes.filter(note => (profits || !/الربح|الوصفات|التكلفة التقديرية/.test(note)) && (expenses || !/المصروفات/.test(note)) && (allowed("inventory.read") || !/المخزون/.test(note)));
+  filtered[filtered.length - 1].rows = safeNotes.map(note => [note]);
+  return { tables: filtered, notes: safeNotes };
 }
 export function exportFilename(r: BusinessReport, format: "pdf" | "xlsx") { return `auraic-report-${r.range.from}-${r.range.to}.${format}`; }

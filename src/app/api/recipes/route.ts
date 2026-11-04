@@ -1,3 +1,4 @@
+import { recipeForAccess } from "@/lib/access-data";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { listRecipes, createRecipe } from "@/services/recipe.service";
@@ -19,7 +20,7 @@ const createSchema = z.object({
 export async function GET(req: NextRequest) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "recipes.read")) {
+    if (!can(session, "recipes.read")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const storeId = getStoreId(session);
@@ -30,7 +31,7 @@ export async function GET(req: NextRequest) {
       variantId: searchParams.get("variantId") ?? undefined,
     });
 
-    return NextResponse.json({ data: recipes });
+    return NextResponse.json({ data: recipes.map(recipe => recipeForAccess(recipe, session)) });
   } catch (err) {
     return handleError(err);
   }
@@ -39,7 +40,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "recipes.write")) {
+    if (!can(session, "recipes.write")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const storeId = getStoreId(session);

@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 export async function GET(req: NextRequest) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "customers.read")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!can(session, "customers.read")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     const p = req.nextUrl.searchParams;
     const customers = await getCustomers(session.storeId);
     const key = p.get("key");
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
           manualStatus: true, financialStatus: true, customerRef: true, customerPhone: true, customerAddress: true,
           items: { select: { title: true, quantity: true } },
           returns: { select: { id: true, status: true, totalAmount: true, returnCost: true, createdAt: true } } } });
-      return NextResponse.json({ data: { ...customer, orderIds: undefined, orders }, page, pages: Math.ceil(customer.ordersCount / 20) }, { headers: { "Cache-Control": "no-store" } });
+      return NextResponse.json({ data: { ...customer, orderIds: undefined, orders: orders.map(order => ({ ...order, returns: order.returns.map(ret => ({ ...ret, returnCost: can(session, "costs.read") ? ret.returnCost : undefined })) })) }, page, pages: Math.ceil(customer.ordersCount / 20) }, { headers: { "Cache-Control": "no-store" } });
     }
     const q = (p.get("q") ?? "").trim().toLocaleLowerCase().slice(0, 100);
     const digits = phoneDigits(q);

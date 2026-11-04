@@ -18,7 +18,7 @@ export async function PATCH(
 ) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "materials.write")) {
+    if (!can(session, "materials.write")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const storeId = getStoreId(session);

@@ -24,12 +24,18 @@ const nav = [
   { label: "زيارة المتجر", href: "/", mark: "↗" },
 ];
 
-export function NavLinks({ compact = false, canCreateOrder = false, canReadCustomers = false, canManageCoupons = false, canReadReports = false }: { compact?: boolean; canCreateOrder?: boolean; canReadCustomers?: boolean; canManageCoupons?: boolean; canReadReports?: boolean }) {
+const routePermission: Record<string, string> = {
+  "/dashboard": "dashboard.read", "/dashboard/orders": "orders.read", "/dashboard/inventory": "inventory.read", "/dashboard/products": "products.read", "/dashboard/expenses": "expenses.read", "/dashboard/returns": "returns.read", "/dashboard/recipes": "recipes.read", "/dashboard/consumption": "consumption.read", "/dashboard/reports": "reports.read", "/dashboard/traffic": "traffic.read", "/dashboard/settings": "settings.read", "/dashboard/storefront": "storefront.read", "/dashboard/coupons": "coupons.read", "/dashboard/customers": "customers.read", "/dashboard/materials": "materials.read",
+};
+export function NavLinks({ compact = false, permissions }: { compact?: boolean; permissions: readonly string[] }) {
+  const allowed = (p: string) => permissions.includes("*") || permissions.includes(p);
+  const canCreateOrder = allowed("orders.write");
+  const visible = nav.filter(item => !routePermission[item.href] || allowed(routePermission[item.href]));
   const pathname = usePathname();
   if (compact) {
     const tabs = [nav[0], nav[1],
       canCreateOrder ? { label: "طلب جديد", href: "/dashboard/orders/new", mark: "+" } : nav[3],
-      nav[2]];
+      nav[2]].filter(item => item.href === "/dashboard/orders/new" || visible.includes(item));
     return <>
       {tabs.map(({ label, href, mark }) => <Link key={label} href={href}
         aria-current={pathname === href ? "page" : undefined}
@@ -44,10 +50,7 @@ export function NavLinks({ compact = false, canCreateOrder = false, canReadCusto
       </button>
     </>;
   }
-  return <GroupedNav key={pathname} pathname={pathname} items={nav.filter(item =>
-    (item.href !== "/dashboard/traffic" || canReadReports) &&
-    (item.href !== "/dashboard/customers" || canReadCustomers) &&
-    (item.href !== "/dashboard/coupons" || canManageCoupons))} />;
+  return <GroupedNav key={pathname} pathname={pathname} items={visible} />;
 }
 
 type NavItem = typeof nav[number];
@@ -79,7 +82,7 @@ function GroupedNav({ pathname, items }: { pathname: string; items: NavItem[] })
     </Link>;
   }
   return <nav ref={root} aria-label="التنقل الرئيسي" className="grid gap-1 p-3">
-    {destination(nav[0])}
+    {items.includes(nav[0]) && destination(nav[0])}
     {groups.map((group, index) => {
       const children = group.paths.flatMap(path => items.filter(item => item.href === `/dashboard/${path}`));
       if (!children.length) return null;

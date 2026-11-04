@@ -1,9 +1,10 @@
+import type { AccessPrincipal } from "../rbac";
 import ExcelJS from "exceljs";
 import { reportExportData, type BusinessReport } from "./export-data";
-export async function reportXlsx(report: BusinessReport) {
+export async function reportXlsx(report: BusinessReport, actor?: AccessPrincipal) {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Auraic";
-  for (const table of reportExportData(report).tables) {
+  for (const table of reportExportData(report, actor).tables) {
     const sheet = workbook.addWorksheet(table.name, { views:[{state:"frozen",ySplit:4,rightToLeft:true}], pageSetup:{orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:0} });
     const cols=table.columns.length;
     sheet.addRow([`Auraic - ${table.name}`]); sheet.mergeCells(1,1,1,Math.max(cols,2));

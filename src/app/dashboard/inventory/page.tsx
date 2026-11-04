@@ -14,7 +14,7 @@ const categories = [
 export default async function InventoryPage({ searchParams }: { searchParams: Promise<{ add?: string; q?: string }> }) {
   const session = await requireAuth();
   const { add, q } = await searchParams;
-  if (!can(session.role, "inventory.read")) throw new Error("Forbidden");
+  if (!can(session, "inventory.read")) throw new Error("Forbidden");
   const [balances, types] = await Promise.all([
     db.inventoryBalance.findMany({ where: { storeId: session.storeId }, include: { material: { include: { materialType: true } } }, orderBy: { material: { name: "asc" } } }),
     db.materialType.findMany({ where: { storeId: session.storeId, active: true }, orderBy: { name: "asc" } }),
@@ -30,7 +30,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   return <main className="mx-auto max-w-6xl space-y-4 px-4 py-4 sm:space-y-6 sm:px-8 sm:py-8">
     <header className="flex flex-wrap items-center justify-between gap-3">
       <div><h1 className="text-2xl font-bold tracking-tight sm:text-3xl">المخزون</h1><p className="mt-1 text-xs text-slate-500 sm:text-sm">رصيد خامات الشغل حسب النوع</p></div>
-      {can(session.role, "inventory.write") && can(session.role, "expenses.write") && can(session.role, "materials.write") && <QuickStockForm initialOpen={add === "1"} extraCategories={extra.map((type) => ({ id: `type:${type.id}`, name: type.name }))} />}
+      {can(session, "inventory.write") && can(session, "expenses.write") && can(session, "materials.write") && <QuickStockForm initialOpen={add === "1"} extraCategories={extra.map((type) => ({ id: `type:${type.id}`, name: type.name }))} />}
     </header>
     <section aria-label="ملخص المخزون" className="grid grid-cols-2 gap-2 sm:gap-3">
       <div className="rounded-xl border border-slate-200 bg-white p-3 sm:p-4"><p className="text-xs text-slate-500">الخامات المسجلة</p><strong className="mt-1 block text-xl text-[#191735]">{format(balances.length)}</strong></div>

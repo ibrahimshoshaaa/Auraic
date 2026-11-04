@@ -48,7 +48,7 @@ class _OrdersPageState extends State<OrdersPage> {
       const PageIntro(title: 'الطلبات',
         subtitle: 'تابع التجهيز والشحن والتحصيل', icon: Icons.receipt_long_outlined),
       const SizedBox(height: 20),
-      if (widget.canWrite) Padding(padding: const EdgeInsets.only(bottom: 14), child: OutlinedButton.icon(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PaymentReviewsPage(api: widget.api))), icon: const Icon(Icons.payments_outlined), label: const Text('مراجعة تحويلات InstaPay والمحافظ'))),
+      if (widget.api.can('payments.read')) Padding(padding: const EdgeInsets.only(bottom: 14), child: OutlinedButton.icon(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PaymentReviewsPage(api: widget.api))), icon: const Icon(Icons.payments_outlined), label: const Text('مراجعة تحويلات InstaPay والمحافظ'))),
       if (widget.canWrite) ...[
         SizedBox(width: double.infinity, height: 52,
           child: FilledButton.icon(onPressed: newOrder,
@@ -136,7 +136,7 @@ class _OrdersPageState extends State<OrdersPage> {
                 label: Text(o['manualStatus'] == 'NEW' ? 'تم التجهيز' : o['manualStatus'] == 'PREPARED' ? 'جاري الشحن' : 'تم التسليم وتحصيل المبلغ',
                   textAlign: TextAlign.center, style: const TextStyle(fontSize: 12)),
               )),
-              if (o['manualStatus'] == 'SHIPPING') ...[
+              if (o['manualStatus'] == 'SHIPPING' && widget.api.can('returns.write') && widget.api.can('inventory.write') && widget.api.can('expenses.write')) ...[
                 const SizedBox(width: 8),
                 OutlinedButton(
                   style: OutlinedButton.styleFrom(foregroundColor: const Color(0xffb42318),
@@ -185,7 +185,7 @@ class _OrdersPageState extends State<OrdersPage> {
                 fontWeight: FontWeight.w800, color: Color(0xff143e54))),
             ]))),
           const SizedBox(height: 12),
-          SizedBox(width: double.infinity, child: OutlinedButton.icon(
+          if (widget.api.can('consumption.read')) SizedBox(width: double.infinity, child: OutlinedButton.icon(
             onPressed: () => openPage(context, Scaffold(
             appBar: AppBar(title: Text('استهلاك طلب #${str(o['orderNumber'])}')),
             body: ConsumptionPage(api: widget.api, orderId: str(o['id'])))),

@@ -26,7 +26,7 @@ export const maxDuration = 60;
 export async function POST(req: NextRequest) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "orders.write")) return NextResponse.json({ error: "غير مسموح بتسجيل المبيعات" }, { status: 403 });
+    if (!can(session, "orders.write")) return NextResponse.json({ error: "غير مسموح بتسجيل المبيعات" }, { status: 403 });
     const input = schema.parse(await req.json());
     const orderId = `manual_${input.requestId}`;
     let order = await db.order.findUnique({ where: { id: orderId }, select: { id: true, storeId: true } });

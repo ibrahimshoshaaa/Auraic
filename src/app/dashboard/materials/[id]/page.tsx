@@ -14,7 +14,7 @@ const format = (value: number) => value.toLocaleString("ar-EG", { maximumFractio
 
 export default async function MaterialDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth();
-  if (!can(session.role, "materials.read")) throw new Error("Forbidden");
+  if (!can(session, "materials.read")) throw new Error("Forbidden");
   const { id } = await params;
   const material = await db.material.findFirst({
     where: { id, storeId: session.storeId },
@@ -38,10 +38,10 @@ export default async function MaterialDetailPage({ params }: { params: Promise<{
       {reorder !== null && <p className="mt-2 text-xs text-slate-500">حد إعادة الشراء: {format(reorder)} {material.unit}</p>}
     </section>
     {(material.defaultCost !== null || material.capacityMl !== null) && <section aria-label="بيانات الخامة" className="grid grid-cols-2 gap-2 sm:gap-3">
-      {material.defaultCost !== null && <div className="min-w-0 rounded-xl border border-slate-200 bg-white p-3 sm:p-4"><p className="text-xs text-slate-500">التكلفة الافتراضية</p><strong className="mt-1 block break-words text-base text-slate-900">{format(Number(material.defaultCost))} EGP</strong></div>}
+      {can(session, "costs.read") && material.defaultCost !== null && <div className="min-w-0 rounded-xl border border-slate-200 bg-white p-3 sm:p-4"><p className="text-xs text-slate-500">التكلفة الافتراضية</p><strong className="mt-1 block break-words text-base text-slate-900">{format(Number(material.defaultCost))} EGP</strong></div>}
       {material.capacityMl !== null && <div className="min-w-0 rounded-xl border border-slate-200 bg-white p-3 sm:p-4"><p className="text-xs text-slate-500">السعة</p><strong className="mt-1 block text-base text-slate-900">{format(Number(material.capacityMl))} مل</strong></div>}
     </section>}
-    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+{can(session, "consumption.read") && <>    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 sm:px-5"><h2 className="font-bold">حركة المخزون</h2><span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600">آخر {history.length} حركة</span></div>
       {history.length ? <div className="max-h-[600px] divide-y divide-slate-100 overflow-y-auto px-4 sm:px-5">{history.map((txn) => {
         const isIn = incoming.has(txn.type);
@@ -51,6 +51,6 @@ export default async function MaterialDetailPage({ params }: { params: Promise<{
         </article>;
       })}</div> : <p className="p-6 text-sm text-slate-500">لا توجد حركات لهذه الخامة بعد.</p>}
     </section>
-    {can(session.role, "inventory.write") && <details className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"><summary className="cursor-pointer font-bold text-[#191735]">تسوية الرصيد يدويًا</summary><p className="mb-4 mt-2 text-xs text-slate-500">للتصحيح والجرد. لتسجيل مشتريات جديدة وتكلفتها استخدم «إضافة مخزون» من صفحة المخزون.</p><AdjustInventoryForm materialId={material.id} materialName={material.name} unit={material.unit} currentBalance={balance} /></details>}
+</>}    {can(session, "inventory.write") && <details className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"><summary className="cursor-pointer font-bold text-[#191735]">تسوية الرصيد يدويًا</summary><p className="mb-4 mt-2 text-xs text-slate-500">للتصحيح والجرد. لتسجيل مشتريات جديدة وتكلفتها استخدم «إضافة مخزون» من صفحة المخزون.</p><AdjustInventoryForm materialId={material.id} materialName={material.name} unit={material.unit} currentBalance={balance} /></details>}
   </main>;
 }

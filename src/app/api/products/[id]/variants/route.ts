@@ -1,3 +1,4 @@
+import { productForAccess } from "@/lib/access-data";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createVariant, getProduct } from "@/services/product.service";
@@ -16,7 +17,7 @@ export async function GET(
 ) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "products.read")) {
+    if (!can(session, "products.read")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const storeId = getStoreId(session);
@@ -27,7 +28,7 @@ export async function GET(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ data: product.variants });
+    return NextResponse.json({ data: productForAccess(product, session).variants });
   } catch (err) {
     return handleError(err);
   }
@@ -39,7 +40,7 @@ export async function POST(
 ) {
   try {
     const session = await requireAuth();
-    if (!can(session.role, "products.write")) {
+    if (!can(session, "products.write")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const storeId = getStoreId(session);

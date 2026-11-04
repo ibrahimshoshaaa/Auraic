@@ -228,7 +228,7 @@ test('mobile login, tenant access, and revocable logout through real HTTP routes
       const createOwner = async currentPassword => fetch(`${url}/api/mobile/account/users`, {
         method: 'POST', headers: { ...headers, 'content-type': 'application/json' },
         body: JSON.stringify({ name: 'Second owner', email: ownerEmail,
-          password: ownerPassword, currentPassword }),
+          password: ownerPassword, currentPassword, fullAccess: true, permissions: [] }),
       });
       assert.equal((await createOwner('incorrect-password')).status, 403);
       assert.equal((await createOwner(password)).status, 201);

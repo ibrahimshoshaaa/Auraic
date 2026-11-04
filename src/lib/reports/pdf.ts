@@ -1,14 +1,15 @@
+import type { AccessPrincipal } from "../rbac";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { reportExportData, type BusinessReport } from "./export-data";
 let font: Promise<string> | undefined;
-export async function reportPdf(report: BusinessReport) {
+export async function reportPdf(report: BusinessReport, actor?: AccessPrincipal) {
   font ??= readFile(path.join(process.cwd(),"public/fonts/Amiri-Regular.ttf")).then(data=>data.toString("base64"));
   const doc=new jsPDF({orientation:"landscape",unit:"mm",format:"a4",compress:true});
   doc.addFileToVFS("Amiri.ttf",await font);doc.addFont("Amiri.ttf","Amiri","normal");doc.addFont("Amiri.ttf","Amiri","bold");doc.setFont("Amiri");
-  const tables=reportExportData(report).tables;
+  const tables=reportExportData(report, actor).tables;
   for(let i=0;i<tables.length;i++){
     if(i)doc.addPage();const table=tables[i];
     doc.setFontSize(19);doc.setTextColor("#211b3d");doc.text(`Auraic - ${table.name}`,282,16,{align:"right"});

@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 
 async function getDevStoreId() {
   const session = await requireAuth();
-  if (!can(session.role, "materials.read")) throw new Error("Forbidden");
+  if (!can(session, "materials.read")) throw new Error("Forbidden");
   return session.storeId;
 }
 
