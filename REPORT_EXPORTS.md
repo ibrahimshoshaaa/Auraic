@@ -7,3 +7,5 @@ The admin orders list displays a warning when the same normalized phone number b
 No schema changes or production business-data modifications are required. Existing local/international/Arabic phone formats use the established customer normalization. A signed Android rebuild is required for the new export/share and history screens. Files can be saved/shared through the phone's system share menu.
 
 Scope: original `ibrahimshoshaaa/Auraic` only. Transfer to the client repository requires the user's subsequent instruction.
+
+Original Android API: `https://auraic.shotechsolutions.net`. The former `https://auraic.vercel.app` deployment does not expose the export route; builds normalize that legacy override to the current original domain. Preserve the client repository’s own API URL when transferring this feature.

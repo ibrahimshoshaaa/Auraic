@@ -15,7 +15,7 @@ class ApiException implements Exception {
 class ErpApi {
   ErpApi({http.Client? client}) : _client = client ?? http.Client();
 
-  static const _baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'https://auraic.vercel.app');
+  static const _baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'https://auraic.shotechsolutions.net');
   String get baseUrl => _baseUrl;
   static const _storage = FlutterSecureStorage();
   static const _tokenKey = 'erp_mobile_session';
@@ -41,7 +41,7 @@ class ErpApi {
     }).timeout(const Duration(seconds: 90));
     if (response.statusCode >= 400) {
       if (response.statusCode == 401 && token != null) await _storage.delete(key: _tokenKey);
-      String message = 'تعذر تصدير التقرير';
+      String message = response.statusCode == 404 ? 'نسخة السيرفر المتصل بها التطبيق لا تدعم التصدير. حدّث التطبيق.' : 'تعذر تصدير التقرير';
       try { final data = jsonDecode(utf8.decode(response.bodyBytes)); if (data is Map) message = data['error']?.toString() ?? message; } catch (_) { /* Keep controlled error for non-JSON responses. */ }
       throw ApiException(message, response.statusCode);
     }
